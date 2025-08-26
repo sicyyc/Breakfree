@@ -407,6 +407,13 @@ def dashboard():
                 after_care_clients += 1
             else:
                 in_house_clients += 1
+        
+        # Role-based filtering: Caseworkers only see after care statistics
+        user_role = session.get('role', '')
+        if user_role == 'caseworker':
+            print("Caseworker detected - showing only after care statistics")
+            total_clients = after_care_clients
+            in_house_clients = 0
                 
     except Exception as e:
         print(f"Error fetching client counts: {e}")
@@ -542,6 +549,13 @@ def clients():
                 all_clients_data.append(client_dict)
                 print(f"Added client {client_dict.get('name', 'Unknown')} to display list")
 
+        # Role-based filtering: Caseworkers can only see after care clients
+        user_role = session.get('role', '')
+        if user_role == 'caseworker':
+            print("Caseworker detected - filtering to show only after care clients")
+            all_clients_data = [client for client in all_clients_data if client.get('care_type') == 'after_care']
+            print(f"After filtering: {len(all_clients_data)} after care clients")
+
         # Sort clients by name for consistent pagination
         all_clients_data.sort(key=lambda x: x.get('name', '').lower())
         
@@ -592,7 +606,7 @@ def clients():
     return render_template('clients.html', email=session['email'], clients=clients_data, pagination=pagination)
 
 @app.route('/clients/add', methods=['GET', 'POST'])
-@role_required(['admin', 'facilitator', 'caseworker'])
+@role_required(['admin', 'facilitator'])
 def add_client():
     if request.method == 'POST':
         try:
@@ -883,17 +897,17 @@ def add_client():
     return render_template('add_client.html', email=session['email'], suggested_client_id=suggested_client_id)
 
 @app.route('/clients/add/step2')
-@role_required(['admin', 'facilitator', 'caseworker'])
+@role_required(['admin', 'facilitator'])
 def add_client_step2():
     return render_template('add_client_step2.html', email=session['email'])
 
 @app.route('/clients/add/step3')
-@role_required(['admin', 'facilitator', 'caseworker'])
+@role_required(['admin', 'facilitator'])
 def add_client_step3():
     return render_template('add_client_step3.html', email=session['email'])
 
 @app.route('/clients/add/step4')
-@role_required(['admin', 'facilitator', 'caseworker'])
+@role_required(['admin', 'facilitator'])
 def add_client_step4():
     return render_template('add_client_step4.html', email=session['email'])
 
@@ -1013,22 +1027,22 @@ def map():
     return render_template('map.html', email=session['email'])
 
 @app.route('/reports')
-@role_required(['admin', 'facilitator'])
+@role_required(['admin', 'facilitator', 'caseworker'])
 def reports():
     return render_template('reports.html', email=session['email'])
 
 @app.route('/settings')
-@admin_required
+@role_required(['admin', 'facilitator', 'caseworker'])
 def settings():
     try:
-        # Get all users from Firestore
-        users_ref = db.collection('users')
+        # Get all users from Firestore (only for admin and facilitator)
         users = []
-        
-        for user in users_ref.stream():
-            user_data = user.to_dict()
-            user_data['id'] = user.id
-            users.append(user_data)
+        if session.get('role') in ['admin', 'facilitator']:
+            users_ref = db.collection('users')
+            for user in users_ref.stream():
+                user_data = user.to_dict()
+                user_data['id'] = user.id
+                users.append(user_data)
         
         return render_template('settings.html', email=session['email'], users=users)
     except Exception as e:
@@ -1270,6 +1284,13 @@ def get_client_locations():
                     client_data['formatted_address'] = coordinates['formatted_address']
                 
                 clients_data.append(client_data)
+        
+        # Role-based filtering: Caseworkers can only see after care clients
+        user_role = session.get('role', '')
+        if user_role == 'caseworker':
+            print("Caseworker detected - filtering API to show only after care clients")
+            clients_data = [client for client in clients_data if client.get('care_type') == 'after_care']
+            print(f"After filtering: {len(clients_data)} after care clients")
         
         print("Debug info for all clients:", debug_info)
         print(f"Returning {len(clients_data)} clients with location data")

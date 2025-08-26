@@ -11,13 +11,15 @@ block page_css %}
 {% endblock %} {% block content %}
 <div class="main-header-clients">
   <div>
-    <h1>Clients</h1>
-    <p>Browse or search registered clients</p>
+    <h1>{% if session.role == 'caseworker' %}After Care Clients{% else %}Clients{% endif %}</h1>
+    <p>{% if session.role == 'caseworker' %}Browse or search after care clients{% else %}Browse or search registered clients{% endif %}</p>
   </div>
   <div class="actions">
+    {% if session.role != 'caseworker' %}
     <a href="{{ url_for('add_client') }}" class="btn-primary">
       <i class="fas fa-plus"></i> Add Client
     </a>
+    {% endif %}
     <div class="search-container">
       <span class="search-icon"><i class="fas fa-search"></i></span>
       <input type="text" placeholder="Search by name, ID, or barangay..." />

@@ -10,8 +10,8 @@
 {% block content %}
 <div class="main-header">
     <div>
-        <h1>Reports</h1>
-        <p>Generate and download comprehensive reports</p>
+        <h1>{% if session.role == 'caseworker' %}After Care Reports{% else %}Reports{% endif %}</h1>
+        <p>{% if session.role == 'caseworker' %}Generate and download after care client reports{% else %}Generate and download comprehensive reports{% endif %}</p>
     </div>
     <div class="actions">
         <div class="date-range-picker">
@@ -26,6 +26,7 @@
 
 <div class="reports-grid">
     <!-- Monthly Summary Report -->
+    {% if session.role != 'caseworker' %}
     <div class="card report-card">
         <div class="report-header">
             <div class="report-icon">
@@ -62,6 +63,7 @@
             </button>
         </div>
     </div>
+    {% endif %}
 
     <!-- Client Progress Report -->
     <div class="card report-card">
@@ -70,8 +72,8 @@
                 <i class="fas fa-user-chart"></i>
             </div>
             <div class="report-info">
-                <h3>Individual Client Progress</h3>
-                <p>Detailed analysis of client recovery journey</p>
+                <h3>{% if session.role == 'caseworker' %}After Care Client Progress{% else %}Individual Client Progress{% endif %}</h3>
+                <p>{% if session.role == 'caseworker' %}Detailed analysis of after care client recovery journey{% else %}Detailed analysis of client recovery journey{% endif %}</p>
             </div>
         </div>
         <div class="report-preview">
@@ -110,6 +112,7 @@
     </div>
 
     <!-- Municipal Relapse Trends -->
+    {% if session.role != 'caseworker' %}
     <div class="card report-card">
         <div class="report-header">
             <div class="report-icon trends-icon">
@@ -155,8 +158,10 @@
             </button>
         </div>
     </div>
+    {% endif %}
 
     <!-- Intervention Success Rate -->
+    {% if session.role != 'caseworker' %}
     <div class="card report-card">
         <div class="report-header">
             <div class="report-icon success-icon">
@@ -201,6 +206,47 @@
             </button>
         </div>
     </div>
+    {% endif %}
+
+    <!-- After Care Summary Report (for caseworkers) -->
+    {% if session.role == 'caseworker' %}
+    <div class="card report-card">
+        <div class="report-header">
+            <div class="report-icon">
+                <i class="fas fa-home"></i>
+            </div>
+            <div class="report-info">
+                <h3>After Care Summary</h3>
+                <p>Overview of after care client activities and progress</p>
+            </div>
+        </div>
+        <div class="report-preview">
+            <div class="chart-container">
+                <canvas id="afterCareSummaryChart"></canvas>
+            </div>
+        </div>
+        <div class="report-actions">
+            <div class="format-options">
+                <button class="format-btn" title="Download PDF">
+                    <i class="fas fa-file-pdf"></i>
+                    PDF
+                </button>
+                <button class="format-btn" title="Download Excel">
+                    <i class="fas fa-file-excel"></i>
+                    Excel
+                </button>
+                <button class="format-btn" title="Download CSV">
+                    <i class="fas fa-file-csv"></i>
+                    CSV
+                </button>
+            </div>
+            <button class="btn-primary">
+                <i class="fas fa-download"></i>
+                Generate Report
+            </button>
+        </div>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}
 
