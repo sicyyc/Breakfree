@@ -378,6 +378,182 @@
     box-shadow: var(--shadow-lg);
 }
 
+/* Cluster Marker Styles */
+.custom-cluster-icon {
+    background: transparent;
+    border: none;
+}
+
+.cluster-marker {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-color), var(--primary-dark));
+    border: 3px solid white;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.cluster-marker:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.4);
+}
+
+.cluster-count {
+    font-size: 12px;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.cluster-marker i {
+    font-size: 14px;
+    margin-top: 2px;
+}
+
+/* Offset Indicator Styles */
+.offset-indicator {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    background: var(--warning-light);
+    color: var(--warning-color);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    font-size: 11px;
+    font-weight: 500;
+    margin-left: 8px;
+}
+
+.offset-indicator i {
+    font-size: 10px;
+}
+
+/* Cluster Popup Styles */
+.cluster-popup {
+    min-width: 250px;
+}
+
+.cluster-popup h4 {
+    margin: 0 0 12px 0;
+    color: var(--text-dark);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.cluster-clients {
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.cluster-client-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 0;
+    border-bottom: 1px solid var(--border-light);
+}
+
+.cluster-client-item:last-child {
+    border-bottom: none;
+}
+
+.cluster-client-item strong {
+    font-size: 13px;
+    color: var(--text-dark);
+    flex: 1;
+}
+
+.client-type {
+    font-size: 11px;
+    color: var(--text-muted);
+    background: var(--primary-light);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+}
+
+.client-status {
+    font-size: 11px;
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    font-weight: 500;
+}
+
+.client-status.active {
+    background: var(--success-light);
+    color: var(--success-color);
+}
+
+.client-status.inactive {
+    background: var(--warning-light);
+    color: var(--warning-color);
+}
+
+.client-status.relapsed {
+    background: var(--danger-light);
+    color: var(--danger-color);
+}
+
+/* Notification Styles */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    background: var(--bg-light);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    box-shadow: var(--shadow-lg);
+    z-index: 10000;
+    transform: translateX(100%);
+    transition: transform 0.3s ease;
+    max-width: 400px;
+}
+
+.notification.show {
+    transform: translateX(0);
+}
+
+.notification-content {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.notification-content i {
+    font-size: 1.25rem;
+}
+
+.notification-success {
+    border-left: 4px solid var(--success-color);
+}
+
+.notification-success .notification-content i {
+    color: var(--success-color);
+}
+
+.notification-error {
+    border-left: 4px solid var(--danger-color);
+}
+
+.notification-error .notification-content i {
+    color: var(--danger-color);
+}
+
+.notification-info {
+    border-left: 4px solid var(--primary-color);
+}
+
+.notification-info .notification-content i {
+    color: var(--primary-color);
+}
+
 /* Heat Map Info */
 .heat-map-info {
     background: var(--bg-light);

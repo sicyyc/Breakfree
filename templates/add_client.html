@@ -345,13 +345,23 @@
         </div>
         <div class="form-group">
           <label for="street_address">Street Address (Optional)</label>
-          <input
-            type="text"
-            id="street_address"
-            name="street_address"
-            class="input-enhanced"
-            placeholder="House/Building Number, Street Name"
-          />
+          <div class="input-group">
+            <input
+              type="text"
+              id="street_address"
+              name="street_address"
+              class="input-enhanced"
+              placeholder="House/Building Number, Street Name"
+            />
+            <button type="button" id="validateAddress" class="btn-secondary" style="margin-left: 10px;">
+              <i class="fas fa-map-marker-alt"></i>
+              Validate Address
+            </button>
+          </div>
+          <small class="form-text text-muted">
+            <i class="fas fa-info-circle"></i>
+            Address validation will automatically set coordinates for accurate map placement
+          </small>
         </div>
         <input type="hidden" id="complete_address" name="address" />
         <input type="hidden" id="address_lat" name="lat" />

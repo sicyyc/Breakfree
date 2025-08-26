@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const fitBoundsBtn = document.getElementById('fitBounds');
 
     // Map initialization
-    const LAGUNA_CENTER = [14.2691, 121.4113]; // Coordinates for Laguna
+    const LAGUNA_CENTER = [14.2500, 121.3000]; // Centered to cover all of Laguna Province
     let map = null;
     let heatLayer = null;
     let markers = [];
@@ -35,7 +35,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize map
     function initializeMap() {
         // Create the map centered on Laguna
-        map = L.map('mapCanvas').setView(LAGUNA_CENTER, 11);
+        map = L.map('mapCanvas').setView(LAGUNA_CENTER, 10);
 
         // Add the default tile layer (OpenStreetMap)
         baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -270,19 +270,116 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Updating heat map with', heatData.length, 'data points');
         heatLayer.setLatLngs(heatData);
 
-        // Add markers for each client
-        filteredClients.forEach(client => {
-            const markerIcon = getClientMarkerIcon(client);
-            const marker = L.marker([client.coordinates.lat, client.coordinates.lng], {
-                icon: markerIcon
-            })
-                .bindPopup(createPopupContent(client))
-                .addTo(map);
-            markers.push(marker);
+        // Group clients by location (within 0.001 degrees = ~100m)
+        const locationGroups = groupClientsByLocation(filteredClients, 0.001);
+        
+        // Add markers for each client or group
+        locationGroups.forEach(group => {
+            if (group.clients.length === 1) {
+                // Single client - add individual marker
+                const client = group.clients[0];
+                const markerIcon = getClientMarkerIcon(client);
+                const marker = L.marker([client.coordinates.lat, client.coordinates.lng], {
+                    icon: markerIcon
+                })
+                    .bindPopup(createPopupContent(client))
+                    .addTo(map);
+                markers.push(marker);
+            } else {
+                // Multiple clients at same location - add cluster marker
+                const clusterMarker = createClusterMarker(group);
+                markers.push(clusterMarker);
+            }
         });
 
         // Update client count
         updateClientCount();
+    }
+    
+    // Group clients by location proximity
+    function groupClientsByLocation(clients, proximityThreshold = 0.001) {
+        const groups = [];
+        const processed = new Set();
+        
+        clients.forEach((client, index) => {
+            if (processed.has(index)) return;
+            
+            const group = {
+                center: { lat: client.coordinates.lat, lng: client.coordinates.lng },
+                clients: [client]
+            };
+            
+            processed.add(index);
+            
+            // Find other clients at the same location
+            clients.forEach((otherClient, otherIndex) => {
+                if (otherIndex === index || processed.has(otherIndex)) return;
+                
+                const distance = Math.sqrt(
+                    Math.pow(client.coordinates.lat - otherClient.coordinates.lat, 2) +
+                    Math.pow(client.coordinates.lng - otherClient.coordinates.lng, 2)
+                );
+                
+                if (distance <= proximityThreshold) {
+                    group.clients.push(otherClient);
+                    processed.add(otherIndex);
+                }
+            });
+            
+            groups.push(group);
+        });
+        
+        return groups;
+    }
+    
+    // Create a cluster marker for multiple clients at the same location
+    function createClusterMarker(group) {
+        const center = group.center;
+        const clientCount = group.clients.length;
+        
+        // Create cluster icon
+        const clusterIcon = L.divIcon({
+            html: `<div class="cluster-marker">
+                     <span class="cluster-count">${clientCount}</span>
+                     <i class="fas fa-users"></i>
+                   </div>`,
+            iconSize: [40, 40],
+            className: 'custom-cluster-icon'
+        });
+        
+        // Create popup content for cluster
+        const clusterPopupContent = createClusterPopupContent(group);
+        
+        const marker = L.marker([center.lat, center.lng], {
+            icon: clusterIcon
+        })
+            .bindPopup(clusterPopupContent)
+            .addTo(map);
+            
+        return marker;
+    }
+    
+    // Create popup content for cluster markers
+    function createClusterPopupContent(group) {
+        const clientList = group.clients.map(client => {
+            const careTypeLabel = client.care_type === 'in_house' ? 'In-House' : 'After Care';
+            return `
+                <div class="cluster-client-item">
+                    <strong>${client.name}</strong>
+                    <span class="client-type">${careTypeLabel}</span>
+                    <span class="client-status ${client.status.toLowerCase()}">${client.status}</span>
+                </div>
+            `;
+        }).join('');
+        
+        return `
+            <div class="cluster-popup">
+                <h4>${group.clients.length} Clients at this location</h4>
+                <div class="cluster-clients">
+                    ${clientList}
+                </div>
+            </div>
+        `;
     }
 
     // Fit map bounds to show all markers
@@ -348,6 +445,12 @@ document.addEventListener('DOMContentLoaded', function() {
         // Use formatted address if available, otherwise use original address
         const displayAddress = client.formatted_address || client.address;
         
+        // Add offset indicator if coordinates were adjusted
+        let offsetIndicator = '';
+        if (client.coordinates && client.coordinates.offset_applied) {
+            offsetIndicator = '<span class="offset-indicator" title="Location adjusted for map visibility"><i class="fas fa-arrows-alt"></i> Adjusted</span>';
+        }
+        
         return `
             <div class="popup-content">
                 <h4>${client.name}</h4>
@@ -363,6 +466,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 <div class="popup-coords">
                     <small class="coordinates">${client.coordinates.lat.toFixed(6)}, ${client.coordinates.lng.toFixed(6)}</small>
                     ${sourceBadge}
+                    ${offsetIndicator}
                 </div>
             </div>
         `;
@@ -518,8 +622,8 @@ document.addEventListener('DOMContentLoaded', function() {
     function handleMapControls(action) {
         switch(action) {
             case 'center':
-                map.setView(LAGUNA_CENTER, 11);
-                console.log('Map centered on Laguna');
+                map.setView(LAGUNA_CENTER, 10);
+                console.log('Map centered on Laguna Province');
                 break;
             case 'fullscreen':
                 toggleFullscreen();
@@ -643,6 +747,12 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    // Add event listener for update coordinates button
+    const updateCoordinatesBtn = document.getElementById('updateCoordinates');
+    if (updateCoordinatesBtn) {
+        updateCoordinatesBtn.addEventListener('click', updateClientCoordinates);
+    }
 
     // Handle window resize
     window.addEventListener('resize', () => {
@@ -791,6 +901,75 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize map
     console.log('DOM loaded, initializing map...');
     initializeMap();
+
+    // Function to update client coordinates
+    async function updateClientCoordinates() {
+        try {
+            const button = document.getElementById('updateCoordinates');
+            const originalText = button.innerHTML;
+            
+            // Show loading state
+            button.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            button.disabled = true;
+            
+            const response = await fetch('/api/clients/update-coordinates', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                // Show success message
+                showNotification(`Successfully updated ${result.updated} client coordinates`, 'success');
+                
+                // Reload client data to reflect changes
+                await loadClientData();
+            } else {
+                showNotification(`Error updating coordinates: ${result.error}`, 'error');
+            }
+            
+        } catch (error) {
+            console.error('Error updating coordinates:', error);
+            showNotification('Failed to update coordinates. Please try again.', 'error');
+        } finally {
+            // Restore button state
+            const button = document.getElementById('updateCoordinates');
+            button.innerHTML = originalText;
+            button.disabled = false;
+        }
+    }
+
+    // Function to show notifications
+    function showNotification(message, type = 'info') {
+        // Create notification element
+        const notification = document.createElement('div');
+        notification.className = `notification notification-${type}`;
+        notification.innerHTML = `
+            <div class="notification-content">
+                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+                <span>${message}</span>
+            </div>
+        `;
+        
+        // Add to page
+        document.body.appendChild(notification);
+        
+        // Show notification
+        setTimeout(() => {
+            notification.classList.add('show');
+        }, 100);
+        
+        // Remove after 5 seconds
+        setTimeout(() => {
+            notification.classList.remove('show');
+            setTimeout(() => {
+                document.body.removeChild(notification);
+            }, 300);
+        }, 5000);
+    }
 
     // Auto-refresh data every 5 minutes
     setInterval(() => {

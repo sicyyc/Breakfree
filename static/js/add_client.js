@@ -9,7 +9,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Load municipalities on page load
     fetch('/api/municipalities')
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Failed to load municipalities');
+            }
+            return response.json();
+        })
         .then(municipalities => {
             municipalities.forEach(muni => {
                 const option = new Option(muni.name, muni.id);
@@ -17,6 +22,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 option.dataset.lng = muni.lng;
                 municipalitySelect.add(option);
             });
+        })
+        .catch(error => {
+            console.error('Error loading municipalities:', error);
+            showNotification('Failed to load municipalities. Please refresh the page.', 'error');
         });
 
     // Handle municipality selection
@@ -32,11 +41,20 @@ document.addEventListener('DOMContentLoaded', function() {
             
             // Load barangays for selected municipality
             fetch(`/api/barangays/${selectedOption.value}`)
-                .then(response => response.json())
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Failed to load barangays');
+                    }
+                    return response.json();
+                })
                 .then(barangays => {
                     barangays.forEach(brgy => {
                         barangaySelect.add(new Option(brgy, brgy));
                     });
+                })
+                .catch(error => {
+                    console.error('Error loading barangays:', error);
+                    showNotification('Failed to load barangays for selected municipality.', 'error');
                 });
         }
         updateCompleteAddress();
@@ -45,8 +63,31 @@ document.addEventListener('DOMContentLoaded', function() {
     // Handle barangay selection
     barangaySelect.addEventListener('change', updateCompleteAddress);
     
-    // Handle street address input
-    streetAddressInput.addEventListener('input', updateCompleteAddress);
+    // Handle manual address validation button
+    const validateAddressBtn = document.getElementById('validateAddress');
+    if (validateAddressBtn) {
+        validateAddressBtn.addEventListener('click', function() {
+            if (completeAddressInput.value && completeAddressInput.value !== 'Laguna') {
+                validateAddress(completeAddressInput.value);
+            } else {
+                showAddressValidationMessage('Please complete the address fields first', 'warning');
+            }
+        });
+    }
+    
+    // Handle street address input with debouncing
+    let addressValidationTimeout;
+    streetAddressInput.addEventListener('input', function() {
+        updateCompleteAddress();
+        
+        // Debounce address validation
+        clearTimeout(addressValidationTimeout);
+        addressValidationTimeout = setTimeout(() => {
+            if (completeAddressInput.value && completeAddressInput.value !== 'Laguna') {
+                validateAddress(completeAddressInput.value);
+            }
+        }, 1000); // Wait 1 second after user stops typing
+    });
 
     // Function to update complete address
     function updateCompleteAddress() {
@@ -61,6 +102,57 @@ document.addEventListener('DOMContentLoaded', function() {
         parts.push('Laguna');
 
         completeAddressInput.value = parts.join(', ');
+        
+        // Validate address if we have a complete address
+        if (completeAddressInput.value && completeAddressInput.value !== 'Laguna') {
+            validateAddress(completeAddressInput.value);
+        }
+    }
+
+    // Function to validate address
+    function validateAddress(address) {
+        if (!address || address.trim() === '') return;
+        
+        fetch(`/api/locations/validate?address=${encodeURIComponent(address)}`)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Update coordinates if validation successful
+                    latInput.value = data.coordinates.lat;
+                    lngInput.value = data.coordinates.lng;
+                    
+                    // Show success message
+                    showAddressValidationMessage('Address validated successfully', 'success');
+                } else {
+                    showAddressValidationMessage('Address could not be validated. Please check the format.', 'warning');
+                }
+            })
+            .catch(error => {
+                console.error('Error validating address:', error);
+                showAddressValidationMessage('Error validating address', 'error');
+            });
+    }
+
+    // Function to show address validation messages
+    function showAddressValidationMessage(message, type) {
+        // Remove existing validation message
+        const existingMessage = document.querySelector('.address-validation-message');
+        if (existingMessage) {
+            existingMessage.remove();
+        }
+        
+        // Create new message element
+        const messageDiv = document.createElement('div');
+        messageDiv.className = `address-validation-message alert alert-${type === 'success' ? 'success' : type === 'warning' ? 'warning' : 'danger'}`;
+        messageDiv.style.marginTop = '10px';
+        messageDiv.style.fontSize = '14px';
+        messageDiv.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : type === 'warning' ? 'exclamation-triangle' : 'times-circle'}"></i> ${message}`;
+        
+        // Insert after the complete address input
+        const addressSection = document.querySelector('.address-section');
+        if (addressSection) {
+            addressSection.appendChild(messageDiv);
+        }
     }
 
     // Enhanced Image Upload Handling
