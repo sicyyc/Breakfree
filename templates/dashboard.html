@@ -1,0 +1,130 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - BreakFree{% endblock %}
+
+{% block page_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/stats.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/charts.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/calendar.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/activity.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="main-header">
+    <div>
+        <h1>Welcome back, {{ username }}</h1>
+        <p>Here's your progress overview</p>
+    </div>
+    <div class="actions">
+        <div class="search-container">
+            <span class="search-icon"><i class="fas fa-search"></i></span>
+            <input type="text" placeholder="Search...">
+        </div>
+        <button class="btn-primary">+ Add new task</button>
+    </div>
+</div>
+
+<div class="stats-grid">
+    <div class="card card-blue">
+        <p>Total Clients</p>
+        <h2>{{ total_clients }}</h2>
+    </div>
+    <div class="card card-indigo">
+        <p>In-House Clients</p>
+        <h2>{{ in_house_clients }}</h2>
+    </div>
+    <div class="card">
+        <p>After-Care Clients</p>
+        <h2>{{ after_care_clients }}</h2>
+    </div>
+</div>
+
+<div class="chart-container">
+    <div class="card weekly-progress">
+        <h3>Weekly Progress</h3>
+        <canvas id="lineChart"></canvas>
+    </div>
+    <div class="card task-distribution">
+        <h3>Task Distribution</h3>
+        <canvas id="doughnutChart"></canvas>
+        <div class="chart-center">89%</div>
+    </div>
+</div>
+
+<div class="actions-activity-container">
+    <div class="card">
+        <h3>Calendar</h3>
+        <div class="calendar">
+            <div class="calendar-header">
+                <button class="calendar-nav-btn" id="checkinPrevMonth">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <h4 id="checkinCurrentMonth">June 2025</h4>
+                <button class="calendar-nav-btn" id="checkinNextMonth">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+            <div class="calendar-weekdays">
+                <div>Sun</div>
+                <div>Mon</div>
+                <div>Tue</div>
+                <div>Wed</div>
+                <div>Thu</div>
+                <div>Fri</div>
+                <div>Sat</div>
+            </div>
+            <div class="calendar-days" id="checkinCalendarDays">
+                <!-- Days will be populated by JavaScript -->
+            </div>
+            <div class="calendar-legend">
+                <div class="legend-item">
+                    <span class="legend-dot has-appointment"></span>
+                    <span>Appointment</span>
+                </div>
+                <div class="legend-item">
+                    <span class="legend-dot has-checkup"></span>
+                    <span>Check-up</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <h3>Recent Activity</h3>
+        <div class="activity-item">
+            <div class="activity-icon">
+                <i class="fas fa-check"></i>
+            </div>
+            <div class="activity-content">
+                <h4>Task Completed</h4>
+                <p>Morning Meditation</p>
+            </div>
+            <span class="activity-time">2m ago</span>
+        </div>
+        <div class="activity-item">
+            <div class="activity-icon">
+                <i class="fas fa-plus"></i>
+            </div>
+            <div class="activity-content">
+                <h4>New Task Added</h4>
+                <p>Evening Exercise</p>
+            </div>
+            <span class="activity-time">1h ago</span>
+        </div>
+        <div class="activity-item">
+            <div class="activity-icon">
+                <i class="fas fa-star"></i>
+            </div>
+            <div class="activity-content">
+                <h4>Achievement Unlocked</h4>
+                <p>7-Day Streak!</p>
+            </div>
+            <span class="activity-time">3h ago</span>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+{% endblock %}

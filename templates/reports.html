@@ -1,0 +1,209 @@
+{% extends "base.html" %}
+
+{% block title %}Reports - BreakFree{% endblock %}
+
+{% block page_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/reports.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/charts.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="main-header">
+    <div>
+        <h1>Reports</h1>
+        <p>Generate and download comprehensive reports</p>
+    </div>
+    <div class="actions">
+        <div class="date-range-picker">
+            <button class="btn-secondary">
+                <i class="fas fa-calendar"></i>
+                <span>Last 30 Days</span>
+                <i class="fas fa-chevron-down"></i>
+            </button>
+        </div>
+    </div>
+</div>
+
+<div class="reports-grid">
+    <!-- Monthly Summary Report -->
+    <div class="card report-card">
+        <div class="report-header">
+            <div class="report-icon">
+                <i class="fas fa-chart-bar"></i>
+            </div>
+            <div class="report-info">
+                <h3>Monthly Summary</h3>
+                <p>Comprehensive overview of all activities and progress</p>
+            </div>
+        </div>
+        <div class="report-preview">
+            <div class="chart-container">
+                <canvas id="monthlySummaryChart"></canvas>
+            </div>
+        </div>
+        <div class="report-actions">
+            <div class="format-options">
+                <button class="format-btn" title="Download PDF">
+                    <i class="fas fa-file-pdf"></i>
+                    PDF
+                </button>
+                <button class="format-btn" title="Download Excel">
+                    <i class="fas fa-file-excel"></i>
+                    Excel
+                </button>
+                <button class="format-btn" title="Download CSV">
+                    <i class="fas fa-file-csv"></i>
+                    CSV
+                </button>
+            </div>
+            <button class="btn-primary">
+                <i class="fas fa-download"></i>
+                Generate Report
+            </button>
+        </div>
+    </div>
+
+    <!-- Client Progress Report -->
+    <div class="card report-card">
+        <div class="report-header">
+            <div class="report-icon progress-icon">
+                <i class="fas fa-user-chart"></i>
+            </div>
+            <div class="report-info">
+                <h3>Individual Client Progress</h3>
+                <p>Detailed analysis of client recovery journey</p>
+            </div>
+        </div>
+        <div class="report-preview">
+            <div class="client-selector">
+                <select class="filter-select">
+                    <option value="">Select Client</option>
+                    <option value="1">John Doe</option>
+                    <option value="2">Jane Smith</option>
+                    <option value="3">Mike Johnson</option>
+                </select>
+            </div>
+            <div class="chart-container">
+                <canvas id="clientProgressChart"></canvas>
+            </div>
+        </div>
+        <div class="report-actions">
+            <div class="format-options">
+                <button class="format-btn" title="Download PDF">
+                    <i class="fas fa-file-pdf"></i>
+                    PDF
+                </button>
+                <button class="format-btn" title="Download Excel">
+                    <i class="fas fa-file-excel"></i>
+                    Excel
+                </button>
+                <button class="format-btn" title="Download CSV">
+                    <i class="fas fa-file-csv"></i>
+                    CSV
+                </button>
+            </div>
+            <button class="btn-primary">
+                <i class="fas fa-download"></i>
+                Generate Report
+            </button>
+        </div>
+    </div>
+
+    <!-- Municipal Relapse Trends -->
+    <div class="card report-card">
+        <div class="report-header">
+            <div class="report-icon trends-icon">
+                <i class="fas fa-map-marked-alt"></i>
+            </div>
+            <div class="report-info">
+                <h3>Municipal Relapse Trends</h3>
+                <p>Geographic analysis of relapse patterns</p>
+            </div>
+        </div>
+        <div class="report-preview">
+            <div class="area-selector">
+                <select class="filter-select">
+                    <option value="">All Municipalities</option>
+                    <option value="north">Northern District</option>
+                    <option value="south">Southern District</option>
+                    <option value="east">Eastern District</option>
+                    <option value="west">Western District</option>
+                </select>
+            </div>
+            <div class="chart-container">
+                <canvas id="relapseTrendsChart"></canvas>
+            </div>
+        </div>
+        <div class="report-actions">
+            <div class="format-options">
+                <button class="format-btn" title="Download PDF">
+                    <i class="fas fa-file-pdf"></i>
+                    PDF
+                </button>
+                <button class="format-btn" title="Download Excel">
+                    <i class="fas fa-file-excel"></i>
+                    Excel
+                </button>
+                <button class="format-btn" title="Download CSV">
+                    <i class="fas fa-file-csv"></i>
+                    CSV
+                </button>
+            </div>
+            <button class="btn-primary">
+                <i class="fas fa-download"></i>
+                Generate Report
+            </button>
+        </div>
+    </div>
+
+    <!-- Intervention Success Rate -->
+    <div class="card report-card">
+        <div class="report-header">
+            <div class="report-icon success-icon">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <div class="report-info">
+                <h3>Intervention Success Rate</h3>
+                <p>Analysis of intervention effectiveness</p>
+            </div>
+        </div>
+        <div class="report-preview">
+            <div class="intervention-filters">
+                <select class="filter-select">
+                    <option value="">All Intervention Types</option>
+                    <option value="counseling">Counseling</option>
+                    <option value="therapy">Therapy</option>
+                    <option value="support">Support Groups</option>
+                </select>
+            </div>
+            <div class="chart-container">
+                <canvas id="interventionSuccessChart"></canvas>
+            </div>
+        </div>
+        <div class="report-actions">
+            <div class="format-options">
+                <button class="format-btn" title="Download PDF">
+                    <i class="fas fa-file-pdf"></i>
+                    PDF
+                </button>
+                <button class="format-btn" title="Download Excel">
+                    <i class="fas fa-file-excel"></i>
+                    Excel
+                </button>
+                <button class="format-btn" title="Download CSV">
+                    <i class="fas fa-file-csv"></i>
+                    CSV
+                </button>
+            </div>
+            <button class="btn-primary">
+                <i class="fas fa-download"></i>
+                Generate Report
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/reports.js') }}"></script>
+{% endblock %} 

@@ -1,0 +1,230 @@
+{% extends "base.html" %}
+
+{% block title %}Interventions - BreakFree{% endblock %}
+
+{% block page_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/interventions.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/stats.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/modals.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="main-header">
+    <div>
+        <h1>Interventions</h1>
+        <p>Manage and schedule mental health interventions</p>
+    </div>
+    <div class="actions">
+        <button class="btn-primary" id="createInterventionBtn">
+            <i class="fas fa-plus"></i> Create Intervention
+        </button>
+    </div>
+</div>
+
+<!-- Status Overview Cards -->
+<div class="stats-grid">
+    <div class="card">
+        <div class="stat-content">
+            <i class="fas fa-eye stat-icon"></i>
+            <div class="stat-details">
+                <h3>Viewed Today</h3>
+                <p class="stat-number">24/30</p>
+                <span class="stat-label">80% Response Rate</span>
+            </div>
+        </div>
+    </div>
+    <div class="card">
+        <div class="stat-content">
+            <i class="fas fa-check-circle stat-icon"></i>
+            <div class="stat-details">
+                <h3>Completed</h3>
+                <p class="stat-number">18/24</p>
+                <span class="stat-label">75% Completion Rate</span>
+            </div>
+        </div>
+    </div>
+    <div class="card">
+        <div class="stat-content">
+            <i class="fas fa-clock stat-icon"></i>
+            <div class="stat-details">
+                <h3>Pending</h3>
+                <p class="stat-number">6</p>
+                <span class="stat-label">Awaiting Response</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="interventions-grid">
+    <!-- Intervention Calendar Section -->
+    <div class="card intervention-calendar">
+        <h3>Intervention Schedule</h3>
+        <div class="calendar-toolbar">
+            <div class="calendar-nav">
+                <button class="calendar-nav-btn" id="prevWeek">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <h4 id="currentWeek">February 19-25, 2024</h4>
+                <button class="calendar-nav-btn" id="nextWeek">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
+            </div>
+            <div class="view-options">
+                <button class="view-btn active" data-view="week">Week</button>
+                <button class="view-btn" data-view="day">Day</button>
+            </div>
+        </div>
+        
+        <div class="schedule-timeline">
+            <div class="timeline-hours">
+                <div class="hour-slot">8:00 AM</div>
+                <div class="hour-slot">9:00 AM</div>
+                <div class="hour-slot">10:00 AM</div>
+                <div class="hour-slot">11:00 AM</div>
+                <div class="hour-slot">12:00 PM</div>
+                <div class="hour-slot">1:00 PM</div>
+                <div class="hour-slot">2:00 PM</div>
+                <div class="hour-slot">3:00 PM</div>
+                <div class="hour-slot">4:00 PM</div>
+                <div class="hour-slot">5:00 PM</div>
+            </div>
+            <div class="timeline-events" id="timelineEvents">
+                <!-- Events will be populated by JavaScript -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Intervention Library Section -->
+    <div class="card intervention-library">
+        <div class="library-header">
+            <h3>Intervention Library</h3>
+            <div class="library-search">
+                <span class="search-icon"><i class="fas fa-search"></i></span>
+                <input type="text" placeholder="Search interventions...">
+            </div>
+        </div>
+        
+        <div class="intervention-categories">
+            <button class="category-btn active" data-category="all">All</button>
+            <button class="category-btn" data-category="coping">Coping Skills</button>
+            <button class="category-btn" data-category="reflection">Reflections</button>
+            <button class="category-btn" data-category="mindfulness">Mindfulness</button>
+        </div>
+
+        <div class="interventions-list" id="interventionsList">
+            <!-- Sample intervention items -->
+            <div class="intervention-item">
+                <div class="intervention-icon">
+                    <i class="fas fa-brain"></i>
+                </div>
+                <div class="intervention-details">
+                    <h4>Mindful Breathing Exercise</h4>
+                    <p>5-minute guided breathing technique</p>
+                    <div class="intervention-meta">
+                        <span class="category-tag">Mindfulness</span>
+                        <div class="status-indicators">
+                            <span class="status-badge viewed" title="Viewed">
+                                <i class="fas fa-eye"></i> 24
+                            </span>
+                            <span class="status-badge completed" title="Completed">
+                                <i class="fas fa-check"></i> 18
+                            </span>
+                            <span class="status-badge response-rate" title="Response Rate">
+                                <i class="fas fa-chart-line"></i> 75%
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                <button class="btn-assign" title="Assign Intervention">
+                    <i class="fas fa-plus"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Create Intervention Modal -->
+<div class="modal" id="createInterventionModal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Create New Intervention</h3>
+            <button class="modal-close"><i class="fas fa-times"></i></button>
+        </div>
+        <div class="modal-body">
+            <form id="interventionForm">
+                <div class="form-group">
+                    <label>Title</label>
+                    <input type="text" name="title" placeholder="Enter intervention title" required>
+                </div>
+                
+                <div class="form-group">
+                    <label>Category</label>
+                    <select name="category" required>
+                        <option value="">Select category</option>
+                        <option value="coping">Coping Skills</option>
+                        <option value="reflection">Reflection</option>
+                        <option value="mindfulness">Mindfulness</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label>Description</label>
+                    <textarea name="description" placeholder="Enter intervention description" rows="4" required></textarea>
+                </div>
+
+                <div class="form-group">
+                    <label>Schedule</label>
+                    <div class="schedule-inputs">
+                        <input type="date" name="date" required>
+                        <input type="time" name="time" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Recurring</label>
+                    <div class="recurring-options">
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="recurring" value="daily">
+                            <span>Daily</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="recurring" value="weekly">
+                            <span>Weekly</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="recurring" value="monthly">
+                            <span>Monthly</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Tracking Options</label>
+                    <div class="tracking-options">
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="track_views" checked>
+                            <span>Track Views</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="track_completion" checked>
+                            <span>Track Completion</span>
+                        </label>
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="require_response" checked>
+                            <span>Require Response</span>
+                        </label>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-secondary" id="cancelIntervention">Cancel</button>
+            <button class="btn-primary" id="saveIntervention">Save Intervention</button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/interventions.js') }}"></script>
+{% endblock %} 

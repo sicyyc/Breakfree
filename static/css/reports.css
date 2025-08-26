@@ -1,0 +1,260 @@
+/* Reports Grid Layout */
+.reports-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+    gap: 1.25rem;
+    margin-top: 1.5rem;
+}
+
+/* Date Range Picker */
+.date-range-picker .btn-secondary {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.75rem 1.25rem;
+    background: var(--bg-light);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    color: var(--text-dark);
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.date-range-picker .btn-secondary:hover {
+    border-color: var(--primary-color);
+    background: var(--primary-color-light);
+}
+
+/* Report Cards */
+.report-card {
+    display: flex;
+    flex-direction: column;
+    padding: 1.25rem;
+    height: 500px;
+    min-height: 500px;
+}
+
+.report-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1rem;
+    height: 60px;
+    min-height: 60px;
+}
+
+.report-icon {
+    width: 48px;
+    height: 48px;
+    background: var(--primary-color-light);
+    color: var(--primary-color);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.report-icon.progress-icon {
+    background: var(--success-light);
+    color: var(--success);
+}
+
+.report-icon.trends-icon {
+    background: var(--warning-light);
+    color: var(--warning);
+}
+
+.report-icon.success-icon {
+    background: var(--info-light);
+    color: var(--info);
+}
+
+.report-info {
+    flex: 1;
+}
+
+.report-info h3 {
+    color: var(--text-dark);
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+}
+
+.report-info p {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+}
+
+/* Report Preview */
+.report-preview {
+    flex: 1;
+    margin-bottom: 1rem;
+    height: 300px;
+    min-height: 300px;
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    padding: 0;
+}
+
+.report-preview canvas {
+    max-width: 100%;
+    height: 100% !important;
+}
+
+/* Chart Container */
+.chart-container {
+    position: relative;
+    width: 100%;
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0.5rem 1rem;
+}
+
+.chart-container canvas {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100%;
+}
+
+/* Filters in Reports */
+.client-selector,
+.area-selector,
+.intervention-filters {
+    margin-bottom: 0.75rem;
+    height: 40px;
+    padding: 0 1rem;
+}
+
+.filter-select {
+    width: 100%;
+    height: 38px;
+    padding: 0.5rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: white;
+    color: var(--text-dark);
+    font-size: 0.9rem;
+}
+
+.filter-select:hover {
+    border-color: var(--primary-color);
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(70, 130, 169, 0.1);
+}
+
+/* Report Actions */
+.report-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+    padding-top: 1rem;
+    border-top: 1px solid var(--border-light);
+    height: 60px;
+    min-height: 60px;
+}
+
+.format-options {
+    display: flex;
+    gap: 0.75rem;
+}
+
+.format-btn {
+    padding: 0.5rem 0.75rem;
+    background: var(--bg-main);
+    border: none;
+    border-radius: 6px;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    transition: all 0.3s ease;
+}
+
+.format-btn:hover {
+    background: var(--primary-color-light);
+    color: var(--primary-color);
+}
+
+.format-btn i {
+    font-size: 1rem;
+}
+
+.btn-primary {
+    padding: 0.75rem 1.25rem;
+    background: var(--primary-color);
+    border: none;
+    border-radius: 8px;
+    color: white;
+    font-size: 0.9rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+    background: var(--primary-color-dark);
+    transform: translateY(-1px);
+}
+
+/* Responsive Design */
+@media (max-width: 1200px) {
+    .reports-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 768px) {
+    .report-actions {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch;
+    }
+
+    .format-options {
+        justify-content: center;
+    }
+
+    .btn-primary {
+        justify-content: center;
+    }
+
+    .report-preview {
+        min-height: 250px;
+    }
+}
+
+@media (max-width: 576px) {
+    .report-header {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+
+    .report-info {
+        text-align: center;
+    }
+
+    .format-options {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+
+    .format-btn {
+        flex: 1;
+        justify-content: center;
+    }
+} 

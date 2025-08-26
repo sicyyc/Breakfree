@@ -1,0 +1,139 @@
+{% extends "base.html" %} {% block title %}Location Map - BreakFree{% endblock
+%} {% block page_css %}
+<link
+  rel="stylesheet"
+  href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+/>
+<link rel="stylesheet" href="{{ url_for('static', filename='css/map.css') }}" />
+{% endblock %} {% block content %}
+<div class="main-header">
+  <div>
+    <h1><i class="fas fa-map-marked-alt"></i> Location Map</h1>
+    <p>View client distribution and heat map in Laguna Province</p>
+  </div>
+  <div class="actions">
+    <button class="btn-icon" id="refreshData" title="Refresh Data">
+      <i class="fas fa-sync-alt"></i>
+    </button>
+    {% if session.role == 'admin' %}
+    <button class="btn-icon" id="geocodeAll" title="Geocode All Addresses">
+      <i class="fas fa-map-marked-alt"></i>
+    </button>
+    {% endif %}
+    <div class="search-container">
+      <span class="search-icon"><i class="fas fa-search"></i></span>
+      <input type="text" placeholder="Search clients or locations..." />
+    </div>
+  </div>
+</div>
+
+<div class="map-container">
+  <div class="map-sidebar">
+    <div class="map-filters">
+      <h3><i class="fas fa-filter"></i> Filters</h3>
+      <div class="filter-group">
+        <label>Client Type</label>
+        <select class="filter-select" id="clientTypeFilter">
+          <option value="all">All Clients</option>
+          <option value="in_house">In-House</option>
+          <option value="after_care">After Care</option>
+        </select>
+      </div>
+      <div class="filter-group">
+        <label>Status</label>
+        <select class="filter-select" id="statusFilter">
+          <option value="all">All Status</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+          <option value="relapsed">Relapsed</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="location-list" id="clientList">
+      <div class="location-summary">
+        <h4>Client Locations</h4>
+        <p>Click on a client to center the map on their location</p>
+        <div class="geocoding-stats">
+          <small>
+            <span class="stat-item google">0 Google</span>
+            <span class="stat-item nominatim">0 OSM</span>
+            <span class="stat-item cached">0 Cached</span>
+            <span class="stat-item fallback">0 Approx</span>
+          </small>
+        </div>
+      </div>
+      <div class="location-items">
+        <div class="loading-message">
+          <i class="fas fa-spinner fa-spin"></i>
+          <p>Loading client locations...</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="map-view">
+    <div class="map-toolbar">
+      <div class="map-actions">
+        <button class="btn-icon" title="Center Map">
+          <i class="fas fa-crosshairs"></i>
+        </button>
+        <button class="btn-icon active" title="Toggle Heat Map">
+          <i class="fas fa-fire"></i>
+        </button>
+        <button class="btn-icon" title="Fit to Bounds" id="fitBounds">
+          <i class="fas fa-expand-arrows-alt"></i>
+        </button>
+      </div>
+      <div class="map-info">
+        <span id="clientCount" class="text-muted">Loading...</span>
+      </div>
+      <div class="map-layers">
+        <button class="btn-text active" data-layer="map">Map</button>
+        <button class="btn-text" data-layer="satellite">Satellite</button>
+      </div>
+    </div>
+    <div class="map-canvas">
+      <div id="mapCanvas"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Heat Map Legend -->
+<div class="heat-map-info">
+  <h4 class="legend-title"><i class="fas fa-fire"></i> Heat Map Legend</h4>
+  <p class="legend-description">Red areas indicate higher client density</p>
+  <div class="heat-map-legend">
+    <div class="legend-scale">
+      <div class="gradient-bar"></div>
+      <div class="gradient-labels">
+        <span>Low</span>
+        <span>Medium</span>
+        <span>High</span>
+      </div>
+    </div>
+    <div class="density-info">
+      <div class="density-item">
+        <span class="density-color low"></span>
+        <span class="density-label">Less Clients</span>
+      </div>
+      <div class="density-item">
+        <span class="density-color high"></span>
+        <span class="density-label">More Clients</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="loadingOverlay" class="loading-overlay">
+  <div class="loading-content">
+    <i class="fas fa-spinner fa-spin"></i>
+    <h3>Loading Map Data...</h3>
+    <p>Please wait while we fetch client locations</p>
+  </div>
+</div>
+{% endblock %} {% block scripts %}
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script src="{{ url_for('static', filename='js/map.js') }}"></script>
+{% endblock %}

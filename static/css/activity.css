@@ -1,0 +1,83 @@
+/* Activity Section Styles */
+.activity-item {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: 8px;
+    transition: background-color 0.3s ease;
+    margin-bottom: 0.5rem;
+}
+
+.activity-item:hover {
+    background-color: var(--bg-light);
+}
+
+.activity-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.activity-item:nth-child(1) .activity-icon {
+    background-color: var(--success-light);
+    color: var(--success);
+}
+
+.activity-item:nth-child(2) .activity-icon {
+    background-color: var(--primary-color-light);
+    color: var(--primary-color);
+}
+
+.activity-item:nth-child(3) .activity-icon {
+    background-color: var(--warning-light);
+    color: var(--warning);
+}
+
+.activity-content {
+    flex: 1;
+}
+
+.activity-content h4 {
+    color: var(--text-dark);
+    font-size: 0.95rem;
+    margin-bottom: 0.25rem;
+    font-weight: 500;
+}
+
+.activity-content p {
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.activity-time {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+    white-space: nowrap;
+}
+
+/* Actions & Activity Container */
+.actions-activity-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .activity-item {
+        padding: 0.75rem;
+    }
+
+    .activity-icon {
+        width: 36px;
+        height: 36px;
+        font-size: 0.9rem;
+    }
+} 

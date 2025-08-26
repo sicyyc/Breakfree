@@ -1,0 +1,440 @@
+{% extends "base.html" %}
+{% block title %}Add New Client - Step 2: Progress Monitoring - BreakFree{% endblock %}
+
+{% block page_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/add_client.css') }}" />
+<style>
+  .wizard-progress {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 30px;
+  }
+  
+  .progress-steps {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+  }
+  
+  .progress-steps::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: #e9ecef;
+    z-index: 1;
+  }
+  
+  .step {
+    position: relative;
+    z-index: 2;
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    color: #6c757d;
+  }
+  
+  .step.active {
+    border-color: #007bff;
+    background: #007bff;
+    color: white;
+  }
+  
+  .step.completed {
+    border-color: #28a745;
+    background: #28a745;
+    color: white;
+  }
+  
+  .step-label {
+    position: absolute;
+    top: 50px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 12px;
+    color: #6c757d;
+    white-space: nowrap;
+    text-align: center;
+  }
+  
+  .step.active .step-label {
+    color: #007bff;
+    font-weight: bold;
+  }
+  
+  .step.completed .step-label {
+    color: #28a745;
+    font-weight: bold;
+  }
+
+  .progress-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+
+  .progress-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+
+  .progress-card h4 {
+    margin-bottom: 15px;
+    color: #495057;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 8px;
+  }
+
+  .frequency-selector {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+  }
+
+  .frequency-option {
+    flex: 1;
+    text-align: center;
+    padding: 10px;
+    border: 2px solid #e9ecef;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+
+  .frequency-option:hover {
+    border-color: #007bff;
+  }
+
+  .frequency-option.selected {
+    border-color: #007bff;
+    background: #007bff;
+    color: white;
+  }
+
+  .checkbox-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  .checkbox-item {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 8px;
+    border-radius: 4px;
+    transition: background-color 0.2s ease;
+  }
+
+  .checkbox-item:hover {
+    background: #f8f9fa;
+  }
+
+  .checkbox-item input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="main-header">
+  <div>
+    <h1>Add New Client</h1>
+    <p>Step 2 of 3: Progress Monitoring Setup</p>
+  </div>
+  <div class="actions">
+    <a href="{{ url_for('clients') }}" class="btn-secondary">
+      <i class="fas fa-arrow-left"></i>
+      Back to Clients
+    </a>
+  </div>
+</div>
+
+<!-- Wizard Progress Bar -->
+<div class="wizard-progress">
+  <div class="progress-steps">
+    <div class="step completed">
+      <span>1</span>
+      <div class="step-label">Personal Info</div>
+    </div>
+    <div class="step active">
+      <span>2</span>
+      <div class="step-label">Progress Monitoring</div>
+    </div>
+    <div class="step">
+      <span>3</span>
+      <div class="step-label">Pre-Assessment</div>
+    </div>
+  </div>
+</div>
+
+<div class="add-client-container">
+  <form id="progressMonitoringForm" class="add-client-form">
+    <!-- Program Details -->
+    <div class="form-section">
+      <h3><i class="fas fa-clipboard-check"></i> Program Details</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="clientRegistrationDate">Registration Date</label>
+          <input type="date" id="clientRegistrationDate" name="registrationDate" required class="input-enhanced" />
+        </div>
+        <div class="form-group">
+          <label for="clientCheckInDate">Check-in Date</label>
+          <input type="date" id="clientCheckInDate" name="checkInDate" required class="input-enhanced" />
+        </div>
+        <div class="form-group">
+          <label for="clientStatus">Initial Status</label>
+          <select id="clientStatus" name="status" required class="input-enhanced">
+            <option value="">Select status</option>
+            <option value="active">Active</option>
+            <option value="relapsed">Relapsed</option>
+            <option value="review">Under Review</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="clientCareType">Care Type</label>
+          <select id="clientCareType" name="care_type" required class="input-enhanced">
+            <option value="">Select care type</option>
+            <option value="in_house">In House</option>
+            <option value="after_care">After Care</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Progress Monitoring Setup -->
+    <div class="form-section">
+      <h3><i class="fas fa-chart-line"></i> Progress Monitoring Setup</h3>
+      
+      <div class="progress-grid">
+        <!-- Check-in Frequency -->
+        <div class="progress-card">
+          <h4><i class="fas fa-calendar-check"></i> Check-in Frequency</h4>
+          <div class="frequency-selector">
+            <div class="frequency-option" data-value="daily">
+              <strong>Daily</strong><br><small>Every day</small>
+            </div>
+            <div class="frequency-option" data-value="weekly">
+              <strong>Weekly</strong><br><small>Once a week</small>
+            </div>
+            <div class="frequency-option" data-value="biweekly">
+              <strong>Bi-weekly</strong><br><small>Every 2 weeks</small>
+            </div>
+            <div class="frequency-option" data-value="monthly">
+              <strong>Monthly</strong><br><small>Once a month</small>
+            </div>
+          </div>
+          <input type="hidden" id="checkInFrequency" name="checkInFrequency" required />
+        </div>
+
+        <!-- Monitoring Methods -->
+        <div class="progress-card">
+          <h4><i class="fas fa-tasks"></i> Monitoring Methods</h4>
+          <div class="checkbox-group">
+            <div class="checkbox-item">
+              <input type="checkbox" id="phoneCheck" name="monitoringMethods" value="phone">
+              <label for="phoneCheck">Phone Check-ins</label>
+            </div>
+            <div class="checkbox-item">
+              <input type="checkbox" id="inPersonCheck" name="monitoringMethods" value="in_person">
+              <label for="inPersonCheck">In-Person Visits</label>
+            </div>
+            <div class="checkbox-item">
+              <input type="checkbox" id="videoCall" name="monitoringMethods" value="video_call">
+              <label for="videoCall">Video Calls</label>
+            </div>
+            <div class="checkbox-item">
+              <input type="checkbox" id="textMessage" name="monitoringMethods" value="text_message">
+              <label for="textMessage">Text Messages</label>
+            </div>
+            <div class="checkbox-item">
+              <input type="checkbox" id="emailCheck" name="monitoringMethods" value="email">
+              <label for="emailCheck">Email Updates</label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Progress Indicators -->
+        <div class="progress-card">
+          <h4><i class="fas fa-bullseye"></i> Progress Indicators</h4>
+          <div class="checkbox-group">
+            <div class="checkbox-item">
+              <input type="checkbox" id="sobrietyDays" name="progressIndicators" value="sobriety_days">
+              <label for="sobrietyDays">Sobriety Days Count</label>
+            </div>
+            <div class="checkbox-item">
+              <input type="checkbox" id="attendance" name="progressIndicators" value="attendance">
+              <label for="attendance">Program Attendance</label>
+            </div>
+            <div class="checkbox-item">
+              <input type="checkbox" id="moodTracking" name="progressIndicators" value="mood_tracking">
+              <label for="moodTracking">Mood Tracking</label>
+            </div>
+            <div class="checkbox-item">
+              <input type="checkbox" id="goalProgress" name="progressIndicators" value="goal_progress">
+              <label for="goalProgress">Goal Progress</label>
+            </div>
+            <div class="checkbox-item">
+              <input type="checkbox" id="supportNetwork" name="progressIndicators" value="support_network">
+              <label for="supportNetwork">Support Network Engagement</label>
+            </div>
+          </div>
+        </div>
+
+        <!-- Risk Assessment -->
+        <div class="progress-card">
+          <h4><i class="fas fa-exclamation-triangle"></i> Risk Assessment</h4>
+          <div class="checkbox-group">
+            <div class="checkbox-item">
+              <input type="checkbox" id="relapseRisk" name="riskFactors" value="relapse_risk">
+              <label for="relapseRisk">Relapse Risk Monitoring</label>
+            </div>
+            <div class="checkbox-item">
+              <input type="checkbox" id="mentalHealth" name="riskFactors" value="mental_health">
+              <label for="mentalHealth">Mental Health Status</label>
+            </div>
+            <div class="checkbox-item">
+              <input type="checkbox" id="socialSupport" name="riskFactors" value="social_support">
+              <label for="socialSupport">Social Support Availability</label>
+            </div>
+            <div class="checkbox-item">
+              <input type="checkbox" id="environmentalTriggers" name="riskFactors" value="environmental_triggers">
+              <label for="environmentalTriggers">Environmental Triggers</label>
+            </div>
+            <div class="checkbox-item">
+              <input type="checkbox" id="crisisPlan" name="riskFactors" value="crisis_plan">
+              <label for="crisisPlan">Crisis Plan Implementation</label>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Form Actions -->
+    <div class="form-actions">
+      <button type="button" id="prevStep" class="btn-secondary">
+        <i class="fas fa-arrow-left"></i>
+        Previous Step
+      </button>
+      <button type="button" id="nextStep" class="btn-primary">
+        Next Step
+        <i class="fas fa-arrow-right"></i>
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Load previous form data
+    const previousData = sessionStorage.getItem('clientFormData');
+    if (previousData) {
+        const data = JSON.parse(previousData);
+        Object.keys(data).forEach(key => {
+            const element = document.getElementById(key);
+            if (element) {
+                element.value = data[key];
+            }
+        });
+    }
+
+    // Frequency selector functionality
+    const frequencyOptions = document.querySelectorAll('.frequency-option');
+    const frequencyInput = document.getElementById('checkInFrequency');
+
+    frequencyOptions.forEach(option => {
+        option.addEventListener('click', function() {
+            frequencyOptions.forEach(opt => opt.classList.remove('selected'));
+            this.classList.add('selected');
+            frequencyInput.value = this.dataset.value;
+        });
+    });
+
+    // Navigation buttons
+    const prevStepBtn = document.getElementById('prevStep');
+    const nextStepBtn = document.getElementById('nextStep');
+
+    prevStepBtn.addEventListener('click', function() {
+        saveFormData();
+        window.location.href = "{{ url_for('add_client') }}";
+    });
+
+    nextStepBtn.addEventListener('click', function() {
+        if (validateForm()) {
+            saveFormData();
+            window.location.href = "{{ url_for('add_client_step3') }}";
+        }
+    });
+
+    function saveFormData() {
+        const form = document.getElementById('progressMonitoringForm');
+        const formData = new FormData(form);
+        const formDataObj = {};
+        const previousData = JSON.parse(sessionStorage.getItem('clientFormData') || '{}');
+        
+        formData.forEach((value, key) => {
+            formDataObj[key] = value;
+        });
+
+        const checkboxes = form.querySelectorAll('input[type="checkbox"]:checked');
+        checkboxes.forEach(checkbox => {
+            if (!formDataObj[checkbox.name]) {
+                formDataObj[checkbox.name] = [];
+            }
+            if (Array.isArray(formDataObj[checkbox.name])) {
+                formDataObj[checkbox.name].push(checkbox.value);
+            }
+        });
+
+        const mergedData = { ...previousData, ...formDataObj };
+        sessionStorage.setItem('clientFormData', JSON.stringify(mergedData));
+    }
+
+    function validateForm() {
+        const form = document.getElementById('progressMonitoringForm');
+        const requiredFields = form.querySelectorAll('[required]');
+        let isValid = true;
+
+        requiredFields.forEach(field => {
+            if (!field.value.trim()) {
+                field.classList.add('error');
+                isValid = false;
+            } else {
+                field.classList.remove('error');
+            }
+        });
+
+        const monitoringMethods = form.querySelectorAll('input[name="monitoringMethods"]:checked');
+        if (monitoringMethods.length === 0) {
+            alert('Please select at least one monitoring method.');
+            isValid = false;
+        }
+
+        const progressIndicators = form.querySelectorAll('input[name="progressIndicators"]:checked');
+        if (progressIndicators.length === 0) {
+            alert('Please select at least one progress indicator.');
+            isValid = false;
+        }
+
+        return isValid;
+    }
+});
+</script>
+{% endblock %}

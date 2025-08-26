@@ -1,0 +1,276 @@
+{% extends "base.html" %}
+
+{% block title %}Daily Check-ins - BreakFree{% endblock %}
+
+{% block page_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/check_in.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/calendar.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/stats.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/modals.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/submissions.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="main-header">
+    <div>
+        <h1>In House Check-ins</h1>
+        <p>View client mood and reflections submissions</p>
+    </div>
+    <div class="actions">
+        <div class="view-toggle">
+            <button class="view-btn active" data-view="in-house">
+                <i class="fas fa-home"></i>
+                In House
+            </button>
+            <button class="view-btn" data-view="after-care">
+                <i class="fas fa-heart"></i>
+                After Care
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- In House View -->
+<div class="checkin-view in-house-view" style="display: block;">
+    <div class="checkin-grid">
+        <div class="card checkin-calendar">
+            <div class="calendar-wrapper">
+                <div class="calendar-header">
+                    <button class="calendar-nav-btn" id="checkinPrevMonth">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <h4 id="checkinCurrentMonth">June 2025</h4>
+                    <button class="calendar-nav-btn" id="checkinNextMonth">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+                <div class="calendar-weekdays">
+                    <div>Sun</div>
+                    <div>Mon</div>
+                    <div>Tue</div>
+                    <div>Wed</div>
+                    <div>Thu</div>
+                    <div>Fri</div>
+                    <div>Sat</div>
+                </div>
+                <div class="calendar-days" id="checkinCalendarDays">
+                    <!-- Days will be populated by JavaScript -->
+                </div>
+                <div class="calendar-legend">
+                    <div class="legend-item">
+                        <span class="legend-dot completed-checkin"></span>
+                        <span>Completed Check-in</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-dot missed-checkin"></span>
+                        <span>Missed Check-in</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card checkin-details">
+            <div class="checkin-stats">
+                <div class="stat-card">
+                    <h4>Today's Check-ins</h4>
+                    <div class="stat-value">24/30</div>
+                    <div class="stat-label">Clients Submitted</div>
+                </div>
+                <div class="stat-card">
+                    <h4>Average Mood</h4>
+                    <div class="stat-value">😊 7.5</div>
+                    <div class="stat-label">Positive</div>
+                </div>
+                <div class="stat-card">
+                    <h4>Interventions</h4>
+                    <div class="stat-value">18</div>
+                    <div class="stat-label">Viewed Today</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card checkin-submissions">
+        <div class="submissions-header">
+            <h3>Today's Submissions</h3>
+            <div class="submissions-filter">
+                <select class="filter-select">
+                    <option value="all">All Moods</option>
+                    <option value="excellent">Excellent (9-10)</option>
+                    <option value="good">Good (7-8)</option>
+                    <option value="okay">Okay (5-6)</option>
+                    <option value="low">Low (3-4)</option>
+                    <option value="critical">Critical (1-2)</option>
+                </select>
+            </div>
+        </div>
+        <div class="submissions-list">
+            <!-- Sample submission items -->
+            <div class="submission-item">
+                <div class="submission-header">
+                    <div class="client-info">
+                        <div class="client-avatar">
+                            <span class="avatar-initials">JD</span>
+                        </div>
+                        <div class="client-details">
+                            <h4>John Doe</h4>
+                            <div class="submission-meta">
+                                <span class="submission-time"><i class="fas fa-clock"></i> Today, 9:30 AM</span>
+                                <span class="client-id">#CLIENT123</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mood-indicator mood-excellent">
+                        <span class="mood-emoji">🌟</span>
+                        <div class="mood-details">
+                            <span class="mood-score">9/10</span>
+                            <span class="mood-label">Excellent</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="submission-content">
+                    <p class="reflection-text">Had a productive therapy session today. Feeling more confident about my progress.</p>
+                    <div class="engagement-metrics">
+                        <div class="metric-badge viewed">
+                            <i class="fas fa-eye"></i>
+                            <span>Viewed Intervention</span>
+                        </div>
+                        <div class="metric-badge on-time">
+                            <i class="fas fa-check-circle"></i>
+                            <span>On Time</span>
+                        </div>
+                        <div class="metric-badge streak">
+                            <i class="fas fa-fire"></i>
+                            <span>5 Day Streak</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- After Care View -->
+<div class="checkin-view after-care-view" style="display: none;">
+    <div class="checkin-grid">
+        <div class="card checkin-calendar">
+            <div class="calendar-wrapper">
+                <div class="calendar-header">
+                    <button class="calendar-nav-btn" id="afterCarePrevMonth">
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <h4 id="afterCareCurrentMonth">June 2025</h4>
+                    <button class="calendar-nav-btn" id="afterCareNextMonth">
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </div>
+                <div class="calendar-weekdays">
+                    <div>Sun</div>
+                    <div>Mon</div>
+                    <div>Tue</div>
+                    <div>Wed</div>
+                    <div>Thu</div>
+                    <div>Fri</div>
+                    <div>Sat</div>
+                </div>
+                <div class="calendar-days" id="afterCareCalendarDays">
+                    <!-- Days will be populated by JavaScript -->
+                </div>
+                <div class="calendar-legend">
+                    <div class="legend-item">
+                        <span class="legend-dot completed-checkin"></span>
+                        <span>Completed Check-in</span>
+                    </div>
+                    <div class="legend-item">
+                        <span class="legend-dot missed-checkin"></span>
+                        <span>Missed Check-in</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card checkin-details">
+            <div class="checkin-stats">
+                <div class="stat-card">
+                    <h4>Today's Check-ins</h4>
+                    <div class="stat-value">15/20</div>
+                    <div class="stat-label">Clients Submitted</div>
+                </div>
+                <div class="stat-card">
+                    <h4>Average Mood</h4>
+                    <div class="stat-value">😊 8.2</div>
+                    <div class="stat-label">Positive</div>
+                </div>
+                <div class="stat-card">
+                    <h4>Interventions</h4>
+                    <div class="stat-value">12</div>
+                    <div class="stat-label">Viewed Today</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="card checkin-submissions">
+        <div class="submissions-header">
+            <h3>Today's Submissions</h3>
+            <div class="submissions-filter">
+                <select class="filter-select">
+                    <option value="all">All Moods</option>
+                    <option value="excellent">Excellent (9-10)</option>
+                    <option value="good">Good (7-8)</option>
+                    <option value="okay">Okay (5-6)</option>
+                    <option value="low">Low (3-4)</option>
+                    <option value="critical">Critical (1-2)</option>
+                </select>
+            </div>
+        </div>
+        <div class="submissions-list">
+            <!-- Sample submission items -->
+            <div class="submission-item">
+                <div class="submission-header">
+                    <div class="client-info">
+                        <div class="client-avatar">
+                            <span class="avatar-initials">JD</span>
+                        </div>
+                        <div class="client-details">
+                            <h4>John Doe</h4>
+                            <div class="submission-meta">
+                                <span class="submission-time"><i class="fas fa-clock"></i> Today, 9:30 AM</span>
+                                <span class="client-id">#CLIENT123</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mood-indicator mood-excellent">
+                        <span class="mood-emoji">🌟</span>
+                        <div class="mood-details">
+                            <span class="mood-score">9/10</span>
+                            <span class="mood-label">Excellent</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="submission-content">
+                    <p class="reflection-text">Had a productive therapy session today. Feeling more confident about my progress.</p>
+                    <div class="engagement-metrics">
+                        <div class="metric-badge viewed">
+                            <i class="fas fa-eye"></i>
+                            <span>Viewed Intervention</span>
+                        </div>
+                        <div class="metric-badge on-time">
+                            <i class="fas fa-check-circle"></i>
+                            <span>On Time</span>
+                        </div>
+                        <div class="metric-badge streak">
+                            <i class="fas fa-fire"></i>
+                            <span>5 Day Streak</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/check_in.js') }}"></script>
+{% endblock %} 

@@ -1,0 +1,82 @@
+/* Main Content Styles */
+.main {
+  flex: 1;
+  padding: 2rem;
+  margin-left: 250px;
+  overflow-y: auto;
+}
+
+.main-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.main-header h1 {
+  font-size: 1.8rem;
+  color: #333;
+}
+
+.main-header p {
+  color: #666;
+}
+
+.actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.search-container {
+  position: relative;
+}
+
+.search-icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #666;
+}
+
+.search-container input {
+  padding: 0.8rem 1rem 0.8rem 2.5rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  width: 250px;
+  transition: all 0.3s ease;
+}
+
+.search-container input:focus {
+  outline: none;
+  border-color: #4682A9;
+  box-shadow: 0 0 0 3px rgba(70, 130, 169, 0.1);
+}
+
+.btn-primary {
+  padding: 0.8rem 1.5rem;
+  background: #4682A9;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  background: #91C8E4;
+  transform: translateY(-2px);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .main {
+    margin-left: 0;
+    padding: 1rem;
+  }
+
+  .search-container input {
+    width: 200px;
+  }
+} 

@@ -1,0 +1,1651 @@
+from flask import Flask, render_template, request, redirect, url_for, session, flash, jsonify
+import os
+from dotenv import load_dotenv
+from functools import wraps
+from werkzeug.utils import secure_filename
+import uuid
+import requests
+import time
+import re
+from math import isnan
+
+# Load environment variables before importing Firebase config
+load_dotenv()
+
+from firebase_config import db
+from firebase_admin import auth
+from datetime import datetime
+
+app = Flask(__name__)
+app.secret_key = os.getenv('FLASK_SECRET_KEY', os.urandom(24))  # Use environment variable for session key
+
+# Configure upload folder
+UPLOAD_FOLDER = os.path.join('static', 'uploads', 'client_images')
+ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
+
+# Create upload folder if it doesn't exist
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+
+# Geocoding configuration
+GOOGLE_GEOCODING_API_KEY = os.getenv('GOOGLE_GEOCODING_API_KEY')  # Optional: Add to .env file
+NOMINATIM_BASE_URL = 'https://nominatim.openstreetmap.org/search'
+
+# Add this after the imports
+LAGUNA_LOCATIONS = {
+    "municipalities": [
+        {"id": "calamba", "name": "Calamba City", "lat": 14.1877, "lng": 121.1251},
+        {"id": "sanpablo", "name": "San Pablo City", "lat": 14.0683, "lng": 121.3251},
+        {"id": "santarosa", "name": "Santa Rosa City", "lat": 14.3119, "lng": 121.1114},
+        {"id": "binan", "name": "Biñan City", "lat": 14.3306, "lng": 121.0856},
+        {"id": "cabuyao", "name": "Cabuyao City", "lat": 14.2471, "lng": 121.1367},
+        {"id": "santacruz", "name": "Santa Cruz", "lat": 14.2854, "lng": 121.4134},
+        {"id": "kalayaan", "name": "Kalayaan", "lat": 14.2650, "lng": 121.4200},
+        {"id": "bay", "name": "Bay", "lat": 14.1833, "lng": 121.2833},
+        {"id": "losbanos", "name": "Los Baños", "lat": 14.1692, "lng": 121.2417}
+    ],
+    "barangays": {
+        "calamba": [
+            "Barangay 1", "Barangay 2", "Barangay 3", "Parian", "Crossing", "Real", 
+            "Mayapa", "Canlubang", "Pansol", "Bagong Kalsada"
+        ],
+        "sanpablo": [
+            "San Roque", "San Rafael", "Santa Maria", "San Nicolas", "San Jose",
+            "San Vicente", "San Antonio", "San Bartolome", "San Francisco", "San Pedro"
+        ],
+        "santarosa": [
+            "Balibago", "Don Jose", "Dita", "Kanluran", "Labas", "Macabling",
+            "Market Area", "Malitlit", "Pooc", "Tagapo"
+        ],
+        "binan": [
+            "Canlalay", "Casile", "De La Paz", "Ganado", "Langkiwa", "Malaban",
+            "Mampalasan", "Platero", "San Antonio", "San Francisco"
+        ],
+        "cabuyao": [
+            "Baclaran", "Banay-Banay", "Banlic", "Bigaa", "Butong", "Diezmo",
+            "Gulod", "Mamatid", "Marinig", "Niugan" , "Pulong Buhangin", "Katapatan"
+        ],
+        "santacruz": [
+            "Alipit", "Bagumbayan", "Bubukal", "Gatid", "Labuin", "Oogong",
+            "Pagsawitan", "Patimbao", "Santisima Cruz", "Santo Angel"
+        ],
+        "kalayaan": [
+            "Longos", "San Antonio", "San Juan", "San Cristobal", "Kanluran",
+            "Silangan", "San Diego"
+        ],
+        "bay": [
+            "Bitin", "Calo", "Dila", "Maitim", "Masaya", "Paciano Rizal",
+            "Puypuy", "San Agustin", "Santo Domingo", "Tagumpay"
+        ],
+        "losbanos": [
+            "Anos", "Bambang", "Batong Malake", "Baybayin", "Bayog", "Lalakay",
+            "Maahas", "Malinta", "Mayondon", "San Antonio"
+        ]
+    }
+}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def geocode_address(address):
+    """
+    Geocode an address to get latitude and longitude coordinates.
+    First tries Google Geocoding API (if key is available), then falls back to Nominatim.
+    """
+    if not address or len(address.strip()) < 5:
+        return None
+    
+    # Clean and prepare the address
+    cleaned_address = clean_address(address)
+    
+    # Try Google Geocoding API first (if API key is available)
+    if GOOGLE_GEOCODING_API_KEY:
+        coords = geocode_with_google(cleaned_address)
+        if coords:
+            return coords
+    
+    # Fallback to Nominatim (OpenStreetMap)
+    coords = geocode_with_nominatim(cleaned_address)
+    return coords
+
+def clean_address(address):
+    """Clean and standardize the address for better geocoding results."""
+    # Remove extra spaces and standardize
+    address = re.sub(r'\s+', ' ', address.strip())
+    
+    # Add "Philippines" if not present to improve geocoding accuracy
+    if 'philippines' not in address.lower() and 'ph' not in address.lower():
+        address += ', Philippines'
+    
+    # Add "Laguna" if not present but address seems to be in Laguna
+    if 'laguna' not in address.lower() and any(city in address.lower() for city in [
+        'santa rosa', 'calamba', 'san pablo', 'los baños', 'biñan', 'cabuyao', 
+        'sta rosa', 'bay', 'calauan', 'san pedro'
+    ]):
+        # Insert Laguna before Philippines
+        if ', philippines' in address.lower():
+            address = address.replace(', Philippines', ', Laguna, Philippines')
+        else:
+            address += ', Laguna'
+    
+    return address
+
+def geocode_with_google(address):
+    """Geocode using Google Geocoding API."""
+    try:
+        url = 'https://maps.googleapis.com/maps/api/geocode/json'
+        params = {
+            'address': address,
+            'key': GOOGLE_GEOCODING_API_KEY,
+            'region': 'ph',  # Bias towards Philippines
+            'bounds': '13.9,120.8|14.7,121.6'  # Laguna bounds
+        }
+        
+        response = requests.get(url, params=params, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            if data['status'] == 'OK' and data['results']:
+                location = data['results'][0]['geometry']['location']
+                coords = {
+                    'lat': round(location['lat'], 6),
+                    'lng': round(location['lng'], 6),
+                    'source': 'google',
+                    'formatted_address': data['results'][0]['formatted_address']
+                }
+                print(f"Google geocoded '{address}' to {coords['lat']}, {coords['lng']}")
+                return coords
+    except Exception as e:
+        print(f"Google geocoding error for '{address}': {e}")
+    
+    return None
+
+def geocode_with_nominatim(address):
+    """Geocode using Nominatim (OpenStreetMap) service."""
+    try:
+        # Rate limiting for Nominatim (max 1 request per second)
+        time.sleep(1.1)
+        
+        params = {
+            'q': address,
+            'format': 'json',
+            'limit': 1,
+            'countrycodes': 'ph',  # Limit to Philippines
+            'bounded': 1,
+            'viewbox': '120.8,13.9,121.6,14.7',  # Laguna bounds (west,south,east,north)
+            'addressdetails': 1
+        }
+        
+        headers = {
+            'User-Agent': 'BreakFree-App/1.0'  # Required by Nominatim
+        }
+        
+        response = requests.get(NOMINATIM_BASE_URL, params=params, headers=headers, timeout=10)
+        if response.status_code == 200:
+            data = response.json()
+            if data and len(data) > 0:
+                result = data[0]
+                coords = {
+                    'lat': round(float(result['lat']), 6),
+                    'lng': round(float(result['lon']), 6),
+                    'source': 'nominatim',
+                    'formatted_address': result.get('display_name', address)
+                }
+                print(f"Nominatim geocoded '{address}' to {coords['lat']}, {coords['lng']}")
+                return coords
+    except Exception as e:
+        print(f"Nominatim geocoding error for '{address}': {e}")
+    
+    return None
+
+def generate_fallback_coordinates():
+    """Generate random coordinates within Laguna bounds as last resort."""
+    import random
+    laguna_bounds = {
+        'north': 14.7,
+        'south': 13.9,
+        'east': 121.6,
+        'west': 120.8
+    }
+    
+    lat = random.uniform(laguna_bounds['south'], laguna_bounds['north'])
+    lng = random.uniform(laguna_bounds['west'], laguna_bounds['east'])
+    
+    return {
+        'lat': round(lat, 6),
+        'lng': round(lng, 6),
+        'source': 'fallback',
+        'formatted_address': 'Generated coordinates (Laguna area)'
+    }
+
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if 'user_id' not in session:
+            return redirect(url_for('login'))
+        if session.get('role') != 'admin':
+            flash('Access denied. Admin privileges required.', 'error')
+            return redirect(url_for('dashboard'))
+        return f(*args, **kwargs)
+    return decorated_function
+
+def role_required(allowed_roles):
+    def decorator(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if 'user_id' not in session:
+                return redirect(url_for('login'))
+            if session.get('role') not in allowed_roles:
+                flash('Access denied. Insufficient privileges.', 'error')
+                return redirect(url_for('dashboard'))
+            return f(*args, **kwargs)
+        return decorated_function
+    return decorator
+
+@app.route('/')
+def index():
+    return render_template('login.html')
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        try:
+            # Get form data
+            email = request.form.get('email')
+            selected_role = request.form.get('role')
+            uid = request.form.get('uid')
+
+            if not all([email, selected_role, uid]):
+                return jsonify({'success': False, 'error': 'Missing required fields'}), 400
+
+            # Verify the Firebase ID token
+            user = auth.get_user(uid)
+            
+            # Get user's role from Firestore
+            users_ref = db.collection('users')
+            user_query = users_ref.where('uid', '==', uid).limit(1).stream()
+            user_doc = next(user_query, None)
+            
+            if not user_doc:
+                return jsonify({'success': False, 'error': 'User not found in database'}), 404
+                
+            actual_role = user_doc.to_dict().get('role')
+            
+            # Verify that selected role matches actual role
+            if selected_role != actual_role:
+                return jsonify({
+                    'success': False, 
+                    'error': f'Access denied. You are not authorized as {selected_role}.'
+                }), 403
+            
+            # Store user info in session
+            session['user_id'] = uid
+            session['email'] = email
+            session['role'] = actual_role
+            
+            return jsonify({'success': True, 'redirect': url_for('dashboard')})
+        except Exception as e:
+            print(f"Login error: {e}")
+            return jsonify({'success': False, 'error': str(e)}), 400
+            
+    return render_template('login.html')
+
+@app.route('/dashboard')
+def dashboard():
+    if 'user_id' not in session:
+        return redirect(url_for('login'))
+    
+    try:
+        # Fetch clients from Firestore
+        clients_ref = db.collection('clients')
+        clients = clients_ref.where('archived', '==', False).stream()
+        
+        # Initialize counters
+        total_clients = 0
+        in_house_clients = 0
+        after_care_clients = 0
+        
+        # Count clients by care type
+        for client in clients:
+            client_data = client.to_dict()
+            total_clients += 1
+            
+            care_type = client_data.get('care_type', 'in_house').lower().replace(' ', '_')
+            if care_type in ['after_care', 'aftercare']:
+                after_care_clients += 1
+            else:
+                in_house_clients += 1
+                
+    except Exception as e:
+        print(f"Error fetching client counts: {e}")
+        total_clients = 0
+        in_house_clients = 0
+        after_care_clients = 0
+    
+    return render_template('dashboard.html', 
+                         email=session['email'],
+                         username=session['email'].split('@')[0],
+                         total_clients=total_clients,
+                         in_house_clients=in_house_clients,
+                         after_care_clients=after_care_clients)
+
+@app.route('/check_in')
+@role_required(['admin', 'facilitator', 'caseworker'])
+def check_in():
+    return render_template('check_in.html', email=session['email'])
+
+@app.route('/debug/clients')
+@role_required(['admin', 'facilitator', 'caseworker'])
+def debug_clients():
+    """Debug route to see what's happening with clients data"""
+    try:
+        clients_ref = db.collection('clients')
+        all_clients_data = []
+        
+        for client in clients_ref.stream():
+            client_dict = client.to_dict()
+            client_dict['id'] = client.id
+            all_clients_data.append(client_dict)
+        
+        debug_info = {
+            'total_clients': len(all_clients_data),
+            'clients': all_clients_data,
+            'session': dict(session)
+        }
+        
+        from flask import jsonify
+        return jsonify(debug_info)
+    except Exception as e:
+        from flask import jsonify
+        return jsonify({'error': str(e), 'traceback': str(e.__traceback__)})
+
+@app.route('/clients')
+@role_required(['admin', 'facilitator', 'caseworker'])
+def clients():
+    try:
+        print(f"User accessing clients page: {session.get('email')} with role: {session.get('role')}")
+        
+        # Get pagination parameters
+        page = request.args.get('page', 1, type=int)
+        per_page = 10  # Maximum 10 clients per page
+        print(f"Pagination: page {page}, per_page {per_page}")
+        
+        # Fetch clients from Firestore
+        clients_ref = db.collection('clients')
+        all_clients_data = []
+        print("Starting to fetch clients from Firestore...")
+        
+        print("Fetching clients stream...")
+        clients_stream = clients_ref.stream()
+        print("Got clients stream, iterating...")
+        
+        for client in clients_stream:
+            client_dict = client.to_dict()
+            client_dict['id'] = client.id
+            print(f"Processing client: {client_dict.get('name', 'Unknown')} (ID: {client.id})")
+            
+            # Ensure ALL required fields exist with proper defaults
+            # Skip clients with None names or fix them
+            if client_dict.get('name') is None or client_dict.get('name') == '':
+                print(f"Skipping client with None/empty name (ID: {client.id})")
+                continue
+            
+            # Basic fields with defaults
+            if 'phone' not in client_dict:
+                client_dict['phone'] = None
+            
+            if 'emergency_contact' not in client_dict:
+                client_dict['emergency_contact'] = None
+                
+            if 'registrationDate' not in client_dict:
+                client_dict['registrationDate'] = client_dict.get('created_at', None)
+            
+            if 'flags' not in client_dict:
+                client_dict['flags'] = []
+                
+            if 'archived' not in client_dict:
+                client_dict['archived'] = False
+            
+            # Required template fields with defaults
+            if 'age' not in client_dict or client_dict['age'] is None:
+                client_dict['age'] = 'N/A'
+                
+            if 'gender' not in client_dict or client_dict['gender'] is None:
+                client_dict['gender'] = 'Not specified'
+                
+            if 'address' not in client_dict or client_dict['address'] is None:
+                client_dict['address'] = 'No address provided'
+                
+            if 'checkInDate' not in client_dict or client_dict['checkInDate'] is None:
+                client_dict['checkInDate'] = 'N/A'
+
+            # Normalize care type
+            if 'care_type' not in client_dict or client_dict['care_type'] is None:
+                client_dict['care_type'] = 'in_house'  # Default to in_house
+            else:
+                care_type = str(client_dict['care_type']).lower().replace(' ', '_')
+                if care_type in ['after_care', 'aftercare']:
+                    client_dict['care_type'] = 'after_care'
+                else:
+                    client_dict['care_type'] = 'in_house'
+
+            # Normalize status value
+            if 'status' in client_dict and client_dict['status'] is not None:
+                status = str(client_dict['status']).lower()
+                if status == 'active':
+                    client_dict['status'] = 'active'
+                elif status == 'relapsed':
+                    client_dict['status'] = 'relapsed'
+                elif status in ['review', 'under review']:
+                    client_dict['status'] = 'review'
+                else:
+                    client_dict['status'] = 'active'  # Default status
+            else:
+                client_dict['status'] = 'active'  # Default if no status
+            
+            # Only add non-archived clients
+            archived = client_dict.get('archived', False)
+            print(f"Client {client_dict.get('name', 'Unknown')}: archived = {archived}")
+            if not archived:
+                all_clients_data.append(client_dict)
+                print(f"Added client {client_dict.get('name', 'Unknown')} to display list")
+
+        # Sort clients by name for consistent pagination
+        all_clients_data.sort(key=lambda x: x.get('name', '').lower())
+        
+        # Calculate pagination
+        total_clients = len(all_clients_data)
+        total_pages = (total_clients + per_page - 1) // per_page  # Ceiling division
+        print(f"Total clients: {total_clients}, Total pages: {total_pages}")
+        
+        # Calculate start and end indices for current page
+        start_idx = (page - 1) * per_page
+        end_idx = start_idx + per_page
+        
+        # Get clients for current page
+        clients_data = all_clients_data[start_idx:end_idx]
+        print(f"Displaying clients {start_idx + 1} to {min(end_idx, total_clients)}")
+        
+        # Create pagination info
+        pagination = {
+            'page': page,
+            'per_page': per_page,
+            'total': total_clients,
+            'total_pages': total_pages,
+            'has_prev': page > 1,
+            'has_next': page < total_pages,
+            'prev_num': page - 1 if page > 1 else None,
+            'next_num': page + 1 if page < total_pages else None,
+            'start_record': start_idx + 1 if total_clients > 0 else 0,
+            'end_record': min(end_idx, total_clients)
+        }
+
+        print(f"Pagination: Page {page}/{total_pages}, showing {len(clients_data)} of {total_clients} clients")
+    except Exception as e:
+        print(f"Error fetching clients: {e}")
+        clients_data = []
+        pagination = {
+            'page': 1,
+            'per_page': per_page,
+            'total': 0,
+            'total_pages': 0,
+            'has_prev': False,
+            'has_next': False,
+            'prev_num': None,
+            'next_num': None,
+            'start_record': 0,
+            'end_record': 0
+        }
+    
+    return render_template('clients.html', email=session['email'], clients=clients_data, pagination=pagination)
+
+@app.route('/clients/add', methods=['GET', 'POST'])
+@role_required(['admin', 'facilitator', 'caseworker'])
+def add_client():
+    if request.method == 'POST':
+        try:
+            # Debug: Log received form data
+            print("Received form data:", dict(request.form))
+            print("Received files:", list(request.files.keys()) if request.files else "No files")
+            
+            # Get form data
+            # Handle both old and new form structures
+            first_name = request.form.get('firstName', '')
+            surname = request.form.get('surname', '')
+            middle_initial = request.form.get('middleInitial', '')
+            
+            # Construct full name
+            if first_name and surname:
+                full_name = f"{first_name} {middle_initial} {surname}".strip()
+            else:
+                full_name = request.form.get('name', '')  # Fallback for old form
+            
+            # Get age, handle both string and int
+            age_str = request.form.get('age', '0')
+            try:
+                age = int(age_str) if age_str else 0
+            except ValueError:
+                age = 0
+            
+            client_data = {
+                'name': full_name,
+                'firstName': first_name,
+                'surname': surname,
+                'middleInitial': middle_initial,
+                'age': age,
+                'gender': request.form.get('gender'),
+                'address': request.form.get('address'),
+                'phone': request.form.get('phone'),
+                'emergency_contact': {
+                    'name': request.form.get('emergency_name'),
+                    'phone': request.form.get('emergency_phone')
+                },
+                # Credentials for client mobile login
+                'clientId': request.form.get('clientId'),
+                'clientPassword': request.form.get('clientPassword'),
+                'registrationDate': request.form.get('registrationDate'),
+                'checkInDate': request.form.get('checkInDate'),
+                'status': request.form.get('status'),
+                'care_type': request.form.get('care_type', 'in_house'),
+                'created_at': datetime.now(),
+                'created_by': session['user_id'],
+                'flags': [],
+                'archived': False
+            }
+            
+            # Add wizard-specific data
+            # Progress Monitoring Data
+            client_data['checkInFrequency'] = request.form.get('checkInFrequency')
+            client_data['monitoringMethods'] = request.form.getlist('monitoringMethods')
+            client_data['progressIndicators'] = request.form.getlist('progressIndicators')
+            client_data['riskFactors'] = request.form.getlist('riskFactors')
+            
+            # Pre-Assessment Data
+            client_data['primarySubstance'] = request.form.get('primarySubstance')
+            client_data['otherSubstance'] = request.form.get('otherSubstance')
+            client_data['usageFrequency'] = request.form.get('usageFrequency')
+            client_data['usageDuration'] = request.form.get('usageDuration')
+            client_data['useSeverity'] = request.form.get('useSeverity')
+            client_data['lifeInterference'] = request.form.get('lifeInterference')
+            client_data['mentalHealthConditions'] = request.form.getlist('mentalHealthConditions')
+            client_data['mentalHealthNotes'] = request.form.get('mentalHealthNotes')
+            client_data['currentMood'] = request.form.get('currentMood')
+            client_data['stressLevel'] = request.form.get('stressLevel')
+            client_data['supportNetwork'] = request.form.getlist('supportNetwork')
+            client_data['livingSituation'] = request.form.get('livingSituation')
+            client_data['livingSituationNotes'] = request.form.get('livingSituationNotes')
+            
+            # Intervention Plan Data
+            client_data['primaryGoals'] = request.form.getlist('primaryGoals')
+            client_data['secondaryGoals'] = request.form.getlist('secondaryGoals')
+            client_data['individualTherapy'] = request.form.getlist('individualTherapy')
+            client_data['groupTherapy'] = request.form.getlist('groupTherapy')
+            client_data['medicationManagement'] = request.form.getlist('medicationManagement')
+            client_data['supportServices'] = request.form.getlist('supportServices')
+            client_data['treatmentPriority'] = request.form.get('treatmentPriority')
+            client_data['treatmentDuration'] = request.form.get('treatmentDuration')
+            client_data['treatmentNotes'] = request.form.get('treatmentNotes')
+
+            # Ensure clientId is unique
+            try:
+                existing_iter = db.collection('clients').where('clientId', '==', client_id).limit(1).stream()
+                existing_list = [doc for doc in existing_iter]
+                if existing_list:
+                    return jsonify({'success': False, 'error': 'Client ID already exists. Please choose another.'}), 409
+            except Exception as e:
+                # Log but do not block creation in case of transient read error
+                print(f"Warning: could not verify clientId uniqueness: {e}")
+
+            # Validate phone numbers (more flexible)
+            phone = client_data['phone'].replace('-', '').replace(' ', '').replace('(', '').replace(')', '')
+            emergency_phone = client_data['emergency_contact']['phone'].replace('-', '').replace(' ', '').replace('(', '').replace(')', '')
+            
+            if not (phone.isdigit() and len(phone) >= 10 and len(phone) <= 11):
+                return jsonify({'success': False, 'error': 'Invalid contact number format. Please use 10-11 digits.'}), 400
+            
+            if not (emergency_phone.isdigit() and len(emergency_phone) >= 10 and len(emergency_phone) <= 11):
+                return jsonify({'success': False, 'error': 'Invalid emergency contact number format. Please use 10-11 digits.'}), 400
+            
+            # Update with cleaned phone numbers
+            client_data['phone'] = phone
+            client_data['emergency_contact']['phone'] = emergency_phone
+
+            # Validate client credentials (basic)
+            client_id = (client_data.get('clientId') or '').strip()
+            client_password = (client_data.get('clientPassword') or '').strip()
+            # Auto-generate client_id if missing
+            if not client_id:
+                try:
+                    total_existing = sum(1 for _ in db.collection('clients').stream())
+                    client_id = str(total_existing + 1)
+                    client_data['clientId'] = client_id
+                except Exception as e:
+                    print(f"Error auto-generating clientId: {e}")
+            if not client_password:
+                return jsonify({'success': False, 'error': 'Client password is required.'}), 400
+
+            # Geocode the address automatically
+            address = client_data.get('address', '').strip()
+            if address and address != 'No address provided':
+                print(f"Geocoding address for new client {client_data['name']}: {address}")
+                try:
+                    coordinates = geocode_address(address)
+                    if coordinates:
+                        client_data['coordinates'] = coordinates
+                        print(f"Successfully geocoded address: {coordinates['lat']}, {coordinates['lng']} (source: {coordinates['source']})")
+                    else:
+                        print(f"Failed to geocode address: {address}")
+                        # Try manual mapping for common addresses
+                        address_lower = address.lower()
+                        manual_coords = None
+                        
+                        # Santa Cruz, Laguna - Use accurate municipal center coordinates
+                        if 'sta cruz' in address_lower or 'santa cruz' in address_lower:
+                            if 'laguna' in address_lower or 'sambat' in address_lower:
+                                manual_coords = {'lat': 14.2854, 'lng': 121.4134, 'source': 'manual'}
+                        # Longos, Kalayaan, Laguna
+                        elif 'longos' in address_lower and 'kalayaan' in address_lower:
+                            manual_coords = {'lat': 14.2691, 'lng': 121.4213, 'source': 'manual'}
+                        # General Kalayaan, Laguna
+                        elif 'kalayaan' in address_lower and 'laguna' in address_lower:
+                            manual_coords = {'lat': 14.2650, 'lng': 121.4200, 'source': 'manual'}
+                        # Real Street addresses
+                        elif 'real' in address_lower and ('st' in address_lower or 'street' in address_lower):
+                            if 'zone' in address_lower or 'purok' in address_lower:
+                                manual_coords = {'lat': 14.2100, 'lng': 121.1200, 'source': 'manual'}
+                            else:
+                                manual_coords = {'lat': 14.2120, 'lng': 121.1250, 'source': 'manual'}
+                        # Calamba
+                        elif 'calamba' in address_lower:
+                            manual_coords = {'lat': 14.1877, 'lng': 121.1251, 'source': 'manual'}
+                        # Cabuyao
+                        elif 'cabuyao' in address_lower:
+                            manual_coords = {'lat': 14.2471, 'lng': 121.1367, 'source': 'manual'}
+                        # San Pablo, Laguna
+                        elif 'san pablo' in address_lower and 'laguna' in address_lower:
+                            manual_coords = {'lat': 14.0683, 'lng': 121.3251, 'source': 'manual'}
+                        # Bay, Laguna
+                        elif 'bay' in address_lower and 'laguna' in address_lower:
+                            manual_coords = {'lat': 14.1833, 'lng': 121.2833, 'source': 'manual'}
+                        # Los Baños, Laguna
+                        elif 'los banos' in address_lower or 'los baños' in address_lower:
+                            manual_coords = {'lat': 14.1692, 'lng': 121.2417, 'source': 'manual'}
+                        # Biñan, Laguna
+                        elif 'binan' in address_lower or 'biñan' in address_lower:
+                            manual_coords = {'lat': 14.3306, 'lng': 121.0856, 'source': 'manual'}
+                        # Santa Rosa, Laguna
+                        elif 'santa rosa' in address_lower and 'laguna' in address_lower:
+                            manual_coords = {'lat': 14.3119, 'lng': 121.1114, 'source': 'manual'}
+                        
+                        if manual_coords:
+                            client_data['coordinates'] = manual_coords
+                            print(f"Used manual coordinates: {manual_coords['lat']}, {manual_coords['lng']}")
+                except Exception as geocode_error:
+                    print(f"Error geocoding address: {geocode_error}")
+                    # Continue without coordinates rather than failing the entire operation
+
+            # Handle image upload
+            if 'image' in request.files:
+                image = request.files['image']
+                if image.filename and allowed_file(image.filename):
+                    # Generate a unique filename
+                    filename = secure_filename(image.filename)
+                    unique_filename = f"{uuid.uuid4()}_{filename}"
+                    file_path = os.path.join(UPLOAD_FOLDER, unique_filename)
+                    
+                    # Save the file
+                    image.save(file_path)
+                    
+                    # Store the relative path in client data
+                    client_data['image_url'] = os.path.join('uploads', 'client_images', unique_filename)
+
+            # Add to Firestore
+            new_client = db.collection('clients').add(client_data)
+            
+            response_data = {
+                'success': True, 
+                'message': 'Client added successfully',
+                'client_id': new_client[1].id
+            }
+            
+            # Add coordinates info to response
+            if 'coordinates' in client_data:
+                response_data['coordinates'] = client_data['coordinates']
+                response_data['message'] += f" (Location: {client_data['coordinates']['source']})"
+            else:
+                response_data['message'] += " (No location data available)"
+            
+            return jsonify(response_data)
+            
+        except Exception as e:
+            print(f"Error adding client: {e}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({'success': False, 'error': str(e)}), 400
+
+    # GET: suggest next client ID based on current total count
+    try:
+        clients_ref = db.collection('clients')
+        total = sum(1 for _ in clients_ref.stream())
+        suggested_client_id = str(total + 1)
+    except Exception as e:
+        print(f"Error counting clients for suggested ID: {e}")
+        suggested_client_id = ''
+
+    return render_template('add_client.html', email=session['email'], suggested_client_id=suggested_client_id)
+
+@app.route('/clients/add/step2')
+@role_required(['admin', 'facilitator', 'caseworker'])
+def add_client_step2():
+    return render_template('add_client_step2.html', email=session['email'])
+
+@app.route('/clients/add/step3')
+@role_required(['admin', 'facilitator', 'caseworker'])
+def add_client_step3():
+    return render_template('add_client_step3.html', email=session['email'])
+
+@app.route('/clients/add/step4')
+@role_required(['admin', 'facilitator', 'caseworker'])
+def add_client_step4():
+    return render_template('add_client_step4.html', email=session['email'])
+
+@app.route('/clients/<client_id>/flag', methods=['POST'])
+@role_required(['admin', 'facilitator', 'caseworker'])
+def flag_client(client_id):
+    try:
+        # Get client reference
+        client_ref = db.collection('clients').document(client_id)
+        client = client_ref.get()
+
+        if not client.exists:
+            return jsonify({'success': False, 'error': 'Client not found'}), 404
+
+        # Get current flags
+        client_data = client.to_dict()
+        flags = client_data.get('flags', [])
+
+        # Check if client is already flagged for review
+        has_review_flag = any(flag['type'] == 'Review' for flag in flags)
+
+        if has_review_flag:
+            # Remove review flag
+            flags = [flag for flag in flags if flag['type'] != 'Review']
+        else:
+            # Add review flag
+            flags.append({
+                'type': 'Review',
+                'added_by': session['user_id'],
+                'added_at': datetime.now(),
+                'urgent': False
+            })
+
+        # Update client document
+        client_ref.update({'flags': flags})
+
+        return jsonify({'success': True, 'message': 'Flag updated successfully'})
+    except Exception as e:
+        print(f"Error flagging client: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@app.route('/clients/<client_id>/archive', methods=['POST'])
+@role_required(['admin', 'facilitator'])
+def archive_client(client_id):
+    try:
+        # Get client reference
+        client_ref = db.collection('clients').document(client_id)
+        client = client_ref.get()
+
+        if not client.exists:
+            return jsonify({'success': False, 'error': 'Client not found'}), 404
+
+        # Update client document
+        client_ref.update({
+            'archived': True,
+            'archived_at': datetime.now(),
+            'archived_by': session['user_id']
+        })
+
+        return jsonify({'success': True, 'message': 'Client archived successfully'})
+    except Exception as e:
+        print(f"Error archiving client: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+@app.route('/client/<client_id>')
+@role_required(['admin', 'facilitator', 'caseworker'])
+def client_profile(client_id):
+    try:
+        # Get client reference
+        client_ref = db.collection('clients').document(client_id)
+        client = client_ref.get()
+
+        if not client.exists:
+            flash('Client not found', 'error')
+            return redirect(url_for('clients'))
+
+        # Get client data
+        client_data = client.to_dict()
+        client_data['id'] = client.id
+        
+        # Ensure all required fields exist
+        if 'phone' not in client_data:
+            client_data['phone'] = None
+            
+        if 'emergency_contact' not in client_data:
+            client_data['emergency_contact'] = None
+            
+        # Handle registration date
+        if 'registrationDate' not in client_data or not client_data['registrationDate']:
+            if 'created_at' in client_data:
+                client_data['registrationDate'] = client_data['created_at']
+            else:
+                client_data['registrationDate'] = None
+        
+        # Convert registration date if it's a timestamp
+        if isinstance(client_data['registrationDate'], datetime):
+            client_data['registrationDate'] = client_data['registrationDate'].strftime('%B %d, %Y')
+        
+        # Handle image URL
+        if 'image_url' not in client_data or not client_data['image_url']:
+            client_data['image_url'] = 'images/default-avatar.png'
+
+        return render_template('client_profile.html', client=client_data)
+    except Exception as e:
+        print(f"Error fetching client profile: {e}")
+        flash('Error loading client profile', 'error')
+        return redirect(url_for('clients'))
+
+@app.route('/interventions')
+@role_required(['admin', 'facilitator'])
+def interventions():
+    return render_template('interventions.html', email=session['email'])
+
+@app.route('/map')
+@role_required(['admin', 'facilitator', 'caseworker'])
+def map():
+    return render_template('map.html', email=session['email'])
+
+@app.route('/reports')
+@role_required(['admin', 'facilitator'])
+def reports():
+    return render_template('reports.html', email=session['email'])
+
+@app.route('/settings')
+@admin_required
+def settings():
+    try:
+        # Get all users from Firestore
+        users_ref = db.collection('users')
+        users = []
+        
+        for user in users_ref.stream():
+            user_data = user.to_dict()
+            user_data['id'] = user.id
+            users.append(user_data)
+        
+        return render_template('settings.html', email=session['email'], users=users)
+    except Exception as e:
+        print(f"Error loading settings: {e}")
+        return render_template('settings.html', email=session['email'], users=[])
+
+@app.route('/api/users', methods=['GET'])
+@admin_required
+def get_users():
+    """API endpoint to get all users"""
+    try:
+        users_ref = db.collection('users')
+        users = []
+        
+        for user in users_ref.stream():
+            user_data = user.to_dict()
+            user_data['id'] = user.id
+            # Don't include sensitive data like passwords
+            if 'password' in user_data:
+                del user_data['password']
+            users.append(user_data)
+        
+        return jsonify({'success': True, 'users': users})
+    except Exception as e:
+        print(f"Error fetching users: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/users', methods=['POST'])
+@admin_required
+def create_user():
+    """API endpoint to create a new user"""
+    try:
+        data = request.get_json()
+        email = data.get('email')
+        password = data.get('password')
+        role = data.get('role')
+        
+        if not all([email, password, role]):
+            return jsonify({'success': False, 'error': 'Missing required fields'}), 400
+        
+        # Validate role
+        valid_roles = ['admin', 'facilitator', 'caseworker']
+        if role not in valid_roles:
+            return jsonify({'success': False, 'error': 'Invalid role'}), 400
+        
+        # Check if user already exists
+        users_ref = db.collection('users')
+        existing_user = users_ref.where('email', '==', email).limit(1).stream()
+        if list(existing_user):
+            return jsonify({'success': False, 'error': 'User with this email already exists'}), 400
+        
+        # Create user in Firebase Auth
+        try:
+            user = auth.create_user(
+                email=email,
+                password=password
+            )
+        except Exception as auth_error:
+            return jsonify({'success': False, 'error': f'Firebase Auth error: {str(auth_error)}'}), 400
+        
+        # Add user to Firestore
+        user_data = {
+            'uid': user.uid,
+            'email': email,
+            'role': role,
+            'created_at': datetime.now(),
+            'created_by': session['user_id'],
+            'status': 'active'
+        }
+        
+        new_user = users_ref.add(user_data)
+        
+        return jsonify({
+            'success': True, 
+            'message': 'User created successfully',
+            'user_id': new_user[1].id
+        })
+        
+    except Exception as e:
+        print(f"Error creating user: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/users/<user_id>', methods=['DELETE'])
+@admin_required
+def delete_user(user_id):
+    """API endpoint to delete a user"""
+    try:
+        # Get user data first
+        user_ref = db.collection('users').document(user_id)
+        user_doc = user_ref.get()
+        
+        if not user_doc.exists:
+            return jsonify({'success': False, 'error': 'User not found'}), 404
+        
+        user_data = user_doc.to_dict()
+        
+        # Don't allow admin to delete themselves
+        if user_data.get('uid') == session['user_id']:
+            return jsonify({'success': False, 'error': 'Cannot delete your own account'}), 400
+        
+        # Delete from Firebase Auth
+        try:
+            auth.delete_user(user_data['uid'])
+        except Exception as auth_error:
+            print(f"Error deleting from Firebase Auth: {auth_error}")
+            # Continue with Firestore deletion even if Auth fails
+        
+        # Delete from Firestore
+        user_ref.delete()
+        
+        return jsonify({'success': True, 'message': 'User deleted successfully'})
+        
+    except Exception as e:
+        print(f"Error deleting user: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/users/<user_id>', methods=['PUT'])
+@admin_required
+def update_user(user_id):
+    """API endpoint to update a user"""
+    try:
+        data = request.get_json()
+        role = data.get('role')
+        status = data.get('status')
+        
+        if not role and not status:
+            return jsonify({'success': False, 'error': 'No fields to update'}), 400
+        
+        # Validate role if provided
+        if role:
+            valid_roles = ['admin', 'facilitator', 'caseworker']
+            if role not in valid_roles:
+                return jsonify({'success': False, 'error': 'Invalid role'}), 400
+        
+        # Update user in Firestore
+        user_ref = db.collection('users').document(user_id)
+        user_doc = user_ref.get()
+        
+        if not user_doc.exists:
+            return jsonify({'success': False, 'error': 'User not found'}), 404
+        
+        update_data = {}
+        if role:
+            update_data['role'] = role
+        if status:
+            update_data['status'] = status
+        
+        update_data['updated_at'] = datetime.now()
+        update_data['updated_by'] = session['user_id']
+        
+        user_ref.update(update_data)
+        
+        return jsonify({'success': True, 'message': 'User updated successfully'})
+        
+    except Exception as e:
+        print(f"Error updating user: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/logout')
+def logout():
+    session.clear()
+    return redirect(url_for('index'))
+
+@app.route('/api/clients/locations')
+@role_required(['admin', 'facilitator', 'caseworker'])
+def get_client_locations():
+    try:
+        # Fetch clients from Firestore
+        clients_ref = db.collection('clients')
+        clients = clients_ref.where('archived', '==', False).stream()
+        
+        clients_data = []
+        debug_info = []  # For debugging
+        
+        for client in clients:
+            client_dict = client.to_dict()
+            client_id = client.id
+            
+            # Debug info
+            debug_info.append({
+                'id': client_id,
+                'name': client_dict.get('name', 'Unknown'),
+                'raw_coordinates': client_dict.get('coordinates', 'No coordinates')
+            })
+            
+            # Only include essential fields for map display
+            name = client_dict.get('name', 'Unknown Client')
+            address = client_dict.get('address', 'No address provided')
+            care_type = client_dict.get('care_type', 'in_house').lower().replace(' ', '_')
+            status = client_dict.get('status', 'active').lower()
+            coordinates = client_dict.get('coordinates', {})
+            
+            # Normalize care_type
+            care_type = 'after_care' if care_type in ['after_care', 'aftercare'] else 'in_house'
+            
+            # Normalize status
+            if status not in ['active', 'inactive', 'relapsed']:
+                status = 'active'
+            
+            # Check coordinates format and convert if necessary
+            valid_coordinates = False
+            if isinstance(coordinates, dict):
+                if 'lat' in coordinates and 'lng' in coordinates:
+                    try:
+                        lat = float(coordinates['lat'])
+                        lng = float(coordinates['lng'])
+                        if not (isnan(lat) or isnan(lng)):
+                            valid_coordinates = True
+                            coordinates = {'lat': lat, 'lng': lng}
+                    except (ValueError, TypeError):
+                        pass
+            elif isinstance(coordinates, str):
+                # Try to parse string format (in case it's stored as string)
+                try:
+                    import json
+                    coords_dict = json.loads(coordinates)
+                    if isinstance(coords_dict, dict) and 'lat' in coords_dict and 'lng' in coords_dict:
+                        lat = float(coords_dict['lat'])
+                        lng = float(coords_dict['lng'])
+                        if not (isnan(lat) or isnan(lng)):
+                            valid_coordinates = True
+                            coordinates = {'lat': lat, 'lng': lng}
+                except:
+                    pass
+            
+            if valid_coordinates:
+                client_data = {
+                    'id': client_id,
+                    'name': name,
+                    'address': address,
+                    'coordinates': coordinates,
+                    'care_type': care_type,
+                    'status': status,
+                    'coordinate_source': coordinates.get('source', 'unknown')
+                }
+                
+                # Add formatted address if available
+                if 'formatted_address' in coordinates:
+                    client_data['formatted_address'] = coordinates['formatted_address']
+                
+                clients_data.append(client_data)
+        
+        print("Debug info for all clients:", debug_info)
+        print(f"Returning {len(clients_data)} clients with location data")
+        return jsonify(clients_data)
+        
+    except Exception as e:
+        print(f"Error fetching client locations: {e}")
+        import traceback
+        traceback.print_exc()  # Print full error traceback
+        return jsonify([])
+
+# Add a new endpoint for background geocoding
+@app.route('/api/clients/geocode-missing', methods=['POST'])
+@role_required(['admin', 'facilitator'])
+def geocode_missing_coordinates():
+    try:
+        # Get clients that need geocoding
+        clients_ref = db.collection('clients')
+        clients = clients_ref.where('archived', '==', False).stream()
+        
+        to_geocode = []
+        for client in clients:
+            client_dict = client.to_dict()
+            coordinates = client_dict.get('coordinates', {})
+            address = client_dict.get('address', '')
+            
+            needs_geocoding = (
+                not coordinates or 
+                not isinstance(coordinates, dict) or
+                'lat' not in coordinates or 
+                'lng' not in coordinates or
+                coordinates.get('source') == 'fallback'
+            )
+            
+            if needs_geocoding and address and address != 'No address provided':
+                to_geocode.append({
+                    'id': client.id,
+                    'name': client_dict.get('name', 'Unknown Client'),
+                    'address': address
+                })
+        
+        if not to_geocode:
+            return jsonify({
+                'success': True,
+                'message': 'No clients need geocoding',
+                'count': 0
+            })
+        
+        # Start background geocoding task
+        # Note: In a production environment, you would use a task queue like Celery
+        # For now, we'll do it in a separate thread
+        from threading import Thread
+        
+        def background_geocoding():
+            for client in to_geocode:
+                try:
+                    coords = geocode_address(client['address'])
+                    if coords:
+                        client_ref = db.collection('clients').document(client['id'])
+                        client_ref.update({
+                            'coordinates': coords,
+                            'coordinates_updated_at': datetime.now(),
+                            'coordinates_updated_by': 'system_geocoder'
+                        })
+                        print(f"Geocoded {client['name']}: {coords['lat']}, {coords['lng']} (source: {coords['source']})")
+                    time.sleep(1)  # Rate limiting
+                except Exception as e:
+                    print(f"Error geocoding {client['name']}: {e}")
+        
+        Thread(target=background_geocoding).start()
+        
+        return jsonify({
+            'success': True,
+            'message': f'Started geocoding {len(to_geocode)} clients in background',
+            'count': len(to_geocode)
+        })
+        
+    except Exception as e:
+        print(f"Error starting geocoding: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 400
+
+# Add a new endpoint to update client coordinates
+@app.route('/api/clients/<client_id>/coordinates', methods=['PUT'])
+@role_required(['admin', 'facilitator'])
+def update_client_coordinates(client_id):
+    try:
+        data = request.get_json()
+        
+        if not data or 'lat' not in data or 'lng' not in data:
+            return jsonify({'success': False, 'error': 'Invalid coordinates data'}), 400
+        
+        lat = float(data['lat'])
+        lng = float(data['lng'])
+        
+        # Validate coordinates are within reasonable bounds (Philippines area)
+        if not (10 <= lat <= 20 and 115 <= lng <= 130):
+            return jsonify({'success': False, 'error': 'Coordinates are outside valid range'}), 400
+        
+        # Update client coordinates
+        client_ref = db.collection('clients').document(client_id)
+        client = client_ref.get()
+        
+        if not client.exists:
+            return jsonify({'success': False, 'error': 'Client not found'}), 404
+        
+        coordinates = {
+            'lat': lat,
+            'lng': lng
+        }
+        
+        client_ref.update({
+            'coordinates': coordinates,
+            'coordinates_updated_at': datetime.now(),
+            'coordinates_updated_by': session['user_id']
+        })
+        
+        return jsonify({
+            'success': True,
+            'message': 'Client coordinates updated successfully',
+            'coordinates': coordinates
+        })
+        
+    except ValueError:
+        return jsonify({'success': False, 'error': 'Invalid coordinate values'}), 400
+    except Exception as e:
+        print(f"Error updating client coordinates: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+# Add endpoint to manually geocode all clients
+@app.route('/api/geocode/all', methods=['POST'])
+@role_required(['admin'])
+def geocode_all_clients():
+    try:
+        # Get optional parameters
+        data = request.get_json() or {}
+        force_regeocode = data.get('force', False)  # Force re-geocode even if coordinates exist
+        max_requests = data.get('max_requests', 10)  # Limit requests to avoid rate limiting
+        
+        clients_ref = db.collection('clients')
+        clients = clients_ref.where('archived', '==', False).stream()
+        
+        results = {
+            'total_processed': 0,
+            'geocoded': 0,
+            'cached': 0,
+            'failed': 0,
+            'skipped': 0,
+            'errors': []
+        }
+        
+        for client in clients:
+            if results['total_processed'] >= max_requests:
+                break
+                
+            client_dict = client.to_dict()
+            client_id = client.id
+            name = client_dict.get('name', 'Unknown Client')
+            address = client_dict.get('address', '')
+            
+            results['total_processed'] += 1
+            
+            # Skip if no address
+            if not address or address.strip() == '' or address == 'No address provided':
+                results['skipped'] += 1
+                continue
+            
+            # Check if we need to geocode
+            coordinates = client_dict.get('coordinates')
+            needs_geocoding = force_regeocode
+            
+            if not force_regeocode:
+                if not coordinates or not isinstance(coordinates, dict):
+                    needs_geocoding = True
+                elif not ('lat' in coordinates and 'lng' in coordinates):
+                    needs_geocoding = True
+                elif coordinates.get('source') == 'fallback':
+                    needs_geocoding = True
+            
+            if needs_geocoding:
+                print(f"Geocoding {name}: {address}")
+                
+                try:
+                    geocoded_coords = geocode_address(address)
+                    
+                    if geocoded_coords:
+                        # Save to database
+                        client_ref = db.collection('clients').document(client_id)
+                        update_data = {
+                            'coordinates': geocoded_coords,
+                            'coordinates_updated_at': datetime.now(),
+                            'coordinates_updated_by': session['user_id']
+                        }
+                        client_ref.update(update_data)
+                        
+                        results['geocoded'] += 1
+                        print(f"Successfully geocoded {name}: {geocoded_coords['lat']}, {geocoded_coords['lng']} (source: {geocoded_coords['source']})")
+                    else:
+                        results['failed'] += 1
+                        results['errors'].append(f"Failed to geocode {name}: {address}")
+                        
+                except Exception as e:
+                    results['failed'] += 1
+                    error_msg = f"Error geocoding {name}: {str(e)}"
+                    results['errors'].append(error_msg)
+                    print(error_msg)
+            else:
+                results['cached'] += 1
+        
+        return jsonify({
+            'success': True,
+            'message': f"Geocoding completed. Processed {results['total_processed']} clients.",
+            'results': results
+        })
+        
+    except Exception as e:
+        print(f"Error in bulk geocoding: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 400
+
+# Add debug endpoint to check client data
+@app.route('/api/debug/client/<client_id>')
+@role_required(['admin'])
+def debug_client_data(client_id):
+    try:
+        client_ref = db.collection('clients').document(client_id)
+        client = client_ref.get()
+        
+        if not client.exists:
+            return jsonify({'error': 'Client not found'}), 404
+            
+        client_data = client.to_dict()
+        
+        # Add debug info
+        debug_info = {
+            'id': client.id,
+            'coordinates_type': type(client_data.get('coordinates')).__name__,
+            'coordinates_raw': client_data.get('coordinates'),
+            'all_data': client_data
+        }
+        
+        return jsonify(debug_info)
+        
+    except Exception as e:
+        print(f"Error in debug endpoint: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({'error': str(e)}), 500
+
+# Add endpoint to fix client coordinates
+@app.route('/api/fix/client-coordinates', methods=['POST'])
+@role_required(['admin'])
+def fix_client_coordinates():
+    try:
+        clients_ref = db.collection('clients')
+        clients = clients_ref.where('archived', '==', False).stream()
+        
+        fixed_count = 0
+        errors = []
+        
+        for client in clients:
+            try:
+                client_dict = client.to_dict()
+                coordinates = client_dict.get('coordinates', {})
+                
+                # Skip if no coordinates
+                if not coordinates:
+                    continue
+                
+                needs_fix = False
+                fixed_coordinates = {}
+                
+                # Handle string format
+                if isinstance(coordinates, str):
+                    try:
+                        import json
+                        coordinates = json.loads(coordinates)
+                        needs_fix = True
+                    except:
+                        errors.append(f"Failed to parse coordinates string for client {client.id}")
+                        continue
+                
+                # Handle dict format
+                if isinstance(coordinates, dict):
+                    if 'lat' in coordinates and 'lng' in coordinates:
+                        try:
+                            lat = float(coordinates['lat'])
+                            lng = float(coordinates['lng'])
+                            if not (isnan(lat) or isnan(lng)):
+                                fixed_coordinates = {
+                                    'lat': lat,
+                                    'lng': lng,
+                                    'source': coordinates.get('source', 'unknown'),
+                                }
+                                if 'formatted_address' in coordinates:
+                                    fixed_coordinates['formatted_address'] = coordinates['formatted_address']
+                                needs_fix = True
+                        except (ValueError, TypeError):
+                            errors.append(f"Invalid coordinate values for client {client.id}")
+                            continue
+                
+                if needs_fix:
+                    client_ref = db.collection('clients').document(client.id)
+                    client_ref.update({
+                        'coordinates': fixed_coordinates,
+                        'coordinates_updated_at': datetime.now()
+                    })
+                    fixed_count += 1
+                    
+            except Exception as e:
+                errors.append(f"Error processing client {client.id}: {str(e)}")
+        
+        return jsonify({
+            'success': True,
+            'fixed_count': fixed_count,
+            'errors': errors
+        })
+        
+    except Exception as e:
+        print(f"Error fixing coordinates: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+# Add endpoint to manually set coordinates for clients
+@app.route('/api/set-client-coordinates', methods=['POST'])
+@role_required(['admin'])
+def set_client_coordinates():
+    try:
+        # Manual coordinates for common Laguna addresses
+        address_coords = {
+            'sta cruz laguna': {'lat': 14.2791, 'lng': 121.4113, 'source': 'manual'},
+            'santa cruz laguna': {'lat': 14.2791, 'lng': 121.4113, 'source': 'manual'},
+            'longos kalayaan laguna': {'lat': 14.2691, 'lng': 121.4213, 'source': 'manual'},
+            'kalayaan laguna': {'lat': 14.2691, 'lng': 121.4213, 'source': 'manual'},
+            '1069 zone 1 purok 1a real st': {'lat': 14.1850, 'lng': 121.0583, 'source': 'manual'},
+            'purok 1a real st': {'lat': 14.1850, 'lng': 121.0583, 'source': 'manual'},
+            'real street': {'lat': 14.1850, 'lng': 121.0583, 'source': 'manual'},
+            'sta cruz laguna sambat': {'lat': 14.2791, 'lng': 121.4113, 'source': 'manual'}
+        }
+        
+        clients_ref = db.collection('clients')
+        clients = clients_ref.where('archived', '==', False).stream()
+        
+        updated_count = 0
+        client_info = []
+        
+        for client in clients:
+            client_dict = client.to_dict()
+            client_id = client.id
+            name = client_dict.get('name', 'Unknown')
+            address = client_dict.get('address', '').lower().strip()
+            coordinates = client_dict.get('coordinates', {})
+            
+            client_info.append({
+                'id': client_id,
+                'name': name,
+                'address': address,
+                'has_coordinates': bool(coordinates and 'lat' in coordinates and 'lng' in coordinates)
+            })
+            
+            # Check if client needs coordinates
+            needs_coordinates = not (coordinates and 'lat' in coordinates and 'lng' in coordinates)
+            
+            if needs_coordinates and address:
+                # Try to find matching coordinates
+                matched_coords = None
+                for addr_key, coords in address_coords.items():
+                    if addr_key in address:
+                        matched_coords = coords
+                        break
+                
+                if matched_coords:
+                    # Update client with coordinates
+                    client_ref = db.collection('clients').document(client_id)
+                    client_ref.update({
+                        'coordinates': matched_coords,
+                        'coordinates_updated_at': datetime.now(),
+                        'coordinates_updated_by': session.get('user_id', 'manual_update')
+                    })
+                    updated_count += 1
+                    print(f"Updated coordinates for {name}: {matched_coords}")
+        
+        return jsonify({
+            'success': True,
+            'updated_count': updated_count,
+            'client_info': client_info,
+            'message': f'Updated coordinates for {updated_count} clients'
+        })
+        
+    except Exception as e:
+        print(f"Error setting client coordinates: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+# Add endpoint to force geocode all existing clients
+@app.route('/api/force-geocode-all', methods=['POST'])
+@role_required(['admin'])
+def force_geocode_all():
+    try:
+        clients_ref = db.collection('clients')
+        clients = clients_ref.where('archived', '==', False).stream()
+        
+        results = {
+            'total': 0,
+            'updated': 0,
+            'failed': 0,
+            'details': []
+        }
+        
+        for client in clients:
+            client_dict = client.to_dict()
+            client_id = client.id
+            name = client_dict.get('name', 'Unknown')
+            address = client_dict.get('address', '').strip()
+            
+            results['total'] += 1
+            
+            if not address or address == 'No address provided':
+                results['details'].append(f"Skipped {name}: No address")
+                continue
+            
+            print(f"Force geocoding {name}: {address}")
+            
+            # Try geocoding first
+            coordinates = None
+            try:
+                coordinates = geocode_address(address)
+            except Exception as e:
+                print(f"Geocoding error for {name}: {e}")
+            
+            # If geocoding fails, try manual mapping with accurate coordinates
+            if not coordinates:
+                address_lower = address.lower()
+                
+                # Santa Cruz, Laguna - Municipal center coordinates
+                if 'sta cruz' in address_lower or 'santa cruz' in address_lower:
+                    if 'laguna' in address_lower or 'sambat' in address_lower:
+                        coordinates = {'lat': 14.2854, 'lng': 121.4134, 'source': 'manual'}
+                # Longos, Kalayaan, Laguna - More specific coordinates
+                elif 'longos' in address_lower and 'kalayaan' in address_lower:
+                    coordinates = {'lat': 14.2691, 'lng': 121.4213, 'source': 'manual'}
+                # General Kalayaan, Laguna coordinates
+                elif 'kalayaan' in address_lower and 'laguna' in address_lower:
+                    coordinates = {'lat': 14.2650, 'lng': 121.4200, 'source': 'manual'}
+                # Real Street - Assuming it's in Calamba area
+                elif 'real' in address_lower and ('st' in address_lower or 'street' in address_lower):
+                    if 'zone' in address_lower or 'purok' in address_lower:
+                        coordinates = {'lat': 14.2100, 'lng': 121.1200, 'source': 'manual'}  # More accurate Calamba coordinates
+                    else:
+                        coordinates = {'lat': 14.2120, 'lng': 121.1250, 'source': 'manual'}
+                # Calamba city center
+                elif 'calamba' in address_lower:
+                    coordinates = {'lat': 14.1877, 'lng': 121.1251, 'source': 'manual'}
+                # Cabuyao coordinates
+                elif 'cabuyao' in address_lower:
+                    coordinates = {'lat': 14.2471, 'lng': 121.1367, 'source': 'manual'}
+                # San Pablo, Laguna
+                elif 'san pablo' in address_lower and 'laguna' in address_lower:
+                    coordinates = {'lat': 14.0683, 'lng': 121.3251, 'source': 'manual'}
+                # Bay, Laguna
+                elif 'bay' in address_lower and 'laguna' in address_lower:
+                    coordinates = {'lat': 14.1833, 'lng': 121.2833, 'source': 'manual'}
+                # Los Baños, Laguna
+                elif 'los banos' in address_lower or 'los baños' in address_lower:
+                    coordinates = {'lat': 14.1692, 'lng': 121.2417, 'source': 'manual'}
+                # Biñan, Laguna
+                elif 'binan' in address_lower or 'biñan' in address_lower:
+                    coordinates = {'lat': 14.3306, 'lng': 121.0856, 'source': 'manual'}
+                # Santa Rosa, Laguna
+                elif 'santa rosa' in address_lower and 'laguna' in address_lower:
+                    coordinates = {'lat': 14.3119, 'lng': 121.1114, 'source': 'manual'}
+            
+            if coordinates:
+                try:
+                    client_ref = db.collection('clients').document(client_id)
+                    client_ref.update({
+                        'coordinates': coordinates,
+                        'coordinates_updated_at': datetime.now(),
+                        'coordinates_updated_by': session.get('user_id', 'force_geocode')
+                    })
+                    results['updated'] += 1
+                    results['details'].append(f"Updated {name}: {coordinates['lat']}, {coordinates['lng']} ({coordinates['source']})")
+                    print(f"Successfully updated coordinates for {name}")
+                except Exception as e:
+                    results['failed'] += 1
+                    results['details'].append(f"Failed to update {name}: {str(e)}")
+                    print(f"Error updating {name}: {e}")
+            else:
+                results['failed'] += 1
+                results['details'].append(f"No coordinates found for {name}: {address}")
+        
+        return jsonify({
+            'success': True,
+            'results': results,
+            'message': f"Processed {results['total']} clients. Updated: {results['updated']}, Failed: {results['failed']}"
+        })
+        
+    except Exception as e:
+        print(f"Error in force geocode: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/municipalities')
+@role_required(['admin', 'facilitator', 'caseworker'])
+def get_municipalities():
+    municipalities = LAGUNA_LOCATIONS['municipalities']
+    return jsonify(municipalities)
+
+@app.route('/api/barangays/<municipality_id>')
+@role_required(['admin', 'facilitator', 'caseworker'])
+def get_barangays(municipality_id):
+    barangays = LAGUNA_LOCATIONS['barangays'].get(municipality_id, [])
+    return jsonify(barangays)
+
+if __name__ == '__main__':
+    app.run(debug=True)

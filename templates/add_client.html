@@ -1,0 +1,415 @@
+{% extends "base.html" %} {% block title %}Add New Client - Step 1: Personal Info - BreakFree{% endblock
+%} {% block page_css %}
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/add_client.css') }}"
+/>
+<link
+  href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css"
+  rel="stylesheet"
+/>
+<style>
+  .select2-container {
+    width: 100% !important;
+  }
+  .select2-selection {
+    height: auto !important;
+    min-height: 38px !important;
+    padding: 6px !important;
+  }
+  .select2-selection__rendered {
+    line-height: 24px !important;
+  }
+  
+  /* Wizard Progress Bar */
+  .wizard-progress {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 30px;
+  }
+  
+  .progress-steps {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+  }
+  
+  .progress-steps::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: #e9ecef;
+    z-index: 1;
+  }
+  
+  .step {
+    position: relative;
+    z-index: 2;
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    color: #6c757d;
+  }
+  
+  .step.active {
+    border-color: #007bff;
+    background: #007bff;
+    color: white;
+  }
+  
+  .step.completed {
+    border-color: #28a745;
+    background: #28a745;
+    color: white;
+  }
+  
+  .step-label {
+    position: absolute;
+    top: 50px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 12px;
+    color: #6c757d;
+    white-space: nowrap;
+    text-align: center;
+  }
+  
+  .step.active .step-label {
+    color: #007bff;
+    font-weight: bold;
+  }
+  
+  .step.completed .step-label {
+    color: #28a745;
+    font-weight: bold;
+  }
+</style>
+{% endblock %} {% block content %}
+<div class="main-header">
+  <div>
+    <h1>Add New Client</h1>
+    <p>Step 1 of 4: Personal Information</p>
+  </div>
+  <div class="actions">
+    <a href="{{ url_for('clients') }}" class="btn-secondary">
+      <i class="fas fa-arrow-left"></i>
+      Back to Clients
+    </a>
+  </div>
+</div>
+
+<!-- Wizard Progress Bar -->
+<div class="wizard-progress">
+  <div class="progress-steps">
+    <div class="step active">
+      <span>1</span>
+      <div class="step-label">Personal Info</div>
+    </div>
+    <div class="step">
+      <span>2</span>
+      <div class="step-label">Progress Monitoring</div>
+    </div>
+    <div class="step">
+      <span>3</span>
+      <div class="step-label">Pre-Assessment</div>
+    </div>
+  </div>
+</div>
+
+<div class="add-client-container">
+  <form id="addClientForm" class="add-client-form">
+    <!-- Personal Information Section -->
+    <div class="form-section personal-info-section">
+      <h3><i class="fas fa-user"></i> Personal Information</h3>
+      
+      <!-- Profile Photo Section -->
+      <div class="profile-photo-section">
+        <h4><i class="fas fa-camera"></i> Profile Photo</h4>
+        <div class="image-upload-container">
+          <div class="image-upload-area">
+            <input
+              type="file"
+              id="clientImage"
+              name="image"
+              accept="image/*"
+              required
+            />
+            <div class="upload-placeholder">
+              <i class="fas fa-cloud-upload-alt"></i>
+              <p>Click to upload or drag and drop</p>
+              <span>JPG, PNG or GIF (max. 2MB)</span>
+            </div>
+            <div id="imagePreview" class="image-preview"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="clientSurname">Surname</label>
+          <input
+            type="text"
+            id="clientSurname"
+            name="surname"
+            required
+            placeholder="Enter surname"
+            class="input-enhanced"
+          />
+        </div>
+        <div class="form-group">
+          <label for="clientFirstName">First Name</label>
+          <input
+            type="text"
+            id="clientFirstName"
+            name="firstName"
+            required
+            placeholder="Enter first name"
+            class="input-enhanced"
+          />
+        </div>
+        <div class="form-group">
+          <label for="clientMiddleInitial">Middle Initial (Optional)</label>
+          <input
+            type="text"
+            id="clientMiddleInitial"
+            name="middleInitial"
+            placeholder="M.I."
+            maxlength="2"
+            class="input-enhanced"
+          />
+        </div>
+        <div class="form-group">
+          <label for="clientBirthday">Birthday</label>
+          <input
+            type="date"
+            id="clientBirthday"
+            name="birthday"
+            required
+            class="input-enhanced date-picker"
+          />
+        </div>
+        <div class="form-group">
+          <label for="clientAge">Age</label>
+          <input
+            type="number"
+            id="clientAge"
+            name="age"
+            required
+            min="18"
+            placeholder="Age"
+            class="input-enhanced"
+          />
+        </div>
+        <div class="form-group">
+          <label for="clientGender">Gender</label>
+          <select
+            id="clientGender"
+            name="gender"
+            required
+            class="input-enhanced"
+          >
+            <option value="">Select gender</option>
+            <option value="male">Male</option>
+            <option value="female">Female</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Contact Information -->
+    <div class="form-section">
+      <h3><i class="fas fa-phone"></i> Contact Information</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="clientPhone">Contact Number</label>
+          <input
+            type="tel"
+            id="clientPhone"
+            name="phone"
+            required
+            placeholder="09XXXXXXXXX"
+            pattern="[0-9]{11}"
+            class="input-enhanced"
+          />
+          <small class="input-help">Format: 09XXXXXXXXX</small>
+        </div>
+        <div class="form-group">
+          <label for="clientEmergencyName">Emergency Contact Name</label>
+          <input
+            type="text"
+            id="clientEmergencyName"
+            name="emergency_name"
+            required
+            placeholder="Enter emergency contact name"
+            class="input-enhanced"
+          />
+        </div>
+        <div class="form-group">
+          <label for="clientEmergencyPhone">Emergency Contact Number</label>
+          <input
+            type="tel"
+            id="clientEmergencyPhone"
+            name="emergency_phone"
+            required
+            placeholder="09XXXXXXXXX"
+            pattern="[0-9]{11}"
+            class="input-enhanced"
+          />
+          <small class="input-help">Format: 09XXXXXXXXX</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Login Credentials -->
+    <div class="form-section">
+      <h3><i class="fas fa-key"></i> Login Credentials</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="clientId">Client ID</label>
+          <input
+            type="text"
+            id="clientId"
+            name="clientId"
+            required
+            minlength="4"
+            maxlength="32"
+            placeholder="Unique ID for mobile login"
+            class="input-enhanced"
+            value="{{ suggested_client_id }}"
+            readonly
+          />
+          <small class="input-help">4–32 characters; letters, numbers, dashes or underscores.</small>
+        </div>
+        <div class="form-group">
+          <label for="clientPassword">Password</label>
+          <input
+            type="password"
+            id="clientPassword"
+            name="clientPassword"
+            required
+            minlength="6"
+            placeholder="Temporary password for mobile app"
+            class="input-enhanced"
+          />
+          <small class="input-help">Min 6 characters. You can change it later.</small>
+        </div>
+      </div>
+    </div>
+
+    <!-- Address Information -->
+    <div class="form-section">
+      <h3><i class="fas fa-map-marker-alt"></i> Address Information</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="province">Province</label>
+          <input
+            type="text"
+            id="province"
+            class="input-enhanced"
+            value="Laguna"
+            readonly
+          />
+        </div>
+        <div class="form-group">
+          <label for="municipality">Municipality/City</label>
+          <select
+            id="municipality"
+            name="municipality"
+            required
+            class="input-enhanced"
+          >
+            <option value="">Select Municipality/City</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="barangay">Barangay</label>
+          <select
+            id="barangay"
+            name="barangay"
+            required
+            class="input-enhanced"
+          >
+            <option value="">Select Barangay</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="street_address">Street Address (Optional)</label>
+          <input
+            type="text"
+            id="street_address"
+            name="street_address"
+            class="input-enhanced"
+            placeholder="House/Building Number, Street Name"
+          />
+        </div>
+        <input type="hidden" id="complete_address" name="address" />
+        <input type="hidden" id="address_lat" name="lat" />
+        <input type="hidden" id="address_lng" name="lng" />
+      </div>
+    </div>
+
+    <!-- Form Actions -->
+    <div class="form-actions">
+      <a href="{{ url_for('clients') }}" class="btn-secondary">
+        <i class="fas fa-times"></i>
+        Cancel
+      </a>
+      <button type="button" id="nextStep" class="btn-primary">
+        Next Step
+        <i class="fas fa-arrow-right"></i>
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %} {% block scripts %}
+<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
+<script src="{{ url_for('static', filename='js/add_client.js') }}"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const nextStepBtn = document.getElementById('nextStep');
+    const imageInput = document.getElementById('clientImage');
+    
+    // Handle image file and save to sessionStorage
+    imageInput.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                sessionStorage.setItem('clientImageFile', e.target.result);
+            };
+            reader.readAsDataURL(file);
+        }
+    });
+    
+    nextStepBtn.addEventListener('click', function() {
+        // Validate form
+        const form = document.getElementById('addClientForm');
+        if (form.checkValidity()) {
+            // Store form data in session storage
+            const formData = new FormData(form);
+            const formDataObj = {};
+            formData.forEach((value, key) => {
+                formDataObj[key] = value;
+            });
+            sessionStorage.setItem('clientFormData', JSON.stringify(formDataObj));
+            
+            // Navigate to next step
+            window.location.href = "{{ url_for('add_client_step2') }}";
+        } else {
+            form.reportValidity();
+        }
+    });
+});
+</script>
+{% endblock %}

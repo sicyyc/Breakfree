@@ -1,0 +1,153 @@
+/* Calendar Styles */
+.calendar {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  height: 100%;
+}
+
+.calendar-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.calendar-header h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.calendar-nav-btn {
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 0.25rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.calendar-nav-btn:hover {
+  color: #4682A9;
+}
+
+.calendar-weekdays {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  text-align: center;
+  font-weight: 500;
+  color: #666;
+  font-size: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.calendar-days {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.15rem;
+  flex: 1;
+}
+
+.calendar-day {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border-radius: 50%;
+  position: relative;
+  font-size: 0.75rem;
+  color: #333;
+  transition: all 0.3s ease;
+  padding: 0.15rem;
+}
+
+.calendar-day:hover {
+  background: #f0f2f5;
+}
+
+.calendar-day.today {
+  background: #4682A9;
+  color: white;
+  width: 24px;
+  height: 24px;
+}
+
+.calendar-day.selected {
+  background: #91C8E4;
+  color: white;
+}
+
+.calendar-day.other-month {
+  color: #ccc;
+}
+
+.calendar-day.has-completed::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #4CAF50;
+}
+
+.calendar-day.has-missed::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: #f44336;
+}
+
+.calendar-legend {
+  display: flex;
+  gap: 1rem;
+  margin-top: 0.75rem;
+  justify-content: center;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.legend-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+
+.legend-dot.has-appointment {
+  background: #4682A9;
+}
+
+.legend-dot.has-checkup {
+  background: #91C8E4;
+}
+
+/* Responsive Calendar Styles */
+@media (max-width: 768px) {
+  .calendar-weekdays,
+  .calendar-days {
+    font-size: 0.8rem;
+  }
+
+  .calendar-legend {
+    flex-wrap: wrap;
+  }
+} 

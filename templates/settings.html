@@ -1,0 +1,361 @@
+{% extends "base.html" %}
+
+{% block title %}Settings - BreakFree{% endblock %}
+
+{% block page_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/settings.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="settings-container">
+    <!-- Settings Header -->
+    <div class="settings-header">
+        <div class="header-content">
+            <h1><i class="fas fa-cog"></i> Settings</h1>
+            <p>Manage your system configuration and user access</p>
+        </div>
+    </div>
+
+    <!-- Settings Grid -->
+    <div class="settings-grid">
+        <!-- Left Column -->
+        <div class="settings-column">
+            <!-- User Management Card -->
+            {% if session['role'] == 'admin' %}
+            <div class="settings-card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="fas fa-users-cog"></i>
+                    </div>
+                    <div class="card-title">
+                        <h2>User Management</h2>
+                        <p>Add and manage system users</p>
+                    </div>
+                </div>
+
+                <!-- Add User Form -->
+                <div class="card-section">
+                    <div class="section-header">
+                        <h3>Add New User</h3>
+                        <button class="btn-collapse" data-target="addUserForm">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                    </div>
+                    <div class="section-content" id="addUserForm">
+                        <form id="addUserForm" class="settings-form">
+                            <div class="form-group">
+                                <label for="newUserEmail">
+                                    <i class="fas fa-envelope"></i>
+                                    Email Address
+                                </label>
+                                <input type="email" id="newUserEmail" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="newUserPassword">
+                                    <i class="fas fa-lock"></i>
+                                    Password
+                                </label>
+                                <div class="password-input">
+                                    <input type="password" id="newUserPassword" required>
+                                    <button type="button" class="toggle-password">
+                                        <i class="fas fa-eye"></i>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label for="newUserRole">
+                                    <i class="fas fa-user-tag"></i>
+                                    Role
+                                </label>
+                                <select id="newUserRole" required>
+                                    <option value="">Select role</option>
+                                    <option value="admin">Administrator</option>
+                                    <option value="facilitator">Facilitator</option>
+                                    <option value="caseworker">Case Worker</option>
+                                </select>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn-primary">
+                                    <i class="fas fa-plus"></i>
+                                    Add User
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Users List -->
+                <div class="card-section">
+                    <div class="section-header">
+                        <h3>System Users</h3>
+                        <div class="section-actions">
+                            <div class="search-box">
+                                <i class="fas fa-search"></i>
+                                <input type="text" id="userSearch" placeholder="Search users...">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="section-content">
+                        <div class="users-table-wrapper">
+                            <table class="users-table">
+                                <thead>
+                                    <tr>
+                                        <th>User</th>
+                                        <th>Role</th>
+                                        <th>Status</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="usersList">
+                                    {% if users %}
+                                        {% for user in users %}
+                                        <tr>
+                                            <td>
+                                                <div class="user-info">
+                                                    <div class="user-avatar">{{ user.email[0]|upper }}</div>
+                                                    <div class="user-details">
+                                                        <span class="user-email">{{ user.email }}</span>
+                                                    </div>
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <span class="role-badge {{ user.role }}">{{ user.role|title }}</span>
+                                            </td>
+                                            <td>
+                                                <span class="status-indicator {{ user.status or 'active' }}">{{ user.status or 'Active'|title }}</span>
+                                            </td>
+                                            <td>
+                                                <div class="action-buttons">
+                                                    <button class="btn-icon edit" title="Edit User" onclick="editUser('{{ user.id }}')">
+                                                        <i class="fas fa-edit"></i>
+                                                    </button>
+                                                    <button class="btn-icon delete" title="Delete User" onclick="deleteUser('{{ user.id }}')">
+                                                        <i class="fas fa-trash-alt"></i>
+                                                    </button>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    {% else %}
+                                        <tr>
+                                            <td colspan="4" class="no-data">
+                                                <div class="no-data-message">
+                                                    <i class="fas fa-users"></i>
+                                                    <p>No users found</p>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                    {% endif %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Role Management Card -->
+            <div class="settings-card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="fas fa-user-shield"></i>
+                    </div>
+                    <div class="card-title">
+                        <h2>Role Management</h2>
+                        <p>Configure role permissions and access levels</p>
+                    </div>
+                </div>
+
+                <!-- Role List -->
+                <div class="card-section">
+                    <div class="section-header">
+                        <h3>System Roles</h3>
+                    </div>
+                    <div class="section-content">
+                        <div class="roles-table-wrapper">
+                            <table class="roles-table">
+                                <thead>
+                                    <tr>
+                                        <th>Role</th>
+                                        <th>Permissions</th>
+                                        <th>Users</th>
+                                        <th>Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% set admin_count = users|selectattr('role', 'equalto', 'admin')|list|length %}
+                                    {% set facilitator_count = users|selectattr('role', 'equalto', 'facilitator')|list|length %}
+                                    {% set caseworker_count = users|selectattr('role', 'equalto', 'caseworker')|list|length %}
+                                    
+                                    <tr>
+                                        <td>
+                                            <div class="role-info">
+                                                <span class="role-badge admin">Administrator</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="permission-tags">
+                                                <span class="permission-tag">Full Access</span>
+                                            </div>
+                                        </td>
+                                        <td>{{ admin_count }}</td>
+                                        <td>
+                                            <div class="action-buttons">
+                                                <button class="btn-icon edit" title="Edit Role" onclick="editRolePermissions('admin')">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <div class="role-info">
+                                                <span class="role-badge facilitator">Facilitator</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="permission-tags">
+                                                <span class="permission-tag">View Clients</span>
+                                                <span class="permission-tag">Manage Check-ins</span>
+                                                <span class="permission-tag">View Reports</span>
+                                            </div>
+                                        </td>
+                                        <td>{{ facilitator_count }}</td>
+                                        <td>
+                                            <div class="action-buttons">
+                                                <button class="btn-icon edit" title="Edit Role" onclick="editRolePermissions('facilitator')">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td>
+                                            <div class="role-info">
+                                                <span class="role-badge caseworker">Case Worker</span>
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <div class="permission-tags">
+                                                <span class="permission-tag">View Clients</span>
+                                                <span class="permission-tag">Manage Check-ins</span>
+                                                <span class="permission-tag">Add Notes</span>
+                                            </div>
+                                        </td>
+                                        <td>{{ caseworker_count }}</td>
+                                        <td>
+                                            <div class="action-buttons">
+                                                <button class="btn-icon edit" title="Edit Role" onclick="editRolePermissions('caseworker')">
+                                                    <i class="fas fa-edit"></i>
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column -->
+        <div class="settings-column">
+            <!-- System Settings Card -->
+            <div class="settings-card">
+                <div class="card-header">
+                    <div class="card-icon">
+                        <i class="fas fa-sliders-h"></i>
+                    </div>
+                    <div class="card-title">
+                        <h2>System Settings</h2>
+                        <p>Configure system preferences</p>
+                    </div>
+                </div>
+
+                <!-- Notifications Settings -->
+                <div class="card-section">
+                    <div class="section-header">
+                        <h3>Notifications</h3>
+                        <button class="btn-collapse" data-target="notificationSettings">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                    </div>
+                    <div class="section-content" id="notificationSettings">
+                        <div class="settings-list">
+                            <div class="settings-item">
+                                <div class="item-info">
+                                    <h4>Email Notifications</h4>
+                                    <p>Receive email updates for important events</p>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox" checked>
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                            <div class="settings-item">
+                                <div class="item-info">
+                                    <h4>System Alerts</h4>
+                                    <p>Get notified about system updates</p>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox">
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Security Settings -->
+                <div class="card-section">
+                    <div class="section-header">
+                        <h3>Security</h3>
+                        <button class="btn-collapse" data-target="securitySettings">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                    </div>
+                    <div class="section-content" id="securitySettings">
+                        <div class="settings-list">
+                            <div class="settings-item">
+                                <div class="item-info">
+                                    <h4>Two-Factor Authentication</h4>
+                                    <p>Add an extra layer of security</p>
+                                </div>
+                                <label class="switch">
+                                    <input type="checkbox">
+                                    <span class="slider"></span>
+                                </label>
+                            </div>
+                            <div class="settings-item">
+                                <div class="item-info">
+                                    <h4>Session Timeout</h4>
+                                    <p>Automatically log out after inactivity</p>
+                                </div>
+                                <select class="compact-select">
+                                    <option value="30">30 minutes</option>
+                                    <option value="60">1 hour</option>
+                                    <option value="120">2 hours</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Message Toast -->
+    <div id="messageToast" class="message-toast">
+        <div class="toast-content">
+            <i class="fas fa-info-circle"></i>
+            <span id="toastMessage"></span>
+        </div>
+        <div class="toast-progress"></div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script type="module" src="{{ url_for('static', filename='js/settings.js') }}"></script>
+{% endblock %} 

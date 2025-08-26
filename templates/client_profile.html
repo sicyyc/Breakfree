@@ -1,0 +1,774 @@
+{% extends "base.html" %}
+
+{% block title %}Client Profile - BreakFree{% endblock %}
+
+{% block page_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/client_profile.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/stats.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/charts.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/activity.css') }}">
+{% endblock %}
+
+{% block content %}
+<div class="back-button">
+    <a href="{{ url_for('clients') }}" class="btn-link">
+        <i class="fas fa-arrow-left"></i>
+        Back to Clients
+    </a>
+</div>
+<div class="main-header">
+    <div class="header-content">
+        <div class="client-header">
+            <div class="client-image">
+                {% if client.image_url %}
+                    <img src="{{ url_for('static', filename=client.image_url) }}" alt="{{ client.name }}">
+                {% else %}
+                    <img src="{{ url_for('static', filename='images/default-avatar.png') }}" alt="{{ client.name }}">
+                {% endif %}
+            </div>
+            <div class="client-info">
+                <h1>{{ client.name }}</h1>
+                <div class="client-meta">
+                    <span class="client-id">ID: {{ client.id }}</span>
+                    <span class="status-badge {{ client.status.lower() }}">
+                        <i class="fas fa-circle"></i>
+                        {{ client.status }}
+                    </span>
+                    <span class="care-type-badge care-type-{{ client.care_type }}">
+                        <i class="fas fa-home"></i>
+                        {{ client.care_type|replace('_', ' ')|title }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="actions">
+        <button class="btn-secondary" id="editClientBtn">
+            <i class="fas fa-edit"></i>
+            Edit Profile
+        </button>
+        <button class="btn-primary" id="scheduleInterventionBtn">
+            <i class="fas fa-calendar-plus"></i>
+            Schedule Intervention
+        </button>
+    </div>
+</div>
+
+<!-- Tab Navigation -->
+<div class="tab-navigation">
+    <button class="tab-button active" data-tab="personal-info">
+        <i class="fas fa-user"></i>
+        Personal Info
+    </button>
+    <button class="tab-button" data-tab="progress-monitoring">
+        <i class="fas fa-chart-line"></i>
+        Progress Monitoring
+    </button>
+    <button class="tab-button" data-tab="assessment">
+        <i class="fas fa-clipboard-check"></i>
+        Assessment
+    </button>
+    <button class="tab-button" data-tab="intervention">
+        <i class="fas fa-calendar-alt"></i>
+        Intervention
+    </button>
+</div>
+
+<!-- Tab Content -->
+<div class="tab-content">
+    <!-- Personal Info Tab -->
+    <div class="tab-pane active" id="personal-info">
+        <div class="profile-grid">
+            <!-- Personal Information Card -->
+            <div class="card info-card collapsible-card" data-card="personal">
+                <div class="card-header collapsible-header" data-target="personal">
+                    <h3><i class="fas fa-user"></i> Personal Information</h3>
+                    <div class="header-actions">
+                        <button class="btn-icon" title="Edit">
+                            <i class="fas fa-edit"></i>
+                        </button>
+                        <button class="btn-icon collapse-toggle" title="Expand/Collapse">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-content collapsible-content" data-content="personal">
+                    <div class="info-grid">
+                        <div class="info-item">
+                            <label>Full Name</label>
+                            <p>{{ client.name }}</p>
+                        </div>
+                        {% if client.firstName or client.surname %}
+                        <div class="info-item">
+                            <label>Name Breakdown</label>
+                            <p>{{ client.firstName or '' }} {{ client.middleInitial or '' }} {{ client.surname or '' }}</p>
+                        </div>
+                        {% endif %}
+                        <div class="info-item">
+                            <label>Age</label>
+                            <p>{{ client.age }}</p>
+                        </div>
+                        <div class="info-item">
+                            <label>Gender</label>
+                            <p>{{ client.gender|title if client.gender else 'Not provided' }}</p>
+                        </div>
+                        <div class="info-item">
+                            <label>Care Type</label>
+                            <p>{{ client.care_type|replace('_', ' ')|title if client.care_type else 'Not provided' }}</p>
+                        </div>
+                        <div class="info-item">
+                            <label>Address</label>
+                            <p>{{ client.address if client.address else 'Not provided' }}</p>
+                        </div>
+                        <div class="info-item">
+                            <label>Contact Number</label>
+                            <p>{{ client.phone if client.phone else 'Not provided' }}</p>
+                        </div>
+                        <div class="info-item">
+                            <label>Emergency Contact</label>
+                            <p>
+                                {% if client.emergency_contact %}
+                                    {{ client.emergency_contact.name }} - {{ client.emergency_contact.phone }}
+                                {% else %}
+                                    Not provided
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="info-item">
+                            <label>Registration Date</label>
+                            <p>
+                                {% if client.registrationDate %}
+                                    {{ client.registrationDate.strftime('%B %d, %Y') if client.registrationDate is not string else client.registrationDate }}
+                                {% else %}
+                                    Not provided
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="info-item">
+                            <label>Check-in Date</label>
+                            <p>
+                                {% if client.checkInDate %}
+                                    {{ client.checkInDate.strftime('%B %d, %Y') if client.checkInDate is not string else client.checkInDate }}
+                                {% else %}
+                                    Not provided
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Notes & Observations Card -->
+            <div class="card notes-card" data-card="notes">
+                <div class="card-header" data-target="notes">
+                    <h3><i class="fas fa-sticky-note"></i> Notes & Observations</h3>
+                    <div class="header-actions">
+                        <button class="btn-primary btn-sm">
+                            <i class="fas fa-plus"></i>
+                            Add Note
+                        </button>
+                    </div>
+                </div>
+                <div class="card-content" data-content="notes">
+                    <div class="notes-list">
+                        <div class="note-item">
+                            <div class="note-header">
+                                <span class="note-date">March 12, 2024</span>
+                                <span class="note-author">Dr. Smith</span>
+                            </div>
+                            <p class="note-content">Client showed significant improvement in stress management techniques. Actively participated in group discussions.</p>
+                            <div class="note-tags">
+                                <span class="tag">Progress</span>
+                                <span class="tag">Group Session</span>
+                            </div>
+                        </div>
+                        <div class="note-item">
+                            <div class="note-header">
+                                <span class="note-date">March 10, 2024</span>
+                                <span class="note-author">Nurse Johnson</span>
+                            </div>
+                            <p class="note-content">Regular medication schedule maintained. Sleep pattern showing improvement.</p>
+                            <div class="note-tags">
+                                <span class="tag">Medical</span>
+                                <span class="tag">Routine</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Progress Monitoring Tab -->
+    <div class="tab-pane" id="progress-monitoring">
+        <div class="profile-grid">
+            <!-- Progress Monitoring Card -->
+            <div class="card monitoring-card collapsible-card" data-card="monitoring">
+                <div class="card-header collapsible-header" data-target="monitoring">
+                    <h3><i class="fas fa-chart-line"></i> Progress Monitoring Setup</h3>
+                    <div class="header-actions">
+                        <button class="btn-icon collapse-toggle" title="Expand/Collapse">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-content collapsible-content" data-content="monitoring">
+                    {% if client.checkInFrequency or client.monitoringMethods or client.progressIndicators %}
+                    <div class="info-grid">
+                        {% if client.checkInFrequency %}
+                        <div class="info-item">
+                            <label>Check-in Frequency</label>
+                            <p>{{ client.checkInFrequency|replace('_', ' ')|title }}</p>
+                        </div>
+                        {% endif %}
+                        {% if client.monitoringMethods %}
+                        <div class="info-item">
+                            <label>Monitoring Methods</label>
+                            <p>
+                                {% for method in client.monitoringMethods %}
+                                    <span class="badge">{{ method|replace('_', ' ')|title }}</span>
+                                {% endfor %}
+                            </p>
+                        </div>
+                        {% endif %}
+                        {% if client.progressIndicators %}
+                        <div class="info-item">
+                            <label>Progress Indicators</label>
+                            <p>
+                                {% for indicator in client.progressIndicators %}
+                                    <span class="badge">{{ indicator|replace('_', ' ')|title }}</span>
+                                {% endfor %}
+                            </p>
+                        </div>
+                        {% endif %}
+                        {% if client.riskFactors %}
+                        <div class="info-item">
+                            <label>Risk Factors</label>
+                            <p>
+                                {% for risk in client.riskFactors %}
+                                    <span class="badge">{{ risk|replace('_', ' ')|title }}</span>
+                                {% endfor %}
+                            </p>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div class="no-data-message">
+                        <p><i class="fas fa-info-circle"></i> No progress monitoring data available for this client.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Recovery Progress Card -->
+            <div class="card progress-card collapsible-card" data-card="progress">
+                <div class="card-header collapsible-header" data-target="progress">
+                    <h3><i class="fas fa-chart-line"></i> Recovery Progress</h3>
+                    <div class="header-actions">
+                        <div class="period-selector">
+                            <button class="btn-text active">Week</button>
+                            <button class="btn-text">Month</button>
+                            <button class="btn-text">Year</button>
+                        </div>
+                        <button class="btn-icon collapse-toggle" title="Expand/Collapse">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-content collapsible-content" data-content="progress">
+                    <div class="progress-stats">
+                        <div class="stat-item">
+                            <span class="stat-label">Current Phase</span>
+                            <span class="stat-value phase-badge">Phase 2</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Days Clean</span>
+                            <span class="stat-value">45</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Check-in Rate</span>
+                            <span class="stat-value">92%</span>
+                        </div>
+                    </div>
+                    <div class="chart-container">
+                        <canvas id="recoveryChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Recent Activity Card -->
+            <div class="card activity-card collapsible-card" data-card="activity">
+                <div class="card-header collapsible-header" data-target="activity">
+                    <h3><i class="fas fa-history"></i> Recent Activity</h3>
+                    <div class="header-actions">
+                        <button class="btn-text">View All</button>
+                        <button class="btn-icon collapse-toggle" title="Expand/Collapse">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-content collapsible-content" data-content="activity">
+                    <div class="activity-timeline">
+                        <div class="activity-item">
+                            <div class="activity-icon check-in">
+                                <i class="fas fa-check-circle"></i>
+                            </div>
+                            <div class="activity-content">
+                                <h4>Daily Check-in Completed</h4>
+                                <p>Mood reported: Positive (8/10)</p>
+                                <span class="activity-time">2 hours ago</span>
+                            </div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-icon intervention">
+                                <i class="fas fa-comments"></i>
+                            </div>
+                            <div class="activity-content">
+                                <h4>Group Session Attended</h4>
+                                <p>Topic: Stress Management</p>
+                                <span class="activity-time">Yesterday</span>
+                            </div>
+                        </div>
+                        <div class="activity-item">
+                            <div class="activity-icon milestone">
+                                <i class="fas fa-star"></i>
+                            </div>
+                            <div class="activity-content">
+                                <h4>Milestone Achieved</h4>
+                                <p>30 Days Clean!</p>
+                                <span class="activity-time">3 days ago</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assessment Tab -->
+    <div class="tab-pane" id="assessment">
+        <div class="profile-grid">
+            <!-- Substance Use Assessment Card -->
+            <div class="card assessment-card collapsible-card" data-card="substance">
+                <div class="card-header collapsible-header" data-target="substance">
+                    <h3><i class="fas fa-flask"></i> Substance Use Assessment</h3>
+                    <div class="header-actions">
+                        <button class="btn-icon collapse-toggle" title="Expand/Collapse">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-content collapsible-content" data-content="substance">
+                    {% if client.primarySubstance or client.usageFrequency or client.useSeverity %}
+                    <div class="info-grid">
+                        {% if client.primarySubstance %}
+                        <div class="info-item">
+                            <label>Primary Substance</label>
+                            <p>{{ client.primarySubstance|title }}</p>
+                        </div>
+                        {% endif %}
+                        {% if client.otherSubstance %}
+                        <div class="info-item">
+                            <label>Other Substance</label>
+                            <p>{{ client.otherSubstance }}</p>
+                        </div>
+                        {% endif %}
+                        {% if client.usageFrequency %}
+                        <div class="info-item">
+                            <label>Usage Frequency</label>
+                            <p>{{ client.usageFrequency|replace('_', ' ')|title }}</p>
+                        </div>
+                        {% endif %}
+                        {% if client.usageDuration %}
+                        <div class="info-item">
+                            <label>Usage Duration</label>
+                            <p>{{ client.usageDuration|replace('_', ' ')|title }}</p>
+                        </div>
+                        {% endif %}
+                        {% if client.useSeverity %}
+                        <div class="info-item">
+                            <label>Use Severity</label>
+                            <p>{{ client.useSeverity }}/5</p>
+                        </div>
+                        {% endif %}
+                        {% if client.lifeInterference %}
+                        <div class="info-item">
+                            <label>Life Interference</label>
+                            <p>{{ client.lifeInterference }}/5</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div class="no-data-message">
+                        <p><i class="fas fa-info-circle"></i> No substance use assessment data available for this client.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Mental Health Assessment Card -->
+            <div class="card assessment-card collapsible-card" data-card="mental">
+                <div class="card-header collapsible-header" data-target="mental">
+                    <h3><i class="fas fa-brain"></i> Mental Health Assessment</h3>
+                    <div class="header-actions">
+                        <button class="btn-icon collapse-toggle" title="Expand/Collapse">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-content collapsible-content" data-content="mental">
+                    {% if client.mentalHealthConditions or client.currentMood or client.stressLevel %}
+                    <div class="info-grid">
+                        {% if client.mentalHealthConditions %}
+                        <div class="info-item">
+                            <label>Mental Health Conditions</label>
+                            <p>
+                                {% for condition in client.mentalHealthConditions %}
+                                    <span class="badge">{{ condition|replace('_', ' ')|title }}</span>
+                                {% endfor %}
+                            </p>
+                        </div>
+                        {% endif %}
+                        {% if client.mentalHealthNotes %}
+                        <div class="info-item">
+                            <label>Mental Health Notes</label>
+                            <p>{{ client.mentalHealthNotes }}</p>
+                        </div>
+                        {% endif %}
+                        {% if client.currentMood %}
+                        <div class="info-item">
+                            <label>Current Mood</label>
+                            <p>{{ client.currentMood }}/5</p>
+                        </div>
+                        {% endif %}
+                        {% if client.stressLevel %}
+                        <div class="info-item">
+                            <label>Stress Level</label>
+                            <p>{{ client.stressLevel }}/5</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div class="no-data-message">
+                        <p><i class="fas fa-info-circle"></i> No mental health assessment data available for this client.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Social Support Assessment Card -->
+            <div class="card assessment-card collapsible-card" data-card="social">
+                <div class="card-header collapsible-header" data-target="social">
+                    <h3><i class="fas fa-users"></i> Social Support Assessment</h3>
+                    <div class="header-actions">
+                        <button class="btn-icon collapse-toggle" title="Expand/Collapse">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-content collapsible-content" data-content="social">
+                    {% if client.supportNetwork or client.livingSituation %}
+                    <div class="info-grid">
+                        {% if client.supportNetwork %}
+                        <div class="info-item">
+                            <label>Support Network</label>
+                            <p>
+                                {% for support in client.supportNetwork %}
+                                    <span class="badge">{{ support|replace('_', ' ')|title }}</span>
+                                {% endfor %}
+                            </p>
+                        </div>
+                        {% endif %}
+                        {% if client.livingSituation %}
+                        <div class="info-item">
+                            <label>Living Situation</label>
+                            <p>{{ client.livingSituation|replace('_', ' ')|title }}</p>
+                        </div>
+                        {% endif %}
+                        {% if client.livingSituationNotes %}
+                        <div class="info-item">
+                            <label>Living Situation Notes</label>
+                            <p>{{ client.livingSituationNotes }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div class="no-data-message">
+                        <p><i class="fas fa-info-circle"></i> No social support assessment data available for this client.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Intervention Tab -->
+    <div class="tab-pane" id="intervention">
+        <div class="intervention-plan-container">
+            <!-- Intervention Plan Header -->
+            <div class="intervention-header">
+                <div class="header-content">
+                    <h2><i class="fas fa-clipboard-list"></i> Intervention Plan</h2>
+                    <div class="header-actions">
+                        <button class="btn-secondary btn-sm">
+                            <i class="fas fa-edit"></i>
+                            Edit
+                        </button>
+                        <button class="btn-primary btn-sm">
+                            <i class="fas fa-plus"></i>
+                            Add Service
+                        </button>
+                    </div>
+                </div>
+                <div class="status-indicator">
+                    <span class="status-badge active">
+                        <i class="fas fa-circle"></i>
+                        Active
+                    </span>
+                </div>
+            </div>
+
+            <!-- Services Section -->
+            <div class="services-section">
+                <div class="services-header">
+                    <h3>Services</h3>
+                    <div class="service-actions">
+                        <button class="btn-text">Edit</button>
+                        <button class="btn-text">Status</button>
+                    </div>
+                </div>
+
+                <!-- Service Categories Grid -->
+                <div class="service-categories">
+                    <div class="service-category">
+                        <div class="category-header">
+                            <i class="fas fa-heartbeat"></i>
+                            <h4>Health Service</h4>
+                        </div>
+                        <div class="category-content">
+                            <div class="service-info-grid">
+                                <div class="info-block">
+                                    <label>Objective</label>
+                                    <p>To improve knowledge on health and ensure health of the client through medical and dental services</p>
+                                </div>
+                                <div class="info-block">
+                                    <label>Activities</label>
+                                    <ul>
+                                        <li>Conduct health education & training</li>
+                                        <li>Health check-ups & Physical Assessment</li>
+                                        <li>Provision of vitamins</li>
+                                        <li>Consultation to medical and dental officers</li>
+                                    </ul>
+                                </div>
+                                <div class="info-block">
+                                    <label>Responsible Person</label>
+                                    <ul>
+                                        <li>Client</li>
+                                        <li>Center's Nurse</li>
+                                        <li>Nutrient/Dietitian</li>
+                                        <li>Referral to partner agencies</li>
+                                    </ul>
+                                </div>
+                                <div class="info-block">
+                                    <label>Expected Output</label>
+                                    <ul>
+                                        <li>Enhance knowledge on how to improve & takes care of one's health</li>
+                                        <li>Improve health by obtaining normal body mass index</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="timeframe-section">
+                                <div class="timeframe-content">
+                                    <p>As scheduled</p>
+                                    <p>Monthly</p>
+                                    <p>Daily</p>
+                                    <p>As scheduled</p>
+                                </div>
+                                <div class="timeframe-label">
+                                    <span>Timeframe</span>
+                                </div>
+                            </div>
+                            <div class="progress-section">
+                                <label>Progress</label>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 75%"></div>
+                                </div>
+                                <span class="progress-text">75% Complete</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="service-category">
+                        <div class="category-header">
+                            <i class="fas fa-briefcase"></i>
+                            <h4>Economics & Livelihood</h4>
+                        </div>
+                        <div class="category-content">
+                            <div class="service-info-grid">
+                                <div class="info-block">
+                                    <label>Objective</label>
+                                    <p>To help acquire employable skills and provide trainings that will help improve skills and ability</p>
+                                </div>
+                                <div class="info-block">
+                                    <label>Activities</label>
+                                    <ul>
+                                        <li>Involvement in skills training (gardening, farming, weaving)</li>
+                                        <li>Involvement in dishwashing liquid making</li>
+                                    </ul>
+                                </div>
+                                <div class="info-block">
+                                    <label>Responsible Person</label>
+                                    <ul>
+                                        <li>Client</li>
+                                        <li>Houseparent</li>
+                                        <li>Staffs</li>
+                                        <li>Trainor's/Lecturers</li>
+                                    </ul>
+                                </div>
+                                <div class="info-block">
+                                    <label>Expected Output</label>
+                                    <ul>
+                                        <li>Generation of income while inside the rehabilitation center</li>
+                                        <li>Acquisition of skills that can be used for future income</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="timeframe-section">
+                                <div class="timeframe-content">
+                                    <p>Entire stay in the rehabilitation center</p>
+                                    <p>To be scheduled</p>
+                                </div>
+                                <div class="timeframe-label">
+                                    <span>Timeframe</span>
+                                </div>
+                            </div>
+                            <div class="progress-section">
+                                <label>Progress</label>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 45%"></div>
+                                </div>
+                                <span class="progress-text">45% Complete</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="service-category">
+                        <div class="category-header">
+                            <i class="fas fa-gamepad"></i>
+                            <h4>Recreational Service</h4>
+                        </div>
+                        <div class="category-content">
+                            <div class="service-info-grid">
+                                <div class="info-block">
+                                    <label>Objective</label>
+                                    <p>To promote physical, mental, social, and cultural development and harness hidden talents</p>
+                                </div>
+                                <div class="info-block">
+                                    <label>Activities</label>
+                                    <ul>
+                                        <li>Involvement in daily exercise</li>
+                                        <li>Involvement in recreational activities (Family Day, Sportsfest)</li>
+                                    </ul>
+                                </div>
+                                <div class="info-block">
+                                    <label>Responsible Person</label>
+                                    <ul>
+                                        <li>Client</li>
+                                        <li>Social Worker</li>
+                                        <li>Psychometrician</li>
+                                        <li>Houseparent</li>
+                                    </ul>
+                                </div>
+                                <div class="info-block">
+                                    <label>Expected Output</label>
+                                    <ul>
+                                        <li>To maintain his physical health through exercise</li>
+                                        <li>Improvement of self-confidence</li>
+                                        <li>Development of talents and skills</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="timeframe-section">
+                                <div class="timeframe-content">
+                                    <p>Entire stay in the rehabilitation center</p>
+                                    <p>Everyday</p>
+                                    <p>As scheduled</p>
+                                </div>
+                                <div class="timeframe-label">
+                                    <span>Timeframe</span>
+                                </div>
+                            </div>
+                            <div class="progress-section">
+                                <label>Progress</label>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 90%"></div>
+                                </div>
+                                <span class="progress-text">90% Complete</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="service-category">
+                        <div class="category-header">
+                            <i class="fas fa-pray"></i>
+                            <h4>Spiritual Service</h4>
+                        </div>
+                        <div class="category-content">
+                            <div class="service-info-grid">
+                                <div class="info-block">
+                                    <label>Objective</label>
+                                    <p>To strengthen and deepen faith in God</p>
+                                </div>
+                                <div class="info-block">
+                                    <label>Activities</label>
+                                    <ul>
+                                        <li>Involvement in spiritual activities (daily rosary, Sunday mass)</li>
+                                        <li>Bible sharing and religious practices</li>
+                                    </ul>
+                                </div>
+                                <div class="info-block">
+                                    <label>Responsible Person</label>
+                                    <ul>
+                                        <li>Client</li>
+                                        <li>Social Worker</li>
+                                        <li>Houseparent</li>
+                                        <li>Priest</li>
+                                        <li>Spiritual Groups</li>
+                                    </ul>
+                                </div>
+                                <div class="info-block">
+                                    <label>Expected Output</label>
+                                    <ul>
+                                        <li>Deepen his faith and recognize that God cares for him</li>
+                                        <li>Development of strength whenever in a life crisis</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="timeframe-section">
+                                <div class="timeframe-content">
+                                    <p>As scheduled</p>
+                                </div>
+                                <div class="timeframe-label">
+                                    <span>Timeframe</span>
+                                </div>
+                            </div>
+                            <div class="progress-section">
+                                <label>Progress</label>
+                                <div class="progress-bar">
+                                    <div class="progress-fill" style="width: 60%"></div>
+                                </div>
+                                <span class="progress-text">60% Complete</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/client_profile.js') }}"></script>
+{% endblock %} 
