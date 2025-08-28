@@ -10,62 +10,74 @@ block page_css %}
 />
 {% endblock %} {% block content %}
 <div class="main-header-clients">
-  <div>
-    <h1>{% if session.role == 'caseworker' %}After Care Clients{% else %}Clients{% endif %}</h1>
-    <p>{% if session.role == 'caseworker' %}Browse or search after care clients{% else %}Browse or search registered clients{% endif %}</p>
-  </div>
-  <div class="actions">
-    {% if session.role != 'caseworker' %}
-    <a href="{{ url_for('add_client') }}" class="btn-primary">
-      <i class="fas fa-plus"></i> Add Client
-    </a>
-    {% endif %}
+  <div class="actions actions-left">
     <div class="search-container">
       <span class="search-icon"><i class="fas fa-search"></i></span>
       <input type="text" placeholder="Search by name, ID, or barangay..." />
     </div>
   </div>
+  <div class="actions actions-right">
+    {% if session.role != 'caseworker' %}
+    <a href="{{ url_for('add_client') }}" class="btn-primary">
+      <i class="fas fa-plus"></i> Add Client
+    </a>
+    {% endif %}
+  </div>
 </div>
 
-<div class="filters-container">
-  <div class="filter-group">
-    <label>Status:</label>
-    <select class="filter-select" data-filter="status">
-      <option value="all">All</option>
-      <option value="active">Active</option>
-      <option value="relapsed">Relapsed</option>
-      <option value="review">Review</option>
-    </select>
-  </div>
-  <div class="filter-group">
-    <label>Care Type:</label>
-    <select class="filter-select" data-filter="care_type">
-      <option value="all">All</option>
-      <option value="in_house">In House</option>
-      <option value="after_care">After Care</option>
-    </select>
-  </div>
-  <div class="filter-group">
-    <label>Age Group:</label>
-    <select class="filter-select" data-filter="age">
-      <option value="all">All Ages</option>
-      <option value="18-24">18-24</option>
-      <option value="25-34">25-34</option>
-      <option value="35-44">35-44</option>
-      <option value="45+">45+</option>
-    </select>
-  </div>
-  <div class="filter-group">
-    <label>Gender:</label>
-    <select class="filter-select" data-filter="gender">
-      <option value="all">All</option>
-      <option value="male">Male</option>
-      <option value="female">Female</option>
-    </select>
-  </div>
-</div>
+<!-- Filters moved inside the card below -->
 
 <div class="card">
+  <div class="table-header-bar">
+    <h2 class="table-title">Client</h2>
+    <div class="header-controls">
+      <div class="date-input">
+        <i class="far fa-calendar"></i>
+        <input type="text" placeholder="dd/mm/yyyy" aria-label="From date" />
+        <span class="date-label">From</span>
+      </div>
+      <div class="date-input">
+        <i class="far fa-calendar"></i>
+        <input type="text" placeholder="dd/mm/yyyy" aria-label="To date" />
+        <span class="date-label">To</span>
+      </div>
+      <div class="filter-input" data-label="Status">
+        <select class="filter-select" data-filter="status">
+          <option value="all">All</option>
+          <option value="active">Active</option>
+          <option value="relapsed">Relapsed</option>
+          <option value="review">Review</option>
+        </select>
+      </div>
+      <div class="filter-input" data-label="Care Type">
+        <select class="filter-select" data-filter="care_type">
+          <option value="all">All</option>
+          <option value="in_house">In House</option>
+          <option value="after_care">After Care</option>
+        </select>
+      </div>
+      <div class="export-dropdown">
+        <button class="btn-export" id="exportDropdownBtn">
+          <i class="fas fa-download"></i> Export
+          <i class="fas fa-chevron-down"></i>
+        </button>
+        <div class="export-menu" id="exportMenu">
+          <button class="export-item" data-export="filtered">
+            Export Filtered Data
+          </button>
+          <button class="export-item" data-export="all">
+            Export All to Excel
+          </button>
+          <button class="export-item" data-export="status">
+            Export by Status
+          </button>
+          <button class="export-item" data-export="care_type">
+            Export by Care Type
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
   <!-- Pagination Info -->
   {% if pagination.total > 0 %}
   <div class="pagination-info">
@@ -92,61 +104,59 @@ block page_css %}
         </tr>
       </thead>
       <tbody>
-        {% if clients and clients|length > 0 %}
-          {% for client in clients %}
-          <tr data-client-id="{{ client.id }}">
-            <td>{{ client.clientId or '—' }}</td>
-            <td>{{ client.name }}</td>
-            <td>{{ client.age }}</td>
-            <td>{{ client.gender|title }}</td>
-            <td>{{ client.address }}</td>
-            <td>
-              <span
-                class="care-type-badge care-type-{{ client.care_type }}"
-                data-care-type="{{ client.care_type }}"
-              >
-                {{ client.care_type|replace('_', ' ')|title }}
-              </span>
-            </td>
-            <td>
-              <span
-                class="stage-badge stage-{{ client.status|lower }}"
-                data-status="{{ client.status|lower }}"
-              >
-                {{ client.status|title }}
-              </span>
-            </td>
-            <td>{{ client.checkInDate }}</td>
-            <td class="actions-cell">
-              <a
-                href="{{ url_for('client_profile', client_id=client.id) }}"
-                class="action-btn"
-                title="View Profile"
-              >
-                <i class="fas fa-user"></i>
+        {% if clients and clients|length > 0 %} {% for client in clients %}
+        <tr data-client-id="{{ client.id }}">
+          <td>{{ client.clientId or '—' }}</td>
+          <td>{{ client.name }}</td>
+          <td>{{ client.age }}</td>
+          <td>{{ client.gender|title }}</td>
+          <td>{{ client.address }}</td>
+          <td>
+            <span
+              class="care-type-badge care-type-{{ client.care_type }}"
+              data-care-type="{{ client.care_type }}"
+            >
+              {{ client.care_type|replace('_', ' ')|title }}
+            </span>
+          </td>
+          <td>
+            <span
+              class="stage-badge stage-{{ client.status|lower }}"
+              data-status="{{ client.status|lower }}"
+            >
+              {{ client.status|title }}
+            </span>
+          </td>
+          <td>{{ client.checkInDate }}</td>
+          <td class="actions-cell">
+            <a
+              href="{{ url_for('client_profile', client_id=client.id) }}"
+              class="action-btn"
+              title="View Profile"
+            >
+              <i class="fas fa-user"></i>
+            </a>
+            <button
+              class="action-btn"
+              title="Archive"
+              onclick="openArchiveModal('{{ client.id }}', '{{ client.name|e }}')"
+            >
+              <i class="fas fa-archive"></i>
+            </button>
+          </td>
+        </tr>
+        {% endfor %} {% else %}
+        <tr>
+          <td colspan="9" class="no-data">
+            <div class="no-data-message">
+              <i class="fas fa-users"></i>
+              <p>No clients found</p>
+              <a href="{{ url_for('add_client') }}" class="btn-primary">
+                <i class="fas fa-plus"></i> Add Your First Client
               </a>
-              <button
-                class="action-btn"
-                title="Archive"
-                onclick="openArchiveModal('{{ client.id }}', '{{ client.name|e }}')"
-              >
-                <i class="fas fa-archive"></i>
-              </button>
-            </td>
-          </tr>
-          {% endfor %}
-        {% else %}
-          <tr>
-            <td colspan="9" class="no-data">
-              <div class="no-data-message">
-                <i class="fas fa-users"></i>
-                <p>No clients found</p>
-                <a href="{{ url_for('add_client') }}" class="btn-primary">
-                  <i class="fas fa-plus"></i> Add Your First Client
-                </a>
-              </div>
-            </td>
-          </tr>
+            </div>
+          </td>
+        </tr>
         {% endif %}
       </tbody>
     </table>
@@ -210,20 +220,24 @@ block page_css %}
 
 <!-- Archive Confirmation Modal -->
 <div id="archiveModal" class="modal">
-  <div class="modal-content" style="max-width: 480px;">
+  <div class="modal-content" style="max-width: 480px">
     <div class="modal-header">
       <div class="modal-title">
         <h3>Archive Client</h3>
         <span class="modal-date">This action can be undone by admins.</span>
       </div>
-      <button class="modal-close" onclick="closeArchiveModal()"><i class="fas fa-times"></i></button>
+      <button class="modal-close" onclick="closeArchiveModal()">
+        <i class="fas fa-times"></i>
+      </button>
     </div>
     <div class="modal-body">
       <p id="archiveText">Are you sure you want to archive this client?</p>
     </div>
     <div class="modal-footer">
       <div class="action-buttons">
-        <button class="btn-secondary" onclick="closeArchiveModal()">Cancel</button>
+        <button class="btn-secondary" onclick="closeArchiveModal()">
+          Cancel
+        </button>
         <button class="btn-primary" id="confirmArchiveBtn">Archive</button>
       </div>
     </div>
@@ -233,36 +247,67 @@ block page_css %}
 {% endblock %} {% block scripts %}
 <script src="{{ url_for('static', filename='js/clients.js') }}"></script>
 <script>
+  // Export dropdown toggle (UI only)
+  (function () {
+    const btn = document.getElementById("exportDropdownBtn");
+    const menu = document.getElementById("exportMenu");
+    if (btn && menu) {
+      btn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        menu.classList.toggle("active");
+      });
+      document.addEventListener("click", function () {
+        menu.classList.remove("active");
+      });
+    }
+  })();
+
   let archiveClientId = null;
-  function openArchiveModal(id, name){
+  function openArchiveModal(id, name) {
     archiveClientId = id;
-    const modal = document.getElementById('archiveModal');
-    const text = document.getElementById('archiveText');
-    if(text){ text.textContent = `Are you sure you want to archive "${name}"?`; }
-    if(modal){ modal.classList.add('active'); }
+    const modal = document.getElementById("archiveModal");
+    const text = document.getElementById("archiveText");
+    if (text) {
+      text.textContent = `Are you sure you want to archive "${name}"?`;
+    }
+    if (modal) {
+      modal.classList.add("active");
+    }
   }
-  function closeArchiveModal(){
-    const modal = document.getElementById('archiveModal');
-    if(modal){ modal.classList.remove('active'); }
+  function closeArchiveModal() {
+    const modal = document.getElementById("archiveModal");
+    if (modal) {
+      modal.classList.remove("active");
+    }
     archiveClientId = null;
   }
-  document.getElementById('confirmArchiveBtn')?.addEventListener('click', async function(){
-    if(!archiveClientId) return;
-    try{
-      const response = await fetch(`/clients/${archiveClientId}/archive`, { method: 'POST', headers: { 'Content-Type': 'application/json' } });
-      const result = await response.json();
-      if(result.success){
-        const row = document.querySelector(`[data-client-id="${archiveClientId}"]`);
-        if(row){ row.classList.add('fade-out'); setTimeout(()=>row.remove(), 300); }
-      } else {
-        alert(result.error || 'Failed to archive client');
+  document
+    .getElementById("confirmArchiveBtn")
+    ?.addEventListener("click", async function () {
+      if (!archiveClientId) return;
+      try {
+        const response = await fetch(`/clients/${archiveClientId}/archive`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+        });
+        const result = await response.json();
+        if (result.success) {
+          const row = document.querySelector(
+            `[data-client-id="${archiveClientId}"]`
+          );
+          if (row) {
+            row.classList.add("fade-out");
+            setTimeout(() => row.remove(), 300);
+          }
+        } else {
+          alert(result.error || "Failed to archive client");
+        }
+      } catch (e) {
+        console.error(e);
+        alert("Failed to archive client");
+      } finally {
+        closeArchiveModal();
       }
-    } catch(e){
-      console.error(e);
-      alert('Failed to archive client');
-    } finally {
-      closeArchiveModal();
-    }
-  });
+    });
 </script>
 {% endblock %}
