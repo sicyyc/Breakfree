@@ -51,6 +51,32 @@
             <i class="fas fa-calendar-plus"></i>
             Schedule Intervention
         </button>
+        
+        <!-- Progress and Aftercare Actions -->
+        {% if client.care_type == 'in_house' and client.status == 'active' %}
+            {% if session.role in ['admin', 'facilitator'] %}
+            <button class="btn-success" id="completeTreatmentBtn" onclick="completeTreatment('{{ client.id }}', '{{ client.name|e }}')">
+                <i class="fas fa-check-circle"></i>
+                Complete Treatment
+            </button>
+            {% endif %}
+        {% endif %}
+        
+        {% if client.status == 'completed' %}
+            {% if session.role == 'admin' %}
+            <button class="btn-warning" id="sendToAftercareBtn" onclick="sendToAftercare('{{ client.id }}', '{{ client.name|e }}')">
+                <i class="fas fa-arrow-right"></i>
+                Send to Aftercare
+            </button>
+            {% endif %}
+        {% endif %}
+        
+        {% if client.care_type == 'after_care' %}
+            <span class="status-badge aftercare-badge">
+                <i class="fas fa-home"></i>
+                In Aftercare System
+            </span>
+        {% endif %}
     </div>
 </div>
 
@@ -771,4 +797,52 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/client_profile.js') }}"></script>
+<script>
+// Treatment completion and aftercare transfer functions
+function completeTreatment(clientId, clientName) {
+    if (confirm(`Are you sure you want to mark treatment as completed for "${clientName}"?`)) {
+        fetch(`/clients/${clientId}/complete-treatment`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                alert(result.message);
+                // Reload the page to show updated status
+                location.reload();
+            } else {
+                alert(result.error || 'Failed to complete treatment');
+            }
+        })
+        .catch(e => {
+            console.error(e);
+            alert('Failed to complete treatment');
+        });
+    }
+}
+
+function sendToAftercare(clientId, clientName) {
+    if (confirm(`Are you sure you want to send "${clientName}" to the aftercare system?`)) {
+        fetch(`/clients/${clientId}/send-to-aftercare`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' }
+        })
+        .then(response => response.json())
+        .then(result => {
+            if (result.success) {
+                alert(result.message);
+                // Reload the page to show updated status
+                location.reload();
+            } else {
+                alert(result.error || 'Failed to send to aftercare');
+            }
+        })
+        .catch(e => {
+            console.error(e);
+            alert('Failed to send to aftercare');
+        });
+    }
+}
+</script>
 {% endblock %} 

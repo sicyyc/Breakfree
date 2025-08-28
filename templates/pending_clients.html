@@ -71,8 +71,9 @@ block page_css %}
           <th>Gender</th>
           <th>Address</th>
           <th>Care Type</th>
-          <th>Created By</th>
-          <th>Created Date</th>
+          <th>Status</th>
+          <th>Requested By</th>
+          <th>Request Date</th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -92,8 +93,25 @@ block page_css %}
               {{ client.care_type|replace('_', ' ')|title }}
             </span>
           </td>
+          <td>
+            <span class="status-badge status-{{ client.status|lower }}">
+              {% if client.status == 'pending' %}
+                <i class="fas fa-clock"></i> Pending Approval
+              {% elif client.status == 'pending_aftercare' %}
+                <i class="fas fa-arrow-right"></i> Pending Aftercare
+              {% else %}
+                {{ client.status|title }}
+              {% endif %}
+            </span>
+          </td>
           <td>{{ client.created_by_role|title if client.created_by_role else 'Unknown' }}</td>
-          <td>{{ client.created_at.strftime('%m/%d/%Y') if client.created_at else 'N/A' }}</td>
+          <td>
+            {% if client.status == 'pending_aftercare' %}
+              {{ client.aftercare_request_date.strftime('%m/%d/%Y') if client.aftercare_request_date else 'N/A' }}
+            {% else %}
+              {{ client.created_at.strftime('%m/%d/%Y') if client.created_at else 'N/A' }}
+            {% endif %}
+          </td>
           <td class="actions-cell">
             <a
               href="{{ url_for('client_profile', client_id=client.id) }}"
@@ -102,6 +120,10 @@ block page_css %}
             >
               <i class="fas fa-user"></i>
             </a>
+            
+            <!-- Different actions based on client status -->
+            {% if client.status == 'pending' %}
+            <!-- Regular pending client approval -->
             <button
               class="action-btn approve-btn"
               title="Approve"
@@ -116,11 +138,28 @@ block page_css %}
             >
               <i class="fas fa-times"></i>
             </button>
+            {% elif client.status == 'pending_aftercare' %}
+            <!-- Aftercare request approval -->
+            <button
+              class="action-btn approve-btn"
+              title="Approve Aftercare"
+              onclick="approveAftercare('{{ client.id }}', '{{ client.name|e }}')"
+            >
+              <i class="fas fa-check"></i>
+            </button>
+            <button
+              class="action-btn reject-btn"
+              title="Reject Aftercare"
+              onclick="openAftercareRejectModal('{{ client.id }}', '{{ client.name|e }}')"
+            >
+              <i class="fas fa-times"></i>
+            </button>
+            {% endif %}
           </td>
         </tr>
         {% endfor %} {% else %}
         <tr>
-          <td colspan="9" class="no-data">
+          <td colspan="10" class="no-data">
             <div class="no-data-message">
               <i class="fas fa-clock"></i>
               <p>No pending clients found</p>
@@ -243,6 +282,7 @@ block page_css %}
   })();
 
   let rejectClientId = null;
+  let rejectAftercareClientId = null;
   
   function approveClient(id, name) {
     if (confirm(`Are you sure you want to approve "${name}"?`)) {
@@ -318,6 +358,77 @@ block page_css %}
       } catch (e) {
         console.error(e);
         alert("Failed to reject client");
+             } finally {
+         closeRejectModal();
+       }
+     });
+  
+  // Aftercare approval and rejection functions
+  function approveAftercare(id, name) {
+    if (confirm(`Are you sure you want to approve aftercare for "${name}"?`)) {
+      fetch(`/clients/${id}/approve-aftercare`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      })
+      .then(response => response.json())
+      .then(result => {
+        if (result.success) {
+          const row = document.querySelector(`[data-client-id="${id}"]`);
+          if (row) {
+            row.classList.add("fade-out");
+            setTimeout(() => row.remove(), 300);
+          }
+          alert("Aftercare approved successfully!");
+        } else {
+          alert(result.error || "Failed to approve aftercare");
+        }
+      })
+      .catch(e => {
+        console.error(e);
+        alert("Failed to approve aftercare");
+      });
+    }
+  }
+  
+  function openAftercareRejectModal(id, name) {
+    rejectAftercareClientId = id;
+    const modal = document.getElementById("rejectModal");
+    const text = document.getElementById("rejectText");
+    if (text) {
+      text.textContent = `Are you sure you want to reject aftercare for "${name}"?`;
+    }
+    if (modal) {
+      modal.classList.add("active");
+    }
+  }
+  
+  document
+    .getElementById("confirmRejectBtn")
+    ?.addEventListener("click", async function () {
+      if (!rejectAftercareClientId) return;
+      
+      const reason = document.getElementById("rejectionReason").value;
+      
+      try {
+        const response = await fetch(`/clients/${rejectAftercareClientId}/reject-aftercare`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reason: reason })
+        });
+        const result = await response.json();
+        if (result.success) {
+          const row = document.querySelector(`[data-client-id="${rejectAftercareClientId}"]`);
+          if (row) {
+            row.classList.add("fade-out");
+            setTimeout(() => row.remove(), 300);
+          }
+          alert("Aftercare rejected successfully!");
+        } else {
+          alert(result.error || "Failed to reject aftercare");
+        }
+      } catch (e) {
+        console.error(e);
+        alert("Failed to reject aftercare");
       } finally {
         closeRejectModal();
       }

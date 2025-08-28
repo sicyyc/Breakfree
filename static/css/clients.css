@@ -578,6 +578,47 @@
     color: #d97706;
 }
 
+.stage-completed {
+    background: #d1fae5;
+    color: #059669;
+}
+
+.stage-ready_for_aftercare {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+.stage-pending_aftercare {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+/* Aftercare button styles */
+.aftercare-btn:hover {
+    background: #f59e0b;
+    color: white;
+    border-color: #f59e0b;
+}
+
+/* Status badges for pending clients page */
+.status-pending {
+    background: #fef3c7;
+    color: #d97706;
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.status-pending_aftercare {
+    background: #dbeafe;
+    color: #1d4ed8;
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
 .stage-rejected {
     background: #fee2e2;
     color: #dc2626;

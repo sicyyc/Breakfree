@@ -134,6 +134,12 @@ block page_css %}
                 <i class="fas fa-clock"></i> Pending
               {% elif client.status == 'rejected' %}
                 <i class="fas fa-times"></i> Rejected
+              {% elif client.status == 'completed' %}
+                <i class="fas fa-check-circle"></i> Completed
+              {% elif client.status == 'ready_for_aftercare' %}
+                <i class="fas fa-arrow-right"></i> Ready for Aftercare
+              {% elif client.status == 'pending_aftercare' %}
+                <i class="fas fa-clock"></i> Pending Aftercare
               {% else %}
                 {{ client.status|title }}
               {% endif %}
@@ -148,6 +154,18 @@ block page_css %}
             >
               <i class="fas fa-user"></i>
             </a>
+            
+            <!-- Send to Aftercare button for completed clients -->
+            {% if client.status == 'completed' and client.care_type == 'in_house' and session.role in ['admin', 'facilitator'] %}
+            <button
+              class="action-btn aftercare-btn"
+              title="Send to Aftercare"
+              onclick="sendToAftercare('{{ client.id }}', '{{ client.name|e }}')"
+            >
+              <i class="fas fa-arrow-right"></i>
+            </button>
+            {% endif %}
+            
             <button
               class="action-btn"
               title="Archive"
@@ -327,5 +345,29 @@ block page_css %}
         closeArchiveModal();
       }
     });
+  
+  // Send to aftercare function
+  function sendToAftercare(clientId, clientName) {
+    if (confirm(`Are you sure you want to send "${clientName}" to aftercare? This will create a request for admin approval.`)) {
+      fetch(`/clients/${clientId}/send-to-aftercare`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      })
+      .then(response => response.json())
+      .then(result => {
+        if (result.success) {
+          alert(result.message);
+          // Reload the page to show updated status
+          location.reload();
+        } else {
+          alert(result.error || "Failed to send to aftercare");
+        }
+      })
+      .catch(e => {
+        console.error(e);
+        alert("Failed to send to aftercare");
+      });
+    }
+  }
 </script>
 {% endblock %}

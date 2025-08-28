@@ -541,6 +541,12 @@ def clients():
                     client_dict['status'] = 'pending'
                 elif status == 'rejected':
                     client_dict['status'] = 'rejected'
+                elif status == 'completed':
+                    client_dict['status'] = 'completed'
+                elif status == 'ready_for_aftercare':
+                    client_dict['status'] = 'ready_for_aftercare'
+                elif status == 'pending_aftercare':
+                    client_dict['status'] = 'pending_aftercare'
                 else:
                     client_dict['status'] = 'active'  # Default status
             else:
@@ -634,10 +640,10 @@ def pending_clients():
             if client_dict.get('name') is None or client_dict.get('name') == '':
                 continue
             
-            # Only include pending clients that are not archived
+            # Include both pending approval clients and pending aftercare clients
             status = client_dict.get('status', 'active')
             archived = client_dict.get('archived', False)
-            if status == 'pending' and not archived:
+            if (status == 'pending' or status == 'pending_aftercare') and not archived:
                 # Ensure required fields exist
                 if 'phone' not in client_dict:
                     client_dict['phone'] = None
@@ -1143,6 +1149,149 @@ def reject_client(client_id):
     except Exception as e:
         print(f"Error rejecting client: {e}")
         return jsonify({'success': False, 'error': 'Failed to reject client'}), 500
+
+@app.route('/clients/<client_id>/send-to-aftercare', methods=['POST'])
+@role_required(['admin', 'facilitator'])
+def send_to_aftercare(client_id):
+    try:
+        # Get the client document
+        client_ref = db.collection('clients').document(client_id)
+        client_doc = client_ref.get()
+        
+        if not client_doc.exists:
+            return jsonify({'success': False, 'error': 'Client not found'}), 404
+        
+        client_data = client_doc.to_dict()
+        
+        # Check if client is in-house and completed
+        if client_data.get('care_type') != 'in_house':
+            return jsonify({'success': False, 'error': 'Client is not in in-house care'}), 400
+        
+        if client_data.get('status') != 'completed':
+            return jsonify({'success': False, 'error': 'Client treatment must be completed first'}), 400
+        
+        # Update client status to pending aftercare approval
+        client_ref.update({
+            'status': 'pending_aftercare',
+            'aftercare_request_date': datetime.now(),
+            'aftercare_requested_by': session['user_id']
+        })
+        
+        return jsonify({
+            'success': True, 
+            'message': f'Aftercare request submitted for {client_data.get("name")}. Waiting for admin approval.'
+        })
+        
+    except Exception as e:
+        print(f"Error sending client to aftercare: {e}")
+        return jsonify({'success': False, 'error': 'Failed to send client to aftercare'}), 500
+
+@app.route('/clients/<client_id>/approve-aftercare', methods=['POST'])
+@role_required(['admin'])
+def approve_aftercare(client_id):
+    try:
+        # Get the client document
+        client_ref = db.collection('clients').document(client_id)
+        client_doc = client_ref.get()
+        
+        if not client_doc.exists:
+            return jsonify({'success': False, 'error': 'Client not found'}), 404
+        
+        client_data = client_doc.to_dict()
+        
+        # Check if client is pending aftercare
+        if client_data.get('status') != 'pending_aftercare':
+            return jsonify({'success': False, 'error': 'Client is not pending aftercare approval'}), 400
+        
+        # Update client status to approved and transfer to aftercare
+        client_ref.update({
+            'status': 'active',
+            'care_type': 'after_care',
+            'aftercare_approved_date': datetime.now(),
+            'aftercare_approved_by': session['user_id']
+        })
+        
+        return jsonify({
+            'success': True, 
+            'message': f'Aftercare request approved for {client_data.get("name")}. Client transferred to aftercare system.'
+        })
+        
+    except Exception as e:
+        print(f"Error approving aftercare: {e}")
+        return jsonify({'success': False, 'error': 'Failed to approve aftercare'}), 500
+
+@app.route('/clients/<client_id>/reject-aftercare', methods=['POST'])
+@role_required(['admin'])
+def reject_aftercare(client_id):
+    try:
+        # Get the client document
+        client_ref = db.collection('clients').document(client_id)
+        client_doc = client_ref.get()
+        
+        if not client_doc.exists:
+            return jsonify({'success': False, 'error': 'Client not found'}), 404
+        
+        client_data = client_doc.to_dict()
+        
+        # Check if client is pending aftercare
+        if client_data.get('status') != 'pending_aftercare':
+            return jsonify({'success': False, 'error': 'Client is not pending aftercare approval'}), 400
+        
+        # Get rejection reason from request
+        rejection_reason = request.json.get('reason', 'No reason provided')
+        
+        # Update client status back to completed (rejected aftercare)
+        client_ref.update({
+            'status': 'completed',
+            'aftercare_rejected_date': datetime.now(),
+            'aftercare_rejected_by': session['user_id'],
+            'aftercare_rejection_reason': rejection_reason
+        })
+        
+        return jsonify({
+            'success': True, 
+            'message': f'Aftercare request rejected for {client_data.get("name")}.'
+        })
+        
+    except Exception as e:
+        print(f"Error rejecting aftercare: {e}")
+        return jsonify({'success': False, 'error': 'Failed to reject aftercare'}), 500
+
+@app.route('/clients/<client_id>/complete-treatment', methods=['POST'])
+@role_required(['admin', 'facilitator'])
+def complete_treatment(client_id):
+    try:
+        # Get the client document
+        client_ref = db.collection('clients').document(client_id)
+        client_doc = client_ref.get()
+        
+        if not client_doc.exists:
+            return jsonify({'success': False, 'error': 'Client not found'}), 404
+        
+        client_data = client_doc.to_dict()
+        
+        # Check if client is in-house and active
+        if client_data.get('care_type') != 'in_house':
+            return jsonify({'success': False, 'error': 'Client is not in in-house care'}), 400
+        
+        if client_data.get('status') != 'active':
+            return jsonify({'success': False, 'error': 'Client is not active'}), 400
+        
+        # Update client status to completed
+        client_ref.update({
+            'status': 'completed',
+            'completion_date': datetime.now(),
+            'completed_by': session['user_id']
+        })
+        
+        return jsonify({
+            'success': True, 
+            'message': f'Treatment completed for {client_data.get("name")}. Client is now ready for aftercare.'
+        })
+        
+    except Exception as e:
+        print(f"Error completing treatment: {e}")
+        return jsonify({'success': False, 'error': 'Failed to complete treatment'}), 500
 
 @app.route('/client/<client_id>')
 @role_required(['admin', 'facilitator', 'caseworker'])
