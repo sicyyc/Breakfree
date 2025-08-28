@@ -2,11 +2,10 @@
 
 /* Main Container Styles */
 .main-header-clients {
-    padding: 1.5rem 0;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1.5rem;
+    margin-bottom: 1rem;
 }
 
 .main-header h1 {
@@ -22,17 +21,21 @@
     margin: 0;
 }
 
-/* Enhanced Filters Container */
-.filters-container {
+/* Header controls for title + filters + export */
+.table-header-bar {
     display: flex;
-    gap: 1rem;
-    margin-bottom: 1.5rem;
-    padding: 1.25rem;
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
-    border: 1px solid var(--border-color);
-    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+.table-title {
+    margin: 0;
+    color: var(--text-dark);
+}
+.header-controls {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
 }
 
 .filter-group {
@@ -44,7 +47,7 @@
 
 .filter-group label {
     color: var(--text-dark);
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     font-weight: 500;
     white-space: nowrap;
 }
@@ -55,12 +58,54 @@
     border-radius: 8px;
     background: white;
     color: var(--text-dark);
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     cursor: pointer;
     transition: all 0.2s ease;
     flex: 1;
     min-width: 140px;
 }
+
+/* Export dropdown */
+.export-dropdown { position: relative; }
+.btn-export {
+    background: white;
+    color: var(--text-dark);
+    border: 1.5px solid var(--border-color);
+    padding: 0.625rem 1rem;
+    border-radius: 8px;
+    font-weight: 500;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+.btn-export:hover {
+    background: var(--bg-light);
+    border-color: var(--primary-color);
+}
+.export-menu {
+    position: absolute;
+    right: 0;
+    top: calc(100% + 6px);
+    background: white;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.06);
+    min-width: 220px;
+    display: none;
+    z-index: 10;
+}
+.export-menu.active { display: block; }
+.export-item {
+    width: 100%;
+    text-align: left;
+    padding: 0.75rem 1rem;
+    background: white;
+    border: none;
+    color: var(--text-dark);
+    cursor: pointer;
+}
+.export-item:hover { background: var(--bg-light); }
 
 .filter-select:hover {
     border-color: var(--primary-color);
@@ -80,76 +125,115 @@
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
     border: 1px solid var(--border-color);
     margin-bottom: 1.5rem;
+    display: flex;
+    flex-direction: column;
 }
 
 /* Table Container */
 .table-container {
     width: 100%;
-    overflow-x: auto;
+    overflow-x: hidden;
 }
 
 .clients-table {
     width: 100%;
     border-collapse: separate;
     border-spacing: 0;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
+    table-layout: auto; /* let columns size to content */
 }
 
 .clients-table th {
-    background: var(--bg-light);
+    background: transparent;
     color: var(--text-dark);
     font-weight: 600;
     text-align: left;
-    padding: 1rem 1.5rem;
-    border-bottom: 2px solid var(--border-color);
+    padding: 1rem 1rem;
+    border-bottom: 1px solid var(--border-light);
     white-space: nowrap;
 }
 
 .clients-table td {
-    padding: 1rem 1.5rem;
-    border-bottom: 1px solid var(--border-light);
+    padding: 1rem 1rem;
+    border-bottom: 0;
     color: var(--text-dark);
     vertical-align: middle;
+    white-space: nowrap; /* keep single line */
+}
+
+/* Reduce left padding on the Address cell to close the gap after Gender */
+.clients-table td:nth-child(5) {
+    padding-left: 0.25rem;
 }
 
 /* Column Widths */
 .clients-table th:nth-child(1),
 .clients-table td:nth-child(1) {
-    min-width: 80px; /* ID column */
+    min-width: 36px; /* ID column */
+    width: 48px;
+    text-align: center;
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
 }
 
 .clients-table th:nth-child(2),
 .clients-table td:nth-child(2) {
-    min-width: 220px; /* Name column */
+    min-width: 200px; /* Name column */
 }
 
 .clients-table th:nth-child(3),
 .clients-table td:nth-child(3),
 .clients-table th:nth-child(4),
 .clients-table td:nth-child(4) {
-    min-width: 90px; /* Age and Gender columns */
+    min-width: 56px; /* Age and Gender columns */
+}
+
+/* Tighter age column specifically */
+.clients-table th:nth-child(3),
+.clients-table td:nth-child(3) {
+    width: 64px;
+    text-align: center;
+    padding-left: 0.25rem;
+    padding-right: 0.25rem;
 }
 
 .clients-table th:nth-child(5),
 .clients-table td:nth-child(5) {
-    min-width: 260px; /* Address column */
+    min-width: 260px; /* make address flexible but with a sensible floor */
+    padding-left: 0.25rem; /* tuck closer to Gender */
+}
+
+/* Tighten spacing between Gender (4) and Address (5) */
+.clients-table th:nth-child(4),
+.clients-table td:nth-child(4) {
+    padding-right: 0.25rem;
+    min-width: 52px; /* Gender tighter */
 }
 
 .clients-table th:nth-child(6),
-.clients-table td:nth-child(6),
+.clients-table td:nth-child(6) {
+    min-width: 96px; /* Care Type column tighter */
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+}
 .clients-table th:nth-child(7),
 .clients-table td:nth-child(7) {
-    min-width: 140px; /* Care Type and Stage columns */
+    min-width: 88px; /* Stage column tighter */
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
 }
 
 .clients-table th:nth-child(8),
 .clients-table td:nth-child(8) {
-    min-width: 140px; /* Last Check-in column */
+    min-width: 96px; /* Last Check-in tighter */
 }
 
 .clients-table th:last-child,
 .clients-table td:last-child {
-    min-width: 120px; /* Actions column */
+    min-width: 72px; /* Actions column */
+    width: 1%;
+    padding-right: 0.25rem; /* tighter to right border */
+    padding-left: 0.25rem;
 }
 
 /* More relaxed row spacing */
@@ -157,11 +241,21 @@
     line-height: 1.6;
 }
 
+.clients-table tbody tr {
+    background: white;
+}
+.clients-table tbody tr:hover {
+    background: var(--bg-light);
+}
+.clients-table tbody tr + tr td {
+    border-top: 1px solid var(--border-light);
+}
+
 /* Actions Cell */
 .actions-cell {
     display: flex;
     gap: 0.5rem;
-    justify-content: flex-start;
+    justify-content: flex-end; /* push buttons to the right edge of the column */
 }
 
 .action-btn {
@@ -185,13 +279,86 @@
     transform: translateY(-1px);
 }
 
+/* Approve and Reject button styles */
+.approve-btn:hover {
+    background: #10b981;
+    color: white;
+    border-color: #10b981;
+}
+
+.reject-btn:hover {
+    background: #ef4444;
+    color: white;
+    border-color: #ef4444;
+}
+
+/* Modal form styles */
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--text-dark);
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1.5px solid var(--border-color);
+    border-radius: 8px;
+    font-size: 0.9rem;
+    transition: border-color 0.2s ease;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.btn-danger {
+    background: #ef4444;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-danger:hover {
+    background: #dc2626;
+    transform: translateY(-1px);
+}
+
+.btn-secondary {
+    background: #6b7280;
+    color: white;
+    border: none;
+    padding: 0.75rem 1.5rem;
+    border-radius: 8px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.btn-secondary:hover {
+    background: #4b5563;
+    transform: translateY(-1px);
+}
+
 /* Enhanced Header Actions */
 .actions {
     display: flex;
     gap: 1rem;
     align-items: center;
-    margin-top: 1rem;
 }
+.actions-left { flex: 1; }
+.actions-right { display: flex; align-items: center; gap: 0.75rem; }
 
 .btn-primary {
     background: var(--primary-color);
@@ -217,16 +384,77 @@
 /* Enhanced Search Container */
 .search-container {
     position: relative;
-    flex: 1;
-    max-width: 400px;
+    flex: 1 1 auto;
+    max-width: 640px;
 }
+/* Table header bar inside card */
+.table-header-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    padding: 1rem 1rem 0;
+}
+.table-title {
+    margin: 0;
+    color: var(--text-dark);
+}
+.header-controls {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+/* Date inputs */
+.date-input {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    border: 1.5px solid var(--border-color);
+    border-radius: 8px;
+    background: white;
+    padding: 0 0.75rem;
+    height: 40px;
+}
+.date-input i { color: var(--text-muted); margin-right: 0.5rem; }
+.date-input input {
+    border: none;
+    outline: none;
+    padding: 0.625rem 0;
+    font-size: 0.8rem;
+    width: 120px;
+    background: transparent;
+}
+.date-input .date-label {
+    position: absolute;
+    top: -8px;
+    left: 10px;
+    background: white;
+    padding: 0 6px;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
+
+/* In-field labeled selects */
+.filter-input { position: relative; }
+.filter-input::before {
+    content: attr(data-label);
+    position: absolute;
+    top: -8px;
+    left: 10px;
+    background: white;
+    padding: 0 6px;
+    font-size: 0.7rem;
+    color: var(--text-muted);
+}
+.filter-input .filter-select { min-width: 160px; }
 
 .search-container input {
     width: 100%;
     padding: 0.75rem 1rem 0.75rem 2.75rem;
     border: 1.5px solid var(--border-color);
     border-radius: 8px;
-    font-size: 0.95rem;
+    font-size: 0.8rem;
     transition: all 0.2s ease;
     background: white;
 }
@@ -274,7 +502,7 @@
 /* Responsive Design */
 @media (max-width: 1200px) {
     .clients-table {
-        font-size: 0.85rem;
+        font-size: 0.8rem;
     }
 
     .clients-table th,
@@ -330,7 +558,6 @@
 
 /* Stage Badges */
 .stage-badge {
-    padding: 0.25rem 0.75rem;
     border-radius: 1rem;
     font-size: 0.8rem;
     font-weight: 500;
@@ -344,6 +571,16 @@
 .stage-relapsed {
     background: var(--danger-light);
     color: var(--danger);
+}
+
+.stage-pending {
+    background: #fef3c7;
+    color: #d97706;
+}
+
+.stage-rejected {
+    background: #fee2e2;
+    color: #dc2626;
 }
 
 /* Flag Badges */
@@ -422,7 +659,7 @@
 
 .modal-title p {
     margin: 0.25rem 0 0;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     color: var(--text-muted);
 }
 
@@ -491,12 +728,12 @@
     margin-bottom: 0.5rem;
     color: var(--text-dark);
     font-weight: 500;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
 }
 
 .form-group label i {
     color: var(--primary-color);
-    font-size: 0.9rem;
+    font-size: 0.8rem;
 }
 
 .form-group input,
@@ -506,7 +743,7 @@
     padding: 0.75rem 1rem;
     border: 1px solid var(--border-color);
     border-radius: 8px;
-    font-size: 0.95rem;
+    font-size: 0.8rem;
     transition: all 0.3s ease;
     background: white;
 }
@@ -582,7 +819,7 @@
 }
 
 .upload-placeholder span {
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     color: var(--text-muted);
 }
 
@@ -658,13 +895,13 @@
     gap: 0.5rem;
     padding: 0.5rem 1rem;
     border-radius: 2rem;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     font-weight: 500;
     margin-top: 0.5rem;
 }
 
 .status-indicator i {
-    font-size: 0.75rem;
+    font-size: 0.8rem;
 }
 
 .status-indicator.active {
@@ -700,7 +937,7 @@
     padding: 0.75rem 1.5rem;
     border-radius: 8px;
     font-weight: 500;
-    font-size: 0.95rem;
+    font-size: 0.8rem;
     transition: all 0.3s ease;
     cursor: pointer;
 }
@@ -781,7 +1018,7 @@
 
 .info-item label {
     display: block;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     color: var(--text-muted);
     margin-bottom: 0.5rem;
 }
@@ -815,7 +1052,7 @@
 
 .emergency-contact i {
     color: var(--danger);
-    font-size: 0.75rem;
+    font-size: 0.8rem;
 }
 
 /* Search and Filter Animations */
@@ -871,9 +1108,8 @@
 .care-type-badge {
     display: inline-flex;
     align-items: center;
-    padding: 0.35rem 0.75rem;
     border-radius: 6px;
-    font-size: 0.85rem;
+    font-size: 0.8rem;
     font-weight: 500;
     line-height: 1;
     position: relative;
@@ -908,10 +1144,12 @@
 
 /* Pagination Styles */
 .pagination-info {
-    padding: 1rem 1.5rem 0;
+    order: 3;
+    padding: 0.75rem 1.5rem 0;
     color: var(--text-muted);
-    font-size: 0.9rem;
-    border-bottom: 1px solid var(--border-light);
+    font-size: 0.8rem;
+    border-bottom: 0;
+    border-top: 1px solid var(--border-light);
 }
 
 .pagination-info p {
@@ -920,7 +1158,8 @@
 }
 
 .pagination-container {
-    padding: 1.5rem;
+    order: 4;
+    padding: 1rem 1.5rem 1.25rem;
     background: white;
     border-top: 1px solid var(--border-light);
     display: flex;
@@ -940,7 +1179,7 @@
     text-decoration: none;
     border: 1.5px solid var(--border-color);
     border-radius: 8px;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     font-weight: 500;
     transition: all 0.2s ease;
     display: flex;
@@ -981,7 +1220,7 @@
     color: var(--text-dark);
     border: 1.5px solid var(--border-color);
     border-radius: 8px;
-    font-size: 0.9rem;
+    font-size: 0.8rem;
     font-weight: 500;
     transition: all 0.2s ease;
     cursor: pointer;
@@ -1029,12 +1268,12 @@
     
     .pagination-btn {
         padding: 0.625rem 1rem;
-        font-size: 0.85rem;
+        font-size: 0.8rem;
     }
     
     .pagination-number {
         width: 36px;
         height: 36px;
-        font-size: 0.85rem;
+        font-size: 0.8rem;
     }
 }

@@ -537,15 +537,20 @@ def clients():
                     client_dict['status'] = 'relapsed'
                 elif status in ['review', 'under review']:
                     client_dict['status'] = 'review'
+                elif status == 'pending':
+                    client_dict['status'] = 'pending'
+                elif status == 'rejected':
+                    client_dict['status'] = 'rejected'
                 else:
                     client_dict['status'] = 'active'  # Default status
             else:
                 client_dict['status'] = 'active'  # Default if no status
             
-            # Only add non-archived clients
+            # Only add non-archived clients that are NOT pending
             archived = client_dict.get('archived', False)
-            print(f"Client {client_dict.get('name', 'Unknown')}: archived = {archived}")
-            if not archived:
+            status = client_dict.get('status', 'active')
+            print(f"Client {client_dict.get('name', 'Unknown')}: archived = {archived}, status = {status}")
+            if not archived and status != 'pending':
                 all_clients_data.append(client_dict)
                 print(f"Added client {client_dict.get('name', 'Unknown')} to display list")
 
@@ -605,6 +610,107 @@ def clients():
     
     return render_template('clients.html', email=session['email'], clients=clients_data, pagination=pagination)
 
+@app.route('/pending-clients')
+@role_required(['admin'])
+def pending_clients():
+    try:
+        print(f"Admin accessing pending clients page: {session.get('email')}")
+        
+        # Get pagination parameters
+        page = request.args.get('page', 1, type=int)
+        per_page = 10
+        
+        # Fetch pending clients from Firestore
+        clients_ref = db.collection('clients')
+        all_pending_clients = []
+        
+        clients_stream = clients_ref.stream()
+        
+        for client in clients_stream:
+            client_dict = client.to_dict()
+            client_dict['id'] = client.id
+            
+            # Skip clients with None names
+            if client_dict.get('name') is None or client_dict.get('name') == '':
+                continue
+            
+            # Only include pending clients that are not archived
+            status = client_dict.get('status', 'active')
+            archived = client_dict.get('archived', False)
+            if status == 'pending' and not archived:
+                # Ensure required fields exist
+                if 'phone' not in client_dict:
+                    client_dict['phone'] = None
+                if 'emergency_contact' not in client_dict:
+                    client_dict['emergency_contact'] = None
+                if 'registrationDate' not in client_dict:
+                    client_dict['registrationDate'] = client_dict.get('created_at', None)
+                if 'age' not in client_dict or client_dict['age'] is None:
+                    client_dict['age'] = 'N/A'
+                if 'gender' not in client_dict or client_dict['gender'] is None:
+                    client_dict['gender'] = 'Not specified'
+                if 'address' not in client_dict or client_dict['address'] is None:
+                    client_dict['address'] = 'No address provided'
+                if 'checkInDate' not in client_dict or client_dict['checkInDate'] is None:
+                    client_dict['checkInDate'] = 'N/A'
+                if 'care_type' not in client_dict or client_dict['care_type'] is None:
+                    client_dict['care_type'] = 'in_house'
+                else:
+                    care_type = str(client_dict['care_type']).lower().replace(' ', '_')
+                    if care_type in ['after_care', 'aftercare']:
+                        client_dict['care_type'] = 'after_care'
+                    else:
+                        client_dict['care_type'] = 'in_house'
+                
+                all_pending_clients.append(client_dict)
+        
+        # Sort by creation date (newest first)
+        all_pending_clients.sort(key=lambda x: x.get('created_at', datetime.now()), reverse=True)
+        
+        # Calculate pagination
+        total_clients = len(all_pending_clients)
+        total_pages = math.ceil(total_clients / per_page)
+        
+        if page < 1:
+            page = 1
+        elif page > total_pages and total_pages > 0:
+            page = total_pages
+        
+        start_idx = (page - 1) * per_page
+        end_idx = start_idx + per_page
+        clients_for_page = all_pending_clients[start_idx:end_idx]
+        
+        pagination = {
+            'page': page,
+            'per_page': per_page,
+            'total': total_clients,
+            'total_pages': total_pages,
+            'has_prev': page > 1,
+            'has_next': page < total_pages,
+            'prev_num': page - 1 if page > 1 else None,
+            'next_num': page + 1 if page < total_pages else None,
+            'start_record': start_idx + 1 if total_clients > 0 else 0,
+            'end_record': min(end_idx, total_clients)
+        }
+        
+        return render_template('pending_clients.html', clients=clients_for_page, pagination=pagination)
+        
+    except Exception as e:
+        print(f"Error in pending_clients route: {e}")
+        flash('Error loading pending clients. Please try again.', 'error')
+        return render_template('pending_clients.html', clients=[], pagination={
+            'page': 1,
+            'per_page': 10,
+            'total': 0,
+            'total_pages': 0,
+            'has_prev': False,
+            'has_next': False,
+            'prev_num': None,
+            'next_num': None,
+            'start_record': 0,
+            'end_record': 0
+        })
+
 @app.route('/clients/add', methods=['GET', 'POST'])
 @role_required(['admin', 'facilitator'])
 def add_client():
@@ -651,10 +757,11 @@ def add_client():
                 'clientPassword': request.form.get('clientPassword'),
                 'registrationDate': request.form.get('registrationDate'),
                 'checkInDate': request.form.get('checkInDate'),
-                'status': request.form.get('status'),
+                'status': 'pending',  # Always set as pending for new clients
                 'care_type': request.form.get('care_type', 'in_house'),
                 'created_at': datetime.now(),
                 'created_by': session['user_id'],
+                'created_by_role': session['role'],  # Track who created the client
                 'flags': [],
                 'archived': False
             }
@@ -866,7 +973,7 @@ def add_client():
             
             response_data = {
                 'success': True, 
-                'message': 'Client added successfully',
+                'message': 'Client assessment submitted successfully and is pending admin approval',
                 'client_id': new_client[1].id
             }
             
@@ -950,27 +1057,92 @@ def flag_client(client_id):
         return jsonify({'success': False, 'error': str(e)}), 400
 
 @app.route('/clients/<client_id>/archive', methods=['POST'])
-@role_required(['admin', 'facilitator'])
+@role_required(['admin'])
 def archive_client(client_id):
     try:
-        # Get client reference
+        # Get the client document
         client_ref = db.collection('clients').document(client_id)
-        client = client_ref.get()
-
-        if not client.exists:
+        client_doc = client_ref.get()
+        
+        if not client_doc.exists:
             return jsonify({'success': False, 'error': 'Client not found'}), 404
-
-        # Update client document
+        
+        # Update the client to archived
         client_ref.update({
             'archived': True,
             'archived_at': datetime.now(),
             'archived_by': session['user_id']
         })
-
+        
         return jsonify({'success': True, 'message': 'Client archived successfully'})
+        
     except Exception as e:
         print(f"Error archiving client: {e}")
-        return jsonify({'success': False, 'error': str(e)}), 400
+        return jsonify({'success': False, 'error': 'Failed to archive client'}), 500
+
+@app.route('/clients/<client_id>/approve', methods=['POST'])
+@role_required(['admin'])
+def approve_client(client_id):
+    try:
+        # Get the client document
+        client_ref = db.collection('clients').document(client_id)
+        client_doc = client_ref.get()
+        
+        if not client_doc.exists:
+            return jsonify({'success': False, 'error': 'Client not found'}), 404
+        
+        client_data = client_doc.to_dict()
+        
+        # Check if client is pending
+        if client_data.get('status') != 'pending':
+            return jsonify({'success': False, 'error': 'Client is not pending approval'}), 400
+        
+        # Update the client status to active
+        client_ref.update({
+            'status': 'active',
+            'approved_at': datetime.now(),
+            'approved_by': session['user_id']
+        })
+        
+        return jsonify({'success': True, 'message': 'Client approved successfully'})
+        
+    except Exception as e:
+        print(f"Error approving client: {e}")
+        return jsonify({'success': False, 'error': 'Failed to approve client'}), 500
+
+@app.route('/clients/<client_id>/reject', methods=['POST'])
+@role_required(['admin'])
+def reject_client(client_id):
+    try:
+        # Get the client document
+        client_ref = db.collection('clients').document(client_id)
+        client_doc = client_ref.get()
+        
+        if not client_doc.exists:
+            return jsonify({'success': False, 'error': 'Client not found'}), 404
+        
+        client_data = client_doc.to_dict()
+        
+        # Check if client is pending
+        if client_data.get('status') != 'pending':
+            return jsonify({'success': False, 'error': 'Client is not pending approval'}), 400
+        
+        # Get rejection reason from request
+        rejection_reason = request.json.get('reason', 'No reason provided')
+        
+        # Update the client status to rejected
+        client_ref.update({
+            'status': 'rejected',
+            'rejected_at': datetime.now(),
+            'rejected_by': session['user_id'],
+            'rejection_reason': rejection_reason
+        })
+        
+        return jsonify({'success': True, 'message': 'Client rejected successfully'})
+        
+    except Exception as e:
+        print(f"Error rejecting client: {e}")
+        return jsonify({'success': False, 'error': 'Failed to reject client'}), 500
 
 @app.route('/client/<client_id>')
 @role_required(['admin', 'facilitator', 'caseworker'])

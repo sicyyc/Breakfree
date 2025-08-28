@@ -1,4 +1,4 @@
-{% extends "base.html" %} {% block title %}Clients - BreakFree{% endblock %} {%
+{% extends "base.html" %} {% block title %}Pending Clients - BreakFree{% endblock %} {%
 block page_css %}
 <link
   rel="stylesheet"
@@ -17,44 +17,16 @@ block page_css %}
     </div>
   </div>
   <div class="actions actions-right">
-    {% if session.role == 'admin' %}
-    <a href="{{ url_for('pending_clients') }}" class="btn-secondary">
-      <i class="fas fa-clock"></i> Pending Clients
+    <a href="{{ url_for('clients') }}" class="btn-secondary">
+      <i class="fas fa-users"></i> All Clients
     </a>
-    {% endif %}
-    {% if session.role != 'caseworker' %}
-    <a href="{{ url_for('add_client') }}" class="btn-primary">
-      <i class="fas fa-plus"></i> Add Client
-    </a>
-    {% endif %}
   </div>
 </div>
 
-<!-- Filters moved inside the card below -->
-
 <div class="card">
   <div class="table-header-bar">
-    <h2 class="table-title">Client</h2>
+    <h2 class="table-title">Pending Clients</h2>
     <div class="header-controls">
-      <div class="date-input">
-        <i class="far fa-calendar"></i>
-        <input type="text" placeholder="dd/mm/yyyy" aria-label="From date" />
-        <span class="date-label">From</span>
-      </div>
-      <div class="date-input">
-        <i class="far fa-calendar"></i>
-        <input type="text" placeholder="dd/mm/yyyy" aria-label="To date" />
-        <span class="date-label">To</span>
-      </div>
-      <div class="filter-input" data-label="Status">
-        <select class="filter-select" data-filter="status">
-          <option value="all">All</option>
-          <option value="active">Active</option>
-          <option value="relapsed">Relapsed</option>
-          <option value="review">Review</option>
-          <option value="rejected">Rejected</option>
-        </select>
-      </div>
       <div class="filter-input" data-label="Care Type">
         <select class="filter-select" data-filter="care_type">
           <option value="all">All</option>
@@ -74,22 +46,17 @@ block page_css %}
           <button class="export-item" data-export="all">
             Export All to Excel
           </button>
-          <button class="export-item" data-export="status">
-            Export by Status
-          </button>
-          <button class="export-item" data-export="care_type">
-            Export by Care Type
-          </button>
         </div>
       </div>
     </div>
   </div>
+  
   <!-- Pagination Info -->
   {% if pagination.total > 0 %}
   <div class="pagination-info">
     <p>
       Showing {{ pagination.start_record }}-{{ pagination.end_record }} of {{
-      pagination.total }} clients
+      pagination.total }} pending clients
     </p>
   </div>
   {% endif %}
@@ -104,8 +71,8 @@ block page_css %}
           <th>Gender</th>
           <th>Address</th>
           <th>Care Type</th>
-          <th>Stage</th>
-          <th>Last Check-in</th>
+          <th>Created By</th>
+          <th>Created Date</th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -125,21 +92,8 @@ block page_css %}
               {{ client.care_type|replace('_', ' ')|title }}
             </span>
           </td>
-          <td>
-            <span
-              class="stage-badge stage-{{ client.status|lower }}"
-              data-status="{{ client.status|lower }}"
-            >
-              {% if client.status == 'pending' %}
-                <i class="fas fa-clock"></i> Pending
-              {% elif client.status == 'rejected' %}
-                <i class="fas fa-times"></i> Rejected
-              {% else %}
-                {{ client.status|title }}
-              {% endif %}
-            </span>
-          </td>
-          <td>{{ client.checkInDate }}</td>
+          <td>{{ client.created_by_role|title if client.created_by_role else 'Unknown' }}</td>
+          <td>{{ client.created_at.strftime('%m/%d/%Y') if client.created_at else 'N/A' }}</td>
           <td class="actions-cell">
             <a
               href="{{ url_for('client_profile', client_id=client.id) }}"
@@ -149,11 +103,18 @@ block page_css %}
               <i class="fas fa-user"></i>
             </a>
             <button
-              class="action-btn"
-              title="Archive"
-              onclick="openArchiveModal('{{ client.id }}', '{{ client.name|e }}')"
+              class="action-btn approve-btn"
+              title="Approve"
+              onclick="approveClient('{{ client.id }}', '{{ client.name|e }}')"
             >
-              <i class="fas fa-archive"></i>
+              <i class="fas fa-check"></i>
+            </button>
+            <button
+              class="action-btn reject-btn"
+              title="Reject"
+              onclick="openRejectModal('{{ client.id }}', '{{ client.name|e }}')"
+            >
+              <i class="fas fa-times"></i>
             </button>
           </td>
         </tr>
@@ -161,17 +122,9 @@ block page_css %}
         <tr>
           <td colspan="9" class="no-data">
             <div class="no-data-message">
-              <i class="fas fa-users"></i>
-              <p>No clients found</p>
-              {% if session.role == 'admin' %}
-              <p class="text-muted">Check the Pending Clients page for clients awaiting approval.</p>
-              <a href="{{ url_for('pending_clients') }}" class="btn-secondary">
-                <i class="fas fa-clock"></i> View Pending Clients
-              </a>
-              {% endif %}
-              <a href="{{ url_for('add_client') }}" class="btn-primary">
-                <i class="fas fa-plus"></i> Add Your First Client
-              </a>
+              <i class="fas fa-clock"></i>
+              <p>No pending clients found</p>
+              <p class="text-muted">All clients have been reviewed or there are no new submissions.</p>
             </div>
           </td>
         </tr>
@@ -187,7 +140,7 @@ block page_css %}
       <!-- Previous Button -->
       {% if pagination.has_prev %}
       <a
-        href="{{ url_for('clients', page=pagination.prev_num) }}"
+        href="{{ url_for('pending_clients', page=pagination.prev_num) }}"
         class="pagination-btn"
       >
         <i class="fas fa-chevron-left"></i> Previous
@@ -206,7 +159,7 @@ block page_css %}
         {% elif page_num <= 2 or page_num >= pagination.total_pages - 1 or
         (page_num >= pagination.page - 1 and page_num <= pagination.page + 1) %}
         <a
-          href="{{ url_for('clients', page=page_num) }}"
+          href="{{ url_for('pending_clients', page=page_num) }}"
           class="pagination-number"
           >{{ page_num }}</a
         >
@@ -221,7 +174,7 @@ block page_css %}
       <!-- Next Button -->
       {% if pagination.has_next %}
       <a
-        href="{{ url_for('clients', page=pagination.next_num) }}"
+        href="{{ url_for('pending_clients', page=pagination.next_num) }}"
         class="pagination-btn"
       >
         Next <i class="fas fa-chevron-right"></i>
@@ -236,27 +189,36 @@ block page_css %}
   {% endif %}
 </div>
 
-<!-- Archive Confirmation Modal -->
-<div id="archiveModal" class="modal">
+<!-- Reject Confirmation Modal -->
+<div id="rejectModal" class="modal">
   <div class="modal-content" style="max-width: 480px">
     <div class="modal-header">
       <div class="modal-title">
-        <h3>Archive Client</h3>
-        <span class="modal-date">This action can be undone by admins.</span>
+        <h3>Reject Client</h3>
+        <span class="modal-date">This action cannot be undone.</span>
       </div>
-      <button class="modal-close" onclick="closeArchiveModal()">
+      <button class="modal-close" onclick="closeRejectModal()">
         <i class="fas fa-times"></i>
       </button>
     </div>
     <div class="modal-body">
-      <p id="archiveText">Are you sure you want to archive this client?</p>
+      <p id="rejectText">Are you sure you want to reject this client?</p>
+      <div class="form-group">
+        <label for="rejectionReason">Reason for rejection (optional):</label>
+        <textarea 
+          id="rejectionReason" 
+          class="form-control" 
+          rows="3" 
+          placeholder="Please provide a reason for rejection..."
+        ></textarea>
+      </div>
     </div>
     <div class="modal-footer">
       <div class="action-buttons">
-        <button class="btn-secondary" onclick="closeArchiveModal()">
+        <button class="btn-secondary" onclick="closeRejectModal()">
           Cancel
         </button>
-        <button class="btn-primary" id="confirmArchiveBtn">Archive</button>
+        <button class="btn-danger" id="confirmRejectBtn">Reject</button>
       </div>
     </div>
   </div>
@@ -280,51 +242,84 @@ block page_css %}
     }
   })();
 
-  let archiveClientId = null;
-  function openArchiveModal(id, name) {
-    archiveClientId = id;
-    const modal = document.getElementById("archiveModal");
-    const text = document.getElementById("archiveText");
+  let rejectClientId = null;
+  
+  function approveClient(id, name) {
+    if (confirm(`Are you sure you want to approve "${name}"?`)) {
+      fetch(`/clients/${id}/approve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      })
+      .then(response => response.json())
+      .then(result => {
+        if (result.success) {
+          const row = document.querySelector(`[data-client-id="${id}"]`);
+          if (row) {
+            row.classList.add("fade-out");
+            setTimeout(() => row.remove(), 300);
+          }
+          alert("Client approved successfully!");
+        } else {
+          alert(result.error || "Failed to approve client");
+        }
+      })
+      .catch(e => {
+        console.error(e);
+        alert("Failed to approve client");
+      });
+    }
+  }
+  
+  function openRejectModal(id, name) {
+    rejectClientId = id;
+    const modal = document.getElementById("rejectModal");
+    const text = document.getElementById("rejectText");
     if (text) {
-      text.textContent = `Are you sure you want to archive "${name}"?`;
+      text.textContent = `Are you sure you want to reject "${name}"?`;
     }
     if (modal) {
       modal.classList.add("active");
     }
   }
-  function closeArchiveModal() {
-    const modal = document.getElementById("archiveModal");
+  
+  function closeRejectModal() {
+    const modal = document.getElementById("rejectModal");
     if (modal) {
       modal.classList.remove("active");
     }
-    archiveClientId = null;
+    rejectClientId = null;
+    document.getElementById("rejectionReason").value = "";
   }
+  
   document
-    .getElementById("confirmArchiveBtn")
+    .getElementById("confirmRejectBtn")
     ?.addEventListener("click", async function () {
-      if (!archiveClientId) return;
+      if (!rejectClientId) return;
+      
+      const reason = document.getElementById("rejectionReason").value;
+      
       try {
-        const response = await fetch(`/clients/${archiveClientId}/archive`, {
+        const response = await fetch(`/clients/${rejectClientId}/reject`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reason: reason })
         });
         const result = await response.json();
         if (result.success) {
-          const row = document.querySelector(
-            `[data-client-id="${archiveClientId}"]`
-          );
+          const row = document.querySelector(`[data-client-id="${rejectClientId}"]`);
           if (row) {
             row.classList.add("fade-out");
             setTimeout(() => row.remove(), 300);
           }
+          alert("Client rejected successfully!");
         } else {
-          alert(result.error || "Failed to archive client");
+          alert(result.error || "Failed to reject client");
         }
       } catch (e) {
         console.error(e);
-        alert("Failed to archive client");
+        alert("Failed to reject client");
       } finally {
-        closeArchiveModal();
+        closeRejectModal();
       }
     });
 </script>
