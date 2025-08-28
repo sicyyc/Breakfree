@@ -17,17 +17,14 @@ block page_css %}
     </div>
   </div>
   <div class="actions actions-right">
-<<<<<<< HEAD
     {% if session.role == 'admin' %}
     <a href="{{ url_for('pending_clients') }}" class="btn-secondary">
       <i class="fas fa-clock"></i> Pending Clients
     </a>
     {% endif %}
-=======
->>>>>>> d45146a7cb7a04e99d995712958ee2d851c3c6b8
     {% if session.role != 'caseworker' %}
     <a href="{{ url_for('add_client') }}" class="btn-primary">
-      <i class="fas fa-plus"></i> Add Client
+      <i class="fas fa-plus"></i> Assessment
     </a>
     {% endif %}
   </div>
@@ -55,10 +52,7 @@ block page_css %}
           <option value="active">Active</option>
           <option value="relapsed">Relapsed</option>
           <option value="review">Review</option>
-<<<<<<< HEAD
           <option value="rejected">Rejected</option>
-=======
->>>>>>> d45146a7cb7a04e99d995712958ee2d851c3c6b8
         </select>
       </div>
       <div class="filter-input" data-label="Care Type">
