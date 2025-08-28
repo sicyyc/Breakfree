@@ -17,11 +17,14 @@ block page_css %}
     </div>
   </div>
   <div class="actions actions-right">
+<<<<<<< HEAD
     {% if session.role == 'admin' %}
     <a href="{{ url_for('pending_clients') }}" class="btn-secondary">
       <i class="fas fa-clock"></i> Pending Clients
     </a>
     {% endif %}
+=======
+>>>>>>> d45146a7cb7a04e99d995712958ee2d851c3c6b8
     {% if session.role != 'caseworker' %}
     <a href="{{ url_for('add_client') }}" class="btn-primary">
       <i class="fas fa-plus"></i> Add Client
@@ -52,7 +55,10 @@ block page_css %}
           <option value="active">Active</option>
           <option value="relapsed">Relapsed</option>
           <option value="review">Review</option>
+<<<<<<< HEAD
           <option value="rejected">Rejected</option>
+=======
+>>>>>>> d45146a7cb7a04e99d995712958ee2d851c3c6b8
         </select>
       </div>
       <div class="filter-input" data-label="Care Type">
@@ -130,6 +136,7 @@ block page_css %}
               class="stage-badge stage-{{ client.status|lower }}"
               data-status="{{ client.status|lower }}"
             >
+<<<<<<< HEAD
               {% if client.status == 'pending' %}
                 <i class="fas fa-clock"></i> Pending
               {% elif client.status == 'rejected' %}
@@ -137,6 +144,9 @@ block page_css %}
               {% else %}
                 {{ client.status|title }}
               {% endif %}
+=======
+              {{ client.status|title }}
+>>>>>>> d45146a7cb7a04e99d995712958ee2d851c3c6b8
             </span>
           </td>
           <td>{{ client.checkInDate }}</td>
@@ -163,6 +173,7 @@ block page_css %}
             <div class="no-data-message">
               <i class="fas fa-users"></i>
               <p>No clients found</p>
+<<<<<<< HEAD
               {% if session.role == 'admin' %}
               <p class="text-muted">Check the Pending Clients page for clients awaiting approval.</p>
               <a href="{{ url_for('pending_clients') }}" class="btn-secondary">
@@ -172,6 +183,11 @@ block page_css %}
               <a href="{{ url_for('add_client') }}" class="btn-primary">
                 <i class="fas fa-plus"></i> Add Your First Client
               </a>
+=======
+              <a href="{{ url_for('add_client') }}" class="btn-primary">
+                <i class="fas fa-plus"></i> Add Your First Client
+              </a>
+>>>>>>> d45146a7cb7a04e99d995712958ee2d851c3c6b8
             </div>
           </td>
         </tr>
