@@ -54,7 +54,7 @@
           class="nav-item {% if active_tab == 'clients' %}active{% endif %}"
         >
           <i class="fa-regular fa-user"></i>
-          {% if session.role == 'caseworker' %}After Care Clients{% else
+          {% if session.role == 'house_worker' %}House Clients{% else
           %}Clients{% endif %}
         </a>
         <a
@@ -64,7 +64,7 @@
           <i class="fa-regular fa-calendar-check"></i>
           Check-in
         </a>
-        {% if session['role'] in ['admin', 'facilitator'] %}
+        {% if session['role'] in ['admin', 'psychometrician'] %}
         <a
           href="{{ url_for('interventions') }}"
           class="nav-item {% if active_tab == 'interventions' %}active{% endif %}"
@@ -80,17 +80,17 @@
           <i class="fa-regular fa-map"></i>
           Map
         </a>
-        {% if session['role'] in ['admin', 'facilitator', 'caseworker'] %}
+        {% if session['role'] in ['admin', 'psychometrician', 'house_worker'] %}
         <a
           href="{{ url_for('reports') }}"
           class="nav-item {% if active_tab == 'reports' %}active{% endif %}"
         >
           <i class="fa-regular fa-rectangle-list"></i>
-          {% if session.role == 'caseworker' %}After Care Reports{% else
+          {% if session.role == 'house_worker' %}House Reports{% else
           %}Reports{% endif %}
         </a>
-        {% endif %} {% if session['role'] in ['admin', 'facilitator',
-        'caseworker'] %}
+        {% endif %} {% if session['role'] in ['admin', 'psychometrician',
+        'house_worker'] %}
         <a
           href="{{ url_for('settings') }}"
           class="nav-item {% if active_tab == 'settings' %}active{% endif %}"

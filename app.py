@@ -408,12 +408,12 @@ def dashboard():
             else:
                 in_house_clients += 1
         
-        # Role-based filtering: Caseworkers only see after care statistics
+        # Role-based filtering: House workers only see in-house statistics
         user_role = session.get('role', '')
-        if user_role == 'caseworker':
-            print("Caseworker detected - showing only after care statistics")
-            total_clients = after_care_clients
-            in_house_clients = 0
+        if user_role == 'house_worker':
+            print("House worker detected - showing only in-house statistics")
+            total_clients = in_house_clients
+            after_care_clients = 0
                 
     except Exception as e:
         print(f"Error fetching client counts: {e}")
@@ -429,12 +429,12 @@ def dashboard():
                          after_care_clients=after_care_clients)
 
 @app.route('/check_in')
-@role_required(['admin', 'facilitator', 'caseworker'])
+@role_required(['admin', 'psychometrician', 'house_worker'])
 def check_in():
     return render_template('check_in.html', email=session['email'])
 
 @app.route('/debug/clients')
-@role_required(['admin', 'facilitator', 'caseworker'])
+@role_required(['admin', 'psychometrician', 'house_worker'])
 def debug_clients():
     """Debug route to see what's happening with clients data"""
     try:
@@ -459,7 +459,7 @@ def debug_clients():
         return jsonify({'error': str(e), 'traceback': str(e.__traceback__)})
 
 @app.route('/clients')
-@role_required(['admin', 'facilitator', 'caseworker'])
+@role_required(['admin', 'psychometrician', 'house_worker'])
 def clients():
     try:
         print(f"User accessing clients page: {session.get('email')} with role: {session.get('role')}")
@@ -590,12 +590,12 @@ def clients():
                 all_clients_data.append(client_dict)
                 print(f"Added client {client_dict.get('name', 'Unknown')} to display list")
 
-        # Role-based filtering: Caseworkers can only see after care clients
+        # Role-based filtering: House workers can only see in-house clients
         user_role = session.get('role', '')
-        if user_role == 'caseworker':
-            print("Caseworker detected - filtering to show only after care clients")
-            all_clients_data = [client for client in all_clients_data if client.get('care_type') == 'after_care']
-            print(f"After filtering: {len(all_clients_data)} after care clients")
+        if user_role == 'house_worker':
+            print("House worker detected - filtering to show only in-house clients")
+            all_clients_data = [client for client in all_clients_data if client.get('care_type') != 'after_care']
+            print(f"After filtering: {len(all_clients_data)} in-house clients")
 
         # Sort clients by name for consistent pagination
         all_clients_data.sort(key=lambda x: x.get('name', '').lower())
@@ -748,7 +748,7 @@ def pending_clients():
         })
 
 @app.route('/clients/add', methods=['GET', 'POST'])
-@role_required(['admin', 'facilitator'])
+@role_required(['admin', 'psychometrician'])
 def add_client():
     if request.method == 'POST':
         try:
@@ -1044,14 +1044,14 @@ def add_client():
     return render_template('add_client.html', email=session['email'], suggested_client_id=suggested_client_id)
 
 @app.route('/clients/add/step2')
-@role_required(['admin', 'facilitator'])
+@role_required(['admin', 'psychometrician'])
 def add_client_step2():
     return render_template('add_client_step2.html', email=session['email'])
 
 
 
 @app.route('/clients/<client_id>/flag', methods=['POST'])
-@role_required(['admin', 'facilitator', 'caseworker'])
+@role_required(['admin', 'psychometrician', 'house_worker'])
 def flag_client(client_id):
     try:
         # Get client reference
@@ -1177,7 +1177,7 @@ def reject_client(client_id):
         return jsonify({'success': False, 'error': 'Failed to reject client'}), 500
 
 @app.route('/clients/<client_id>/send-to-aftercare', methods=['POST'])
-@role_required(['admin', 'facilitator'])
+@role_required(['admin', 'psychometrician'])
 def send_to_aftercare(client_id):
     try:
         # Get the client document
@@ -1320,7 +1320,7 @@ def complete_treatment(client_id):
         return jsonify({'success': False, 'error': 'Failed to complete treatment'}), 500
 
 @app.route('/client/<client_id>')
-@role_required(['admin', 'facilitator', 'caseworker'])
+@role_required(['admin', 'psychometrician', 'house_worker'])
 def client_profile(client_id):
     try:
         # Get client reference
@@ -1474,27 +1474,27 @@ def client_profile(client_id):
         return redirect(url_for('clients'))
 
 @app.route('/interventions')
-@role_required(['admin', 'facilitator'])
+@role_required(['admin', 'psychometrician'])
 def interventions():
     return render_template('interventions.html', email=session['email'])
 
 @app.route('/map')
-@role_required(['admin', 'facilitator', 'caseworker'])
+@role_required(['admin', 'psychometrician', 'house_worker'])
 def map():
     return render_template('map.html', email=session['email'])
 
 @app.route('/reports')
-@role_required(['admin', 'facilitator', 'caseworker'])
+@role_required(['admin', 'psychometrician', 'house_worker'])
 def reports():
     return render_template('reports.html', email=session['email'])
 
 @app.route('/settings')
-@role_required(['admin', 'facilitator', 'caseworker'])
+@role_required(['admin', 'psychometrician', 'house_worker'])
 def settings():
     try:
-        # Get all users from Firestore (only for admin and facilitator)
+        # Get all users from Firestore (only for admin and psychometrician)
         users = []
-        if session.get('role') in ['admin', 'facilitator']:
+        if session.get('role') in ['admin', 'psychometrician']:
             users_ref = db.collection('users')
             for user in users_ref.stream():
                 user_data = user.to_dict()
@@ -1541,7 +1541,7 @@ def create_user():
             return jsonify({'success': False, 'error': 'Missing required fields'}), 400
         
         # Validate role
-        valid_roles = ['admin', 'facilitator', 'caseworker']
+        valid_roles = ['admin', 'psychometrician', 'house_worker']
         if role not in valid_roles:
             return jsonify({'success': False, 'error': 'Invalid role'}), 400
         
@@ -1630,7 +1630,7 @@ def update_user(user_id):
         
         # Validate role if provided
         if role:
-            valid_roles = ['admin', 'facilitator', 'caseworker']
+            valid_roles = ['admin', 'psychometrician', 'house_worker']
             if role not in valid_roles:
                 return jsonify({'success': False, 'error': 'Invalid role'}), 400
         
@@ -1742,12 +1742,12 @@ def get_client_locations():
                 
                 clients_data.append(client_data)
         
-        # Role-based filtering: Caseworkers can only see after care clients
+        # Role-based filtering: House workers can only see in-house clients
         user_role = session.get('role', '')
-        if user_role == 'caseworker':
-            print("Caseworker detected - filtering API to show only after care clients")
-            clients_data = [client for client in clients_data if client.get('care_type') == 'after_care']
-            print(f"After filtering: {len(clients_data)} after care clients")
+        if user_role == 'house_worker':
+            print("House worker detected - filtering API to show only in-house clients")
+            clients_data = [client for client in clients_data if client.get('care_type') != 'after_care']
+            print(f"After filtering: {len(clients_data)} in-house clients")
         
         print("Debug info for all clients:", debug_info)
         print(f"Returning {len(clients_data)} clients with location data")
@@ -2368,20 +2368,20 @@ def force_geocode_all():
         }), 500
 
 @app.route('/api/municipalities')
-@role_required(['admin', 'facilitator', 'caseworker'])
+@role_required(['admin', 'psychometrician', 'house_worker'])
 def get_municipalities():
     """Get all Laguna municipalities and cities with their coordinates"""
     municipalities = LAGUNA_LOCATIONS['municipalities']
     return jsonify(municipalities)
 
 @app.route('/api/barangays/<municipality_id>')
-@role_required(['admin', 'facilitator', 'caseworker'])
+@role_required(['admin', 'psychometrician', 'house_worker'])
 def get_barangays(municipality_id):
     barangays = LAGUNA_LOCATIONS['barangays'].get(municipality_id, [])
     return jsonify(barangays)
 
 @app.route('/api/locations/validate')
-@role_required(['admin', 'facilitator', 'caseworker'])
+@role_required(['admin', 'psychometrician', 'house_worker'])
 def validate_address():
     """Validate and geocode an address for the add client form"""
     try:
@@ -2538,7 +2538,7 @@ def debug_locations():
         }), 500
 
 @app.route('/api/locations/stats')
-@role_required(['admin', 'facilitator', 'caseworker'])
+@role_required(['admin', 'psychometrician', 'house_worker'])
 def get_location_stats():
     """Get statistics about client distribution across Laguna locations"""
     try:
@@ -2593,7 +2593,7 @@ def get_location_stats():
         }), 500
 
 @app.route('/api/locations/search')
-@role_required(['admin', 'facilitator', 'caseworker'])
+@role_required(['admin', 'psychometrician', 'house_worker'])
 def search_locations():
     """Search for Laguna locations by name"""
     query = request.args.get('q', '').lower()
@@ -2690,7 +2690,7 @@ def generate_offset_coordinates(base_coords, client_id, offset_radius=0.001):
     return new_coords
 
 @app.route('/debug/client/<client_id>')
-@role_required(['admin', 'facilitator', 'caseworker'])
+@role_required(['admin', 'psychometrician', 'house_worker'])
 def debug_client(client_id):
     """Debug route to see client data"""
     try:

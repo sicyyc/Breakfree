@@ -9,11 +9,12 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/calendar-enhancements.css') }}">
 <style>
     .calendar-container {
-        background: white;
+        background: transparent;
         border-radius: 12px;
-        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         padding: 24px;
         margin-bottom: 24px;
+        width: 100%;
+        max-width: 100%;
     }
 
     .calendar-header {
@@ -27,6 +28,13 @@
         font-size: 24px;
         font-weight: 600;
         color: #2c3e50;
+        margin: 0;
+    }
+
+    .calendar-subtitle {
+        font-size: 14px;
+        color: #666;
+        margin: 4px 0 0 0;
     }
 
     .calendar-nav {
@@ -65,6 +73,7 @@
         background: #ecf0f1;
         border-radius: 8px;
         overflow: hidden;
+        width: 100%;
     }
 
     .calendar-weekday {
@@ -88,11 +97,20 @@
         justify-content: center;
         align-items: center;
         position: relative;
+        writing-mode: horizontal-tb;
+        text-orientation: mixed;
     }
 
     .calendar-day:hover {
         background: #f8f9fa;
         transform: scale(1.02);
+    }
+
+    /* Ensure calendar days are properly sized */
+    .calendar-day {
+        aspect-ratio: 1;
+        min-width: 0;
+        min-height: 60px;
     }
 
     .calendar-day.other-month {
@@ -147,95 +165,102 @@
         top: 0;
         width: 100%;
         height: 100%;
-        background-color: rgba(0, 0, 0, 0.5);
+        background-color: rgba(0, 0, 0, 0.4);
+        backdrop-filter: blur(2px);
     }
 
     .activity-modal-content {
         background-color: white;
-        margin: 5% auto;
+        margin: 8% auto;
         padding: 0;
-        border-radius: 12px;
+        border-radius: 8px;
         width: 90%;
-        max-width: 800px;
-        max-height: 80vh;
+        max-width: 600px;
+        max-height: 70vh;
         overflow-y: auto;
-        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+        border: 1px solid #e0e0e0;
     }
 
     .activity-header {
-        background: linear-gradient(135deg, #3498db, #2980b9);
-        color: white;
-        padding: 20px;
-        border-radius: 12px 12px 0 0;
+        background: #f8f9fa;
+        color: #333;
+        padding: 16px 20px;
+        border-radius: 8px 8px 0 0;
         display: flex;
         justify-content: space-between;
         align-items: center;
+        border-bottom: 1px solid #e0e0e0;
     }
 
     .activity-title {
-        font-size: 24px;
+        font-size: 18px;
         font-weight: 600;
+        color: #2c3e50;
     }
 
     .activity-date {
-        font-size: 16px;
-        opacity: 0.9;
+        font-size: 14px;
+        color: #666;
     }
 
     .close-activity {
         background: none;
         border: none;
-        color: white;
-        font-size: 24px;
+        color: #666;
+        font-size: 20px;
         cursor: pointer;
         padding: 0;
-        width: 30px;
-        height: 30px;
+        width: 28px;
+        height: 28px;
         display: flex;
         align-items: center;
         justify-content: center;
-        border-radius: 50%;
-        transition: background 0.3s;
+        border-radius: 4px;
+        transition: all 0.3s;
     }
 
     .close-activity:hover {
-        background: rgba(255, 255, 255, 0.2);
+        background: #e0e0e0;
+        color: #333;
     }
 
     .activity-body {
-        padding: 24px;
+        padding: 20px;
     }
 
     .schedule-table {
         width: 100%;
         border-collapse: collapse;
         background: white;
-        border-radius: 8px;
+        border-radius: 6px;
         overflow: hidden;
-        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+        border: 1px solid #e0e0e0;
     }
 
     .schedule-table th {
-        background: #34495e;
-        color: white;
-        padding: 12px 8px;
+        background: #f8f9fa;
+        color: #333;
+        padding: 10px 8px;
         text-align: center;
-        font-weight: 500;
-        font-size: 14px;
+        font-weight: 600;
+        font-size: 13px;
+        border-bottom: 1px solid #e0e0e0;
     }
 
     .schedule-table td {
-        padding: 12px 8px;
+        padding: 10px 8px;
         text-align: center;
-        border-bottom: 1px solid #ecf0f1;
-        font-size: 13px;
+        border-bottom: 1px solid #f0f0f0;
+        font-size: 12px;
         vertical-align: middle;
     }
 
     .time-slot {
-        font-weight: 500;
+        font-weight: 600;
         color: #2c3e50;
-        background: #ecf0f1;
+        background: #f8f9fa;
     }
 
     .activity-cell {
@@ -259,27 +284,95 @@
     .view-toggle {
         display: flex;
         gap: 8px;
-        margin-bottom: 24px;
     }
 
     .view-btn {
-        background: #ecf0f1;
-        border: none;
+        background: #f8f9fa;
+        border: 1px solid #e0e0e0;
         padding: 8px 16px;
         border-radius: 6px;
         cursor: pointer;
         font-size: 14px;
         transition: all 0.3s;
+        color: #666;
     }
 
     .view-btn.active {
-        background: #3498db;
+        background: #4682A9;
         color: white;
+        border-color: #4682A9;
     }
 
     .view-btn:hover {
-        background: #3498db;
+        background: #4682A9;
         color: white;
+        border-color: #4682A9;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .calendar-container {
+            max-width: 100%;
+            padding: 16px;
+        }
+        
+        .calendar-day {
+            min-height: 50px;
+            padding: 8px 4px;
+        }
+        
+        .day-number {
+            font-size: 14px;
+        }
+        
+        .calendar-weekday {
+            font-size: 12px;
+            padding: 8px 4px;
+        }
+        
+        .activity-modal-content {
+            width: 95%;
+            margin: 5% auto;
+        }
+    }
+
+    /* Calendar Legend Styles */
+    .calendar-legend {
+        display: flex;
+        gap: 16px;
+        margin-top: 16px;
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        color: #2c3e50;
+    }
+
+    .legend-color {
+        width: 16px;
+        height: 16px;
+        border-radius: 4px;
+        border: 1px solid #ddd;
+    }
+
+    .legend-color.regular {
+        background: #e8f5e8;
+        border-color: #27ae60;
+    }
+
+    .legend-color.intervention {
+        background: #fff3cd;
+        border-color: #ffc107;
+    }
+
+    .legend-color.today {
+        background: #3498db;
+        border-color: #2980b9;
     }
 </style>
 {% endblock %}
@@ -287,7 +380,7 @@
 {% block content %}
 <div class="main-header">
     <div>
-        <h1><i class="fas fa-calendar-check"></i> Daily Activities & Interventions</h1>
+        <h1>Daily Activities & Interventions</h1>
         <p>Comprehensive daily schedules and therapeutic intervention tracking</p>
     </div>
     <div class="view-toggle">
@@ -327,9 +420,7 @@
             <div class="calendar-weekday">Thu</div>
             <div class="calendar-weekday">Fri</div>
             <div class="calendar-weekday">Sat</div>
-            <div id="calendarDays">
-                <!-- Calendar days will be populated by JavaScript -->
-            </div>
+            <!-- Calendar days will be populated by JavaScript directly here -->
         </div>
         
         <div class="calendar-legend">
@@ -501,12 +592,15 @@ let selectedDate = new Date();
 
 // Initialize calendar
 function initCalendar() {
+    console.log('Initializing calendar...');
     updateCalendar();
     setupEventListeners();
+    console.log('Calendar initialized successfully');
 }
 
 // Update calendar display
 function updateCalendar() {
+    console.log('Updating calendar...');
     const year = currentDate.getFullYear();
     const month = currentDate.getMonth();
     
@@ -518,8 +612,16 @@ function updateCalendar() {
     const startDate = new Date(firstDay);
     startDate.setDate(startDate.getDate() - firstDay.getDay());
     
-    const calendarDays = document.getElementById('calendarDays');
-    calendarDays.innerHTML = '';
+    const calendarGrid = document.querySelector('.calendar-grid');
+    
+    // Clear existing content but preserve weekday headers
+    const weekdayHeaders = calendarGrid.querySelectorAll('.calendar-weekday');
+    calendarGrid.innerHTML = '';
+    
+    // Restore weekday headers
+    weekdayHeaders.forEach(header => {
+        calendarGrid.appendChild(header);
+    });
     
     const today = new Date();
     today.setHours(0, 0, 0, 0);
@@ -549,8 +651,9 @@ function updateCalendar() {
             showActivityModal(dayOfWeek);
         });
         
-        calendarDays.appendChild(dayElement);
+        calendarGrid.appendChild(dayElement);
     }
+    console.log('Calendar updated successfully with', calendarGrid.children.length, 'elements');
 }
 
 // Show activity modal
