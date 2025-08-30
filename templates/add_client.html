@@ -118,11 +118,7 @@
     </div>
     <div class="step">
       <span>2</span>
-      <div class="step-label">Progress Monitoring</div>
-    </div>
-    <div class="step">
-      <span>3</span>
-      <div class="step-label">Pre-Assessment</div>
+      <div class="step-label">Rehabilitation Assessment</div>
     </div>
   </div>
 </div>
@@ -268,6 +264,224 @@
           />
           <small class="input-help">Format: 09XXXXXXXXX</small>
         </div>
+      </div>
+    </div>
+
+    <!-- Marital and Family Information -->
+    <div class="form-section">
+      <h3><i class="fas fa-heart"></i> Marital and Family Information</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="civilStatus">Civil Status</label>
+          <select id="civilStatus" name="civil_status" required class="input-enhanced">
+            <option value="">Select civil status</option>
+            <option value="single">Single</option>
+            <option value="married">Married</option>
+            <option value="widowed">Widowed</option>
+            <option value="divorced">Divorced</option>
+            <option value="separated">Separated</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="spouseName">Name of Spouse (if married)</label>
+          <input
+            type="text"
+            id="spouseName"
+            name="spouse_name"
+            placeholder="Enter spouse name"
+            class="input-enhanced"
+          />
+        </div>
+        <div class="form-group">
+          <label for="yearsMarried">Years Married</label>
+          <input
+            type="number"
+            id="yearsMarried"
+            name="years_married"
+            min="0"
+            placeholder="Number of years"
+            class="input-enhanced"
+          />
+        </div>
+        <div class="form-group">
+          <label for="numberOfChildren">Number of Children</label>
+          <input
+            type="number"
+            id="numberOfChildren"
+            name="number_of_children"
+            min="0"
+            placeholder="Number of children"
+            class="input-enhanced"
+          />
+        </div>
+        <div class="form-group">
+          <label for="relationshipWithChildren">Relationship with Children</label>
+          <textarea
+            id="relationshipWithChildren"
+            name="relationship_with_children"
+            placeholder="Describe your relationship with your children"
+            class="input-enhanced"
+            rows="3"
+          ></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Parental Information -->
+    <div class="form-section">
+      <h3><i class="fas fa-users"></i> Parental Information</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="fatherName">Name of Father</label>
+          <input
+            type="text"
+            id="fatherName"
+            name="father_name"
+            placeholder="Enter father's name"
+            class="input-enhanced"
+          />
+        </div>
+        <div class="form-group">
+          <label for="motherName">Name of Mother</label>
+          <input
+            type="text"
+            id="motherName"
+            name="mother_name"
+            placeholder="Enter mother's name"
+            class="input-enhanced"
+          />
+        </div>
+        <div class="form-group">
+          <label for="relationshipWithFather">Relationship with Father</label>
+          <textarea
+            id="relationshipWithFather"
+            name="relationship_with_father"
+            placeholder="Describe your relationship with your father"
+            class="input-enhanced"
+            rows="3"
+          ></textarea>
+        </div>
+        <div class="form-group">
+          <label for="relationshipWithMother">Relationship with Mother</label>
+          <textarea
+            id="relationshipWithMother"
+            name="relationship_with_mother"
+            placeholder="Describe your relationship with your mother"
+            class="input-enhanced"
+            rows="3"
+          ></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sibling Information -->
+    <div class="form-section">
+      <h3><i class="fas fa-user-friends"></i> Sibling Information</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="numberOfSiblings">Number of Siblings</label>
+          <input
+            type="number"
+            id="numberOfSiblings"
+            name="number_of_siblings"
+            min="0"
+            placeholder="Number of siblings"
+            class="input-enhanced"
+          />
+        </div>
+        <div class="form-group">
+          <label for="birthOrder">Birth Order</label>
+          <input
+            type="number"
+            id="birthOrder"
+            name="birth_order"
+            min="1"
+            placeholder="What number are you among siblings"
+            class="input-enhanced"
+          />
+        </div>
+        <div class="form-group">
+          <label for="relationshipWithSiblings">Relationship with Siblings</label>
+          <textarea
+            id="relationshipWithSiblings"
+            name="relationship_with_siblings"
+            placeholder="Describe your relationship with your siblings"
+            class="input-enhanced"
+            rows="3"
+          ></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Educational Information -->
+    <div class="form-section">
+      <h3><i class="fas fa-graduation-cap"></i> Educational Information</h3>
+      <div class="form-grid">
+        <div class="form-group">
+          <label for="elementarySchool">Elementary School</label>
+          <input
+            type="text"
+            id="elementarySchool"
+            name="elementary_school"
+            placeholder="Where did you attend elementary"
+            class="input-enhanced"
+          />
+        </div>
+        <div class="form-group">
+          <label for="secondarySchool">Secondary School</label>
+          <input
+            type="text"
+            id="secondarySchool"
+            name="secondary_school"
+            placeholder="Where did you attend secondary"
+            class="input-enhanced"
+          />
+        </div>
+        <div class="form-group">
+          <label for="college">College/University</label>
+          <input
+            type="text"
+            id="college"
+            name="college"
+            placeholder="Where did you attend college"
+            class="input-enhanced"
+          />
+        </div>
+        <div class="form-group">
+          <label for="educationCompleted">Education Completed</label>
+          <select id="educationCompleted" name="education_completed" class="input-enhanced">
+            <option value="">Select highest education</option>
+            <option value="elementary">Elementary</option>
+            <option value="high_school">High School</option>
+            <option value="college">College</option>
+            <option value="post_graduate">Post Graduate</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="reasonForIncomplete">Reason for Incomplete Education (if applicable)</label>
+          <textarea
+            id="reasonForIncomplete"
+            name="reason_for_incomplete"
+            placeholder="Why did you not complete your education"
+            class="input-enhanced"
+            rows="3"
+          ></textarea>
+        </div>
+      </div>
+    </div>
+
+    <!-- Work Experience -->
+    <div class="form-section">
+      <h3><i class="fas fa-briefcase"></i> Work Experience</h3>
+      <div class="form-group">
+        <label for="workExperience">Work Experience</label>
+        <textarea
+          id="workExperience"
+          name="work_experience"
+          placeholder="State all work experiences and why you left or transferred jobs"
+          class="input-enhanced"
+          rows="6"
+        ></textarea>
       </div>
     </div>
 

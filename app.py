@@ -517,6 +517,36 @@ def clients():
                 
             if 'checkInDate' not in client_dict or client_dict['checkInDate'] is None:
                 client_dict['checkInDate'] = 'N/A'
+                
+            # Handle new fields that might not exist for old clients
+            if 'civil_status' not in client_dict:
+                client_dict['civil_status'] = None
+            if 'spouse_name' not in client_dict:
+                client_dict['spouse_name'] = None
+            if 'father_name' not in client_dict:
+                client_dict['father_name'] = None
+            if 'mother_name' not in client_dict:
+                client_dict['mother_name'] = None
+            if 'elementary_school' not in client_dict:
+                client_dict['elementary_school'] = None
+            if 'secondary_school' not in client_dict:
+                client_dict['secondary_school'] = None
+            if 'college' not in client_dict:
+                client_dict['college'] = None
+            if 'education_completed' not in client_dict:
+                client_dict['education_completed'] = None
+            if 'work_experience' not in client_dict:
+                client_dict['work_experience'] = None
+            if 'drug_usage_amount' not in client_dict:
+                client_dict['drug_usage_amount'] = None
+            if 'drug_effects' not in client_dict:
+                client_dict['drug_effects'] = None
+            if 'last_drug_use' not in client_dict:
+                client_dict['last_drug_use'] = None
+            if 'why_rehabilitation' not in client_dict:
+                client_dict['why_rehabilitation'] = None
+            if 'rehabilitation_goals' not in client_dict:
+                client_dict['rehabilitation_goals'] = None
 
             # Normalize care type
             if 'care_type' not in client_dict or client_dict['care_type'] is None:
@@ -772,38 +802,42 @@ def add_client():
                 'archived': False
             }
             
-            # Add wizard-specific data
-            # Progress Monitoring Data
-            client_data['checkInFrequency'] = request.form.get('checkInFrequency')
-            client_data['monitoringMethods'] = request.form.getlist('monitoringMethods')
-            client_data['progressIndicators'] = request.form.getlist('progressIndicators')
-            client_data['riskFactors'] = request.form.getlist('riskFactors')
+            # Add new personal information fields
+            client_data['civil_status'] = request.form.get('civil_status')
+            client_data['spouse_name'] = request.form.get('spouse_name')
+            client_data['years_married'] = request.form.get('years_married')
+            client_data['number_of_children'] = request.form.get('number_of_children')
+            client_data['relationship_with_children'] = request.form.get('relationship_with_children')
+            client_data['father_name'] = request.form.get('father_name')
+            client_data['mother_name'] = request.form.get('mother_name')
+            client_data['relationship_with_father'] = request.form.get('relationship_with_father')
+            client_data['relationship_with_mother'] = request.form.get('relationship_with_mother')
+            client_data['number_of_siblings'] = request.form.get('number_of_siblings')
+            client_data['birth_order'] = request.form.get('birth_order')
+            client_data['relationship_with_siblings'] = request.form.get('relationship_with_siblings')
+            client_data['elementary_school'] = request.form.get('elementary_school')
+            client_data['secondary_school'] = request.form.get('secondary_school')
+            client_data['college'] = request.form.get('college')
+            client_data['education_completed'] = request.form.get('education_completed')
+            client_data['reason_for_incomplete'] = request.form.get('reason_for_incomplete')
+            client_data['work_experience'] = request.form.get('work_experience')
             
-            # Pre-Assessment Data
-            client_data['primarySubstance'] = request.form.get('primarySubstance')
-            client_data['otherSubstance'] = request.form.get('otherSubstance')
-            client_data['usageFrequency'] = request.form.get('usageFrequency')
-            client_data['usageDuration'] = request.form.get('usageDuration')
-            client_data['useSeverity'] = request.form.get('useSeverity')
-            client_data['lifeInterference'] = request.form.get('lifeInterference')
-            client_data['mentalHealthConditions'] = request.form.getlist('mentalHealthConditions')
-            client_data['mentalHealthNotes'] = request.form.get('mentalHealthNotes')
-            client_data['currentMood'] = request.form.get('currentMood')
-            client_data['stressLevel'] = request.form.get('stressLevel')
-            client_data['supportNetwork'] = request.form.getlist('supportNetwork')
-            client_data['livingSituation'] = request.form.get('livingSituation')
-            client_data['livingSituationNotes'] = request.form.get('livingSituationNotes')
-            
-            # Intervention Plan Data
-            client_data['primaryGoals'] = request.form.getlist('primaryGoals')
-            client_data['secondaryGoals'] = request.form.getlist('secondaryGoals')
-            client_data['individualTherapy'] = request.form.getlist('individualTherapy')
-            client_data['groupTherapy'] = request.form.getlist('groupTherapy')
-            client_data['medicationManagement'] = request.form.getlist('medicationManagement')
-            client_data['supportServices'] = request.form.getlist('supportServices')
-            client_data['treatmentPriority'] = request.form.get('treatmentPriority')
-            client_data['treatmentDuration'] = request.form.get('treatmentDuration')
-            client_data['treatmentNotes'] = request.form.get('treatmentNotes')
+            # Rehabilitation Assessment Data
+            client_data['drug_usage_amount'] = request.form.get('drug_usage_amount')
+            client_data['drug_effects'] = request.form.get('drug_effects')
+            client_data['drug_impact'] = request.form.get('drug_impact')
+            client_data['last_drug_use'] = request.form.get('last_drug_use')
+            client_data['first_drug_use'] = request.form.get('first_drug_use')
+            client_data['drug_types'] = request.form.get('drug_types')
+            client_data['drug_reasons'] = request.form.get('drug_reasons')
+            client_data['drug_duration'] = request.form.get('drug_duration')
+            client_data['why_rehabilitation'] = request.form.get('why_rehabilitation')
+            client_data['wants_rehabilitation'] = request.form.get('wants_rehabilitation')
+            client_data['who_wants_rehabilitation'] = request.form.get('who_wants_rehabilitation')
+            client_data['previous_rehabilitation'] = request.form.get('previous_rehabilitation')
+            client_data['previous_rehabilitation_location'] = request.form.get('previous_rehabilitation_location')
+            client_data['rehabilitation_goals'] = request.form.get('rehabilitation_goals')
+            client_data['rehabilitation_questions'] = request.form.get('rehabilitation_questions')
 
             # Ensure clientId is unique
             try:
@@ -1014,15 +1048,7 @@ def add_client():
 def add_client_step2():
     return render_template('add_client_step2.html', email=session['email'])
 
-@app.route('/clients/add/step3')
-@role_required(['admin', 'facilitator'])
-def add_client_step3():
-    return render_template('add_client_step3.html', email=session['email'])
 
-@app.route('/clients/add/step4')
-@role_required(['admin', 'facilitator'])
-def add_client_step4():
-    return render_template('add_client_step4.html', email=session['email'])
 
 @app.route('/clients/<client_id>/flag', methods=['POST'])
 @role_required(['admin', 'facilitator', 'caseworker'])
@@ -1309,9 +1335,23 @@ def client_profile(client_id):
         client_data = client.to_dict()
         client_data['id'] = client.id
         
-        # Ensure all required fields exist
+        # Ensure all required fields exist with proper defaults
         if 'phone' not in client_data:
             client_data['phone'] = None
+            
+        # Handle basic client fields
+        if 'firstName' not in client_data:
+            client_data['firstName'] = None
+        if 'surname' not in client_data:
+            client_data['surname'] = None
+        if 'middleInitial' not in client_data:
+            client_data['middleInitial'] = None
+        if 'checkInDate' not in client_data:
+            client_data['checkInDate'] = None
+        if 'status' not in client_data:
+            client_data['status'] = 'active'
+        if 'care_type' not in client_data:
+            client_data['care_type'] = 'in_house'
             
         if 'emergency_contact' not in client_data:
             client_data['emergency_contact'] = None
@@ -1330,6 +1370,102 @@ def client_profile(client_id):
         # Handle image URL
         if 'image_url' not in client_data or not client_data['image_url']:
             client_data['image_url'] = 'images/default-avatar.png'
+            
+        # Handle new personal information fields
+        if 'civil_status' not in client_data:
+            client_data['civil_status'] = None
+        if 'spouse_name' not in client_data:
+            client_data['spouse_name'] = None
+        if 'years_married' not in client_data:
+            client_data['years_married'] = None
+        if 'number_of_children' not in client_data:
+            client_data['number_of_children'] = None
+        if 'relationship_with_children' not in client_data:
+            client_data['relationship_with_children'] = None
+        if 'father_name' not in client_data:
+            client_data['father_name'] = None
+        if 'mother_name' not in client_data:
+            client_data['mother_name'] = None
+        if 'relationship_with_father' not in client_data:
+            client_data['relationship_with_father'] = None
+        if 'relationship_with_mother' not in client_data:
+            client_data['relationship_with_mother'] = None
+        if 'number_of_siblings' not in client_data:
+            client_data['number_of_siblings'] = None
+        if 'birth_order' not in client_data:
+            client_data['birth_order'] = None
+        if 'relationship_with_siblings' not in client_data:
+            client_data['relationship_with_siblings'] = None
+            
+        # Handle education and work fields
+        if 'elementary_school' not in client_data:
+            client_data['elementary_school'] = None
+        if 'secondary_school' not in client_data:
+            client_data['secondary_school'] = None
+        if 'college' not in client_data:
+            client_data['college'] = None
+        if 'education_completed' not in client_data:
+            client_data['education_completed'] = None
+        if 'reason_for_incomplete' not in client_data:
+            client_data['reason_for_incomplete'] = None
+        if 'work_experience' not in client_data:
+            client_data['work_experience'] = None
+            
+        # Handle rehabilitation assessment fields
+        if 'drug_usage_amount' not in client_data:
+            client_data['drug_usage_amount'] = None
+        if 'drug_effects' not in client_data:
+            client_data['drug_effects'] = None
+        if 'drug_impact' not in client_data:
+            client_data['drug_impact'] = None
+        if 'last_drug_use' not in client_data:
+            client_data['last_drug_use'] = None
+        if 'first_drug_use' not in client_data:
+            client_data['first_drug_use'] = None
+        if 'drug_types' not in client_data:
+            client_data['drug_types'] = None
+        if 'drug_reasons' not in client_data:
+            client_data['drug_reasons'] = None
+        if 'drug_duration' not in client_data:
+            client_data['drug_duration'] = None
+        if 'why_rehabilitation' not in client_data:
+            client_data['why_rehabilitation'] = None
+        if 'wants_rehabilitation' not in client_data:
+            client_data['wants_rehabilitation'] = None
+        if 'who_wants_rehabilitation' not in client_data:
+            client_data['who_wants_rehabilitation'] = None
+        if 'previous_rehabilitation' not in client_data:
+            client_data['previous_rehabilitation'] = None
+        if 'previous_rehabilitation_location' not in client_data:
+            client_data['previous_rehabilitation_location'] = None
+        if 'rehabilitation_goals' not in client_data:
+            client_data['rehabilitation_goals'] = None
+        if 'rehabilitation_questions' not in client_data:
+            client_data['rehabilitation_questions'] = None
+            
+        # Handle legacy fields that might still exist
+        if 'primarySubstance' not in client_data:
+            client_data['primarySubstance'] = None
+        if 'usageFrequency' not in client_data:
+            client_data['usageFrequency'] = None
+        if 'useSeverity' not in client_data:
+            client_data['useSeverity'] = None
+        if 'lifeInterference' not in client_data:
+            client_data['lifeInterference'] = None
+        if 'mentalHealthConditions' not in client_data:
+            client_data['mentalHealthConditions'] = None
+        if 'mentalHealthNotes' not in client_data:
+            client_data['mentalHealthNotes'] = None
+        if 'currentMood' not in client_data:
+            client_data['currentMood'] = None
+        if 'stressLevel' not in client_data:
+            client_data['stressLevel'] = None
+        if 'supportNetwork' not in client_data:
+            client_data['supportNetwork'] = None
+        if 'livingSituation' not in client_data:
+            client_data['livingSituation'] = None
+        if 'livingSituationNotes' not in client_data:
+            client_data['livingSituationNotes'] = None
 
         return render_template('client_profile.html', client=client_data)
     except Exception as e:
@@ -2552,6 +2688,34 @@ def generate_offset_coordinates(base_coords, client_id, offset_radius=0.001):
         new_coords['formatted_address'] = base_coords['formatted_address']
     
     return new_coords
+
+@app.route('/debug/client/<client_id>')
+@role_required(['admin', 'facilitator', 'caseworker'])
+def debug_client(client_id):
+    """Debug route to see client data"""
+    try:
+        from flask import jsonify
+        client_ref = db.collection('clients').document(client_id)
+        client = client_ref.get()
+        
+        if not client.exists:
+            return jsonify({'error': 'Client not found'}), 404
+            
+        client_data = client.to_dict()
+        client_data['id'] = client.id
+        
+        return jsonify({
+            'success': True,
+            'client_data': client_data,
+            'has_name': 'name' in client_data,
+            'has_status': 'status' in client_data,
+            'has_care_type': 'care_type' in client_data,
+            'all_fields': list(client_data.keys())
+        })
+        
+    except Exception as e:
+        from flask import jsonify
+        return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True)

@@ -86,17 +86,17 @@
         <i class="fas fa-user"></i>
         Personal Info
     </button>
-    <button class="tab-button" data-tab="progress-monitoring">
-        <i class="fas fa-chart-line"></i>
-        Progress Monitoring
+    <button class="tab-button" data-tab="family-info">
+        <i class="fas fa-users"></i>
+        Family Info
     </button>
     <button class="tab-button" data-tab="assessment">
         <i class="fas fa-clipboard-check"></i>
         Assessment
     </button>
     <button class="tab-button" data-tab="intervention">
-        <i class="fas fa-calendar-alt"></i>
-        Intervention
+        <i class="fas fa-bullseye"></i>
+        Rehabilitation Goals
     </button>
 </div>
 
@@ -164,7 +164,7 @@
                             <label>Registration Date</label>
                             <p>
                                 {% if client.registrationDate %}
-                                    {{ client.registrationDate.strftime('%B %d, %Y') if client.registrationDate is not string else client.registrationDate }}
+                                    {{ client.registrationDate }}
                                 {% else %}
                                     Not provided
                                 {% endif %}
@@ -174,7 +174,7 @@
                             <label>Check-in Date</label>
                             <p>
                                 {% if client.checkInDate %}
-                                    {{ client.checkInDate.strftime('%B %d, %Y') if client.checkInDate is not string else client.checkInDate }}
+                                    {{ client.checkInDate }}
                                 {% else %}
                                     Not provided
                                 {% endif %}
@@ -225,62 +225,74 @@
         </div>
     </div>
 
-    <!-- Progress Monitoring Tab -->
-    <div class="tab-pane" id="progress-monitoring">
+    <!-- Family Info Tab -->
+    <div class="tab-pane" id="family-info">
         <div class="profile-grid">
-            <!-- Progress Monitoring Card -->
-            <div class="card monitoring-card collapsible-card" data-card="monitoring">
-                <div class="card-header collapsible-header" data-target="monitoring">
-                    <h3><i class="fas fa-chart-line"></i> Progress Monitoring Setup</h3>
+            <!-- Family Information Card -->
+            <div class="card family-card collapsible-card" data-card="family">
+                <div class="card-header collapsible-header" data-target="family">
+                    <h3><i class="fas fa-users"></i> Family Information</h3>
                     <div class="header-actions">
                         <button class="btn-icon collapse-toggle" title="Expand/Collapse">
                             <i class="fas fa-chevron-down"></i>
                         </button>
                     </div>
                 </div>
-                <div class="card-content collapsible-content" data-content="monitoring">
-                    {% if client.checkInFrequency or client.monitoringMethods or client.progressIndicators %}
+                <div class="card-content collapsible-content" data-content="family">
+                    {% if client.civil_status or client.spouse_name or client.number_of_children or client.father_name or client.mother_name %}
                     <div class="info-grid">
-                        {% if client.checkInFrequency %}
+                        {% if client.civil_status %}
                         <div class="info-item">
-                            <label>Check-in Frequency</label>
-                            <p>{{ client.checkInFrequency|replace('_', ' ')|title }}</p>
+                            <label>Civil Status</label>
+                            <p>{{ client.civil_status|title }}</p>
                         </div>
                         {% endif %}
-                        {% if client.monitoringMethods %}
+                        {% if client.spouse_name %}
                         <div class="info-item">
-                            <label>Monitoring Methods</label>
-                            <p>
-                                {% for method in client.monitoringMethods %}
-                                    <span class="badge">{{ method|replace('_', ' ')|title }}</span>
-                                {% endfor %}
-                            </p>
+                            <label>Spouse Name</label>
+                            <p>{{ client.spouse_name }}</p>
                         </div>
                         {% endif %}
-                        {% if client.progressIndicators %}
+                        {% if client.years_married %}
                         <div class="info-item">
-                            <label>Progress Indicators</label>
-                            <p>
-                                {% for indicator in client.progressIndicators %}
-                                    <span class="badge">{{ indicator|replace('_', ' ')|title }}</span>
-                                {% endfor %}
-                            </p>
+                            <label>Years Married</label>
+                            <p>{{ client.years_married }} years</p>
                         </div>
                         {% endif %}
-                        {% if client.riskFactors %}
+                        {% if client.number_of_children %}
                         <div class="info-item">
-                            <label>Risk Factors</label>
-                            <p>
-                                {% for risk in client.riskFactors %}
-                                    <span class="badge">{{ risk|replace('_', ' ')|title }}</span>
-                                {% endfor %}
-                            </p>
+                            <label>Number of Children</label>
+                            <p>{{ client.number_of_children }}</p>
+                        </div>
+                        {% endif %}
+                        {% if client.father_name %}
+                        <div class="info-item">
+                            <label>Father's Name</label>
+                            <p>{{ client.father_name }}</p>
+                        </div>
+                        {% endif %}
+                        {% if client.mother_name %}
+                        <div class="info-item">
+                            <label>Mother's Name</label>
+                            <p>{{ client.mother_name }}</p>
+                        </div>
+                        {% endif %}
+                        {% if client.number_of_siblings %}
+                        <div class="info-item">
+                            <label>Number of Siblings</label>
+                            <p>{{ client.number_of_siblings }}</p>
+                        </div>
+                        {% endif %}
+                        {% if client.birth_order %}
+                        <div class="info-item">
+                            <label>Birth Order</label>
+                            <p>{{ client.birth_order }}</p>
                         </div>
                         {% endif %}
                     </div>
                     {% else %}
                     <div class="no-data-message">
-                        <p><i class="fas fa-info-circle"></i> No progress monitoring data available for this client.</p>
+                        <p><i class="fas fa-info-circle"></i> No family information available for this client.</p>
                     </div>
                     {% endif %}
                 </div>
@@ -374,59 +386,159 @@
     <!-- Assessment Tab -->
     <div class="tab-pane" id="assessment">
         <div class="profile-grid">
-            <!-- Substance Use Assessment Card -->
-            <div class="card assessment-card collapsible-card" data-card="substance">
-                <div class="card-header collapsible-header" data-target="substance">
-                    <h3><i class="fas fa-flask"></i> Substance Use Assessment</h3>
+            <!-- Rehabilitation Assessment Card -->
+            <div class="card assessment-card collapsible-card" data-card="rehabilitation">
+                <div class="card-header collapsible-header" data-target="rehabilitation">
+                    <h3><i class="fas fa-heartbeat"></i> Rehabilitation Assessment</h3>
                     <div class="header-actions">
                         <button class="btn-icon collapse-toggle" title="Expand/Collapse">
                             <i class="fas fa-chevron-down"></i>
                         </button>
                     </div>
                 </div>
-                <div class="card-content collapsible-content" data-content="substance">
-                    {% if client.primarySubstance or client.usageFrequency or client.useSeverity %}
+                <div class="card-content collapsible-content" data-content="rehabilitation">
+                    {% if client.drug_usage_amount or client.drug_effects or client.last_drug_use or client.why_rehabilitation %}
                     <div class="info-grid">
-                        {% if client.primarySubstance %}
+                        {% if client.drug_usage_amount %}
                         <div class="info-item">
-                            <label>Primary Substance</label>
-                            <p>{{ client.primarySubstance|title }}</p>
+                            <label>Drug Usage Amount & Frequency</label>
+                            <p>{{ client.drug_usage_amount }}</p>
                         </div>
                         {% endif %}
-                        {% if client.otherSubstance %}
+                        {% if client.drug_effects %}
                         <div class="info-item">
-                            <label>Other Substance</label>
-                            <p>{{ client.otherSubstance }}</p>
+                            <label>Drug Effects</label>
+                            <p>{{ client.drug_effects }}</p>
                         </div>
                         {% endif %}
-                        {% if client.usageFrequency %}
+                        {% if client.drug_impact %}
                         <div class="info-item">
-                            <label>Usage Frequency</label>
-                            <p>{{ client.usageFrequency|replace('_', ' ')|title }}</p>
+                            <label>Impact on Life</label>
+                            <p>{{ client.drug_impact }}</p>
                         </div>
                         {% endif %}
-                        {% if client.usageDuration %}
+                        {% if client.last_drug_use %}
                         <div class="info-item">
-                            <label>Usage Duration</label>
-                            <p>{{ client.usageDuration|replace('_', ' ')|title }}</p>
+                            <label>Last Drug Use</label>
+                            <p>{{ client.last_drug_use }}</p>
                         </div>
                         {% endif %}
-                        {% if client.useSeverity %}
+                        {% if client.first_drug_use %}
                         <div class="info-item">
-                            <label>Use Severity</label>
-                            <p>{{ client.useSeverity }}/5</p>
+                            <label>First Drug Use</label>
+                            <p>{{ client.first_drug_use }}</p>
                         </div>
                         {% endif %}
-                        {% if client.lifeInterference %}
+                        {% if client.drug_types %}
                         <div class="info-item">
-                            <label>Life Interference</label>
-                            <p>{{ client.lifeInterference }}/5</p>
+                            <label>Drug Types Used</label>
+                            <p>{{ client.drug_types }}</p>
+                        </div>
+                        {% endif %}
+                        {% if client.drug_reasons %}
+                        <div class="info-item">
+                            <label>Reasons for Drug Use</label>
+                            <p>{{ client.drug_reasons }}</p>
+                        </div>
+                        {% endif %}
+                        {% if client.drug_duration %}
+                        <div class="info-item">
+                            <label>Duration of Drug Use</label>
+                            <p>{{ client.drug_duration }}</p>
+                        </div>
+                        {% endif %}
+                        {% if client.why_rehabilitation %}
+                        <div class="info-item">
+                            <label>Reason for Rehabilitation</label>
+                            <p>{{ client.why_rehabilitation }}</p>
+                        </div>
+                        {% endif %}
+                        {% if client.wants_rehabilitation %}
+                        <div class="info-item">
+                            <label>Wants Rehabilitation</label>
+                            <p>{{ client.wants_rehabilitation|title }}</p>
+                        </div>
+                        {% endif %}
+                        {% if client.previous_rehabilitation %}
+                        <div class="info-item">
+                            <label>Previous Rehabilitation</label>
+                            <p>{{ client.previous_rehabilitation|title }}</p>
+                        </div>
+                        {% endif %}
+                        {% if client.previous_rehabilitation_location %}
+                        <div class="info-item">
+                            <label>Previous Rehabilitation Location</label>
+                            <p>{{ client.previous_rehabilitation_location }}</p>
+                        </div>
+                        {% endif %}
+                        {% if client.rehabilitation_goals %}
+                        <div class="info-item">
+                            <label>Rehabilitation Goals</label>
+                            <p>{{ client.rehabilitation_goals }}</p>
                         </div>
                         {% endif %}
                     </div>
                     {% else %}
                     <div class="no-data-message">
-                        <p><i class="fas fa-info-circle"></i> No substance use assessment data available for this client.</p>
+                        <p><i class="fas fa-info-circle"></i> No rehabilitation assessment data available for this client.</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Education & Work Experience Card -->
+            <div class="card education-card collapsible-card" data-card="education">
+                <div class="card-header collapsible-header" data-target="education">
+                    <h3><i class="fas fa-graduation-cap"></i> Education & Work Experience</h3>
+                    <div class="header-actions">
+                        <button class="btn-icon collapse-toggle" title="Expand/Collapse">
+                            <i class="fas fa-chevron-down"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="card-content collapsible-content" data-content="education">
+                    {% if client.elementary_school or client.secondary_school or client.college or client.education_completed or client.work_experience %}
+                    <div class="info-grid">
+                        {% if client.elementary_school %}
+                        <div class="info-item">
+                            <label>Elementary School</label>
+                            <p>{{ client.elementary_school }}</p>
+                        </div>
+                        {% endif %}
+                        {% if client.secondary_school %}
+                        <div class="info-item">
+                            <label>Secondary School</label>
+                            <p>{{ client.secondary_school }}</p>
+                        </div>
+                        {% endif %}
+                        {% if client.college %}
+                        <div class="info-item">
+                            <label>College/University</label>
+                            <p>{{ client.college }}</p>
+                        </div>
+                        {% endif %}
+                        {% if client.education_completed %}
+                        <div class="info-item">
+                            <label>Education Completed</label>
+                            <p>{{ client.education_completed|replace('_', ' ')|title }}</p>
+                        </div>
+                        {% endif %}
+                        {% if client.reason_for_incomplete %}
+                        <div class="info-item">
+                            <label>Reason for Incomplete Education</label>
+                            <p>{{ client.reason_for_incomplete }}</p>
+                        </div>
+                        {% endif %}
+                        {% if client.work_experience %}
+                        <div class="info-item">
+                            <label>Work Experience</label>
+                            <p>{{ client.work_experience }}</p>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div class="no-data-message">
+                        <p><i class="fas fa-info-circle"></i> No education or work experience data available for this client.</p>
                     </div>
                     {% endif %}
                 </div>
@@ -445,7 +557,7 @@
                 <div class="card-content collapsible-content" data-content="mental">
                     {% if client.mentalHealthConditions or client.currentMood or client.stressLevel %}
                     <div class="info-grid">
-                        {% if client.mentalHealthConditions %}
+                        {% if client.mentalHealthConditions and client.mentalHealthConditions is iterable %}
                         <div class="info-item">
                             <label>Mental Health Conditions</label>
                             <p>
@@ -495,7 +607,7 @@
                 <div class="card-content collapsible-content" data-content="social">
                     {% if client.supportNetwork or client.livingSituation %}
                     <div class="info-grid">
-                        {% if client.supportNetwork %}
+                        {% if client.supportNetwork and client.supportNetwork is iterable %}
                         <div class="info-item">
                             <label>Support Network</label>
                             <p>
@@ -528,13 +640,13 @@
         </div>
     </div>
 
-    <!-- Intervention Tab -->
+    <!-- Rehabilitation Goals Tab -->
     <div class="tab-pane" id="intervention">
         <div class="intervention-plan-container">
-            <!-- Intervention Plan Header -->
+            <!-- Rehabilitation Goals Header -->
             <div class="intervention-header">
                 <div class="header-content">
-                    <h2><i class="fas fa-clipboard-list"></i> Intervention Plan</h2>
+                    <h2><i class="fas fa-bullseye"></i> Rehabilitation Goals</h2>
                     <div class="header-actions">
                         <button class="btn-secondary btn-sm">
                             <i class="fas fa-edit"></i>
@@ -542,7 +654,7 @@
                         </button>
                         <button class="btn-primary btn-sm">
                             <i class="fas fa-plus"></i>
-                            Add Service
+                            Add Goal
                         </button>
                     </div>
                 </div>
@@ -554,75 +666,66 @@
                 </div>
             </div>
 
-            <!-- Services Section -->
+            <!-- Rehabilitation Goals Section -->
             <div class="services-section">
                 <div class="services-header">
-                    <h3>Services</h3>
+                    <h3>Rehabilitation Goals</h3>
                     <div class="service-actions">
                         <button class="btn-text">Edit</button>
                         <button class="btn-text">Status</button>
                     </div>
                 </div>
 
-                <!-- Service Categories Grid -->
+                <!-- Rehabilitation Goals Grid -->
                 <div class="service-categories">
+                    {% if client.rehabilitation_goals %}
                     <div class="service-category">
                         <div class="category-header">
-                            <i class="fas fa-heartbeat"></i>
-                            <h4>Health Service</h4>
+                            <i class="fas fa-bullseye"></i>
+                            <h4>Primary Goals</h4>
                         </div>
                         <div class="category-content">
                             <div class="service-info-grid">
                                 <div class="info-block">
-                                    <label>Objective</label>
-                                    <p>To improve knowledge on health and ensure health of the client through medical and dental services</p>
+                                    <label>Rehabilitation Goals</label>
+                                    <p>{{ client.rehabilitation_goals }}</p>
                                 </div>
+                                {% if client.why_rehabilitation %}
                                 <div class="info-block">
-                                    <label>Activities</label>
-                                    <ul>
-                                        <li>Conduct health education & training</li>
-                                        <li>Health check-ups & Physical Assessment</li>
-                                        <li>Provision of vitamins</li>
-                                        <li>Consultation to medical and dental officers</li>
-                                    </ul>
+                                    <label>Reason for Rehabilitation</label>
+                                    <p>{{ client.why_rehabilitation }}</p>
                                 </div>
+                                {% endif %}
+                                {% if client.wants_rehabilitation %}
                                 <div class="info-block">
-                                    <label>Responsible Person</label>
-                                    <ul>
-                                        <li>Client</li>
-                                        <li>Center's Nurse</li>
-                                        <li>Nutrient/Dietitian</li>
-                                        <li>Referral to partner agencies</li>
-                                    </ul>
+                                    <label>Client's Motivation</label>
+                                    <p>{{ client.wants_rehabilitation|title }}</p>
                                 </div>
+                                {% endif %}
+                                {% if client.previous_rehabilitation %}
                                 <div class="info-block">
-                                    <label>Expected Output</label>
-                                    <ul>
-                                        <li>Enhance knowledge on how to improve & takes care of one's health</li>
-                                        <li>Improve health by obtaining normal body mass index</li>
-                                    </ul>
+                                    <label>Previous Rehabilitation Experience</label>
+                                    <p>{{ client.previous_rehabilitation|title }}</p>
+                                    {% if client.previous_rehabilitation_location %}
+                                    <p><small>Location: {{ client.previous_rehabilitation_location }}</small></p>
+                                    {% endif %}
                                 </div>
-                            </div>
-                            <div class="timeframe-section">
-                                <div class="timeframe-content">
-                                    <p>As scheduled</p>
-                                    <p>Monthly</p>
-                                    <p>Daily</p>
-                                    <p>As scheduled</p>
-                                </div>
-                                <div class="timeframe-label">
-                                    <span>Timeframe</span>
-                                </div>
+                                {% endif %}
                             </div>
                             <div class="progress-section">
                                 <label>Progress</label>
                                 <div class="progress-bar">
-                                    <div class="progress-fill" style="width: 75%"></div>
+                                    <div class="progress-fill" style="width: 60%"></div>
                                 </div>
-                                <span class="progress-text">75% Complete</span>
+                                <span class="progress-text">60% Complete</span>
                             </div>
                         </div>
                     </div>
+                    {% else %}
+                    <div class="no-data-message">
+                        <p><i class="fas fa-info-circle"></i> No rehabilitation goals set for this client.</p>
+                    </div>
+                    {% endif %}
 
                     <div class="service-category">
                         <div class="category-header">
@@ -845,4 +948,4 @@ function sendToAftercare(clientId, clientName) {
     }
 }
 </script>
-{% endblock %} 
+{% endblock %}

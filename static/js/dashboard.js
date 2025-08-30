@@ -294,31 +294,32 @@ document.addEventListener('DOMContentLoaded', function() {
             // Clear previous days
             calendarDaysElement.innerHTML = '';
 
-            // Previous month's days
-            const prevMonthLastDay = new Date(currentYear, currentMonth, 0).getDate();
-            for (let i = startingDay - 1; i >= 0; i--) {
-                const dayElement = createDayElement(prevMonthLastDay - i, 'other-month');
-                calendarDaysElement.appendChild(dayElement);
-            }
-
-            // Current month's days
+            // Calculate the total number of days to display (6 weeks × 7 days = 42)
+            const totalDaysToShow = 42;
+            
+            // Calculate the start date (first day of the first week to display)
+            const startDate = new Date(firstDay);
+            startDate.setDate(startDate.getDate() - startingDay);
+            
             const today = new Date();
-            for (let i = 1; i <= monthLength; i++) {
-                const isToday = today.getDate() === i && 
-                               today.getMonth() === currentMonth && 
-                               today.getFullYear() === currentYear;
+            today.setHours(0, 0, 0, 0);
+            
+            for (let i = 0; i < totalDaysToShow; i++) {
+                const date = new Date(startDate);
+                date.setDate(startDate.getDate() + i);
                 
-                const dateStr = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}-${String(i).padStart(2, '0')}`;
-                const dayElement = createDayElement(i, isToday ? 'today' : '', events[dateStr]);
+                const isToday = date.getTime() === today.getTime();
+                const isCurrentMonth = date.getMonth() === currentMonth;
+                const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
                 
-                calendarDaysElement.appendChild(dayElement);
-            }
-
-            // Next month's days
-            const totalDaysShown = startingDay + monthLength;
-            const remainingDays = 42 - totalDaysShown; // Always show 6 rows
-            for (let i = 1; i <= remainingDays; i++) {
-                const dayElement = createDayElement(i, 'other-month');
+                let additionalClass = '';
+                if (!isCurrentMonth) {
+                    additionalClass = 'other-month';
+                } else if (isToday) {
+                    additionalClass = 'today';
+                }
+                
+                const dayElement = createDayElement(date.getDate(), additionalClass, events[dateStr]);
                 calendarDaysElement.appendChild(dayElement);
             }
         }

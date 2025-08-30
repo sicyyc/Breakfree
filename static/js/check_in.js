@@ -1,44 +1,39 @@
 $(document).ready(function() {
-    // Handle search
-    const searchInput = $('.search-container input');
-    searchInput.on('input', function(e) {
-        const searchTerm = e.target.value.toLowerCase();
-        const checkInItems = $('.check-in-item');
+    // View toggle functionality
+    $('.view-btn').on('click', function() {
+        $('.view-btn').removeClass('active');
+        $(this).addClass('active');
         
-        checkInItems.each(function() {
-            const clientName = $(this).find('h4').text().toLowerCase();
-            const status = $(this).find('.status').text().toLowerCase();
-            const date = $(this).find('.date').text().toLowerCase();
-            
-            if (clientName.includes(searchTerm) || 
-                status.includes(searchTerm) || 
-                date.includes(searchTerm)) {
-                $(this).css('display', '');
-            } else {
-                $(this).css('display', 'none');
-            }
-        });
+        const view = $(this).data('view');
+        console.log('Switched to view:', view);
+        
+        // You can add different functionality for different views here
+        if (view === 'interventions') {
+            // Show intervention-specific features
+            console.log('Showing intervention view');
+        } else {
+            // Show activities view
+            console.log('Showing activities view');
+        }
     });
 
-    // Handle filter buttons
+    // Search functionality for future use
+    const searchInput = $('.search-container input');
+    if (searchInput.length > 0) {
+        searchInput.on('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            // Add search functionality here when needed
+        });
+    }
+
+    // Filter functionality for future use
     const filterButtons = $('.filter-btn');
     filterButtons.on('click', function() {
-        // Remove active class from all buttons
         filterButtons.removeClass('active');
-        // Add active class to clicked button
         $(this).addClass('active');
         
         const filter = $(this).data('filter');
-        const checkInItems = $('.check-in-item');
-        
-        checkInItems.each(function() {
-            if (filter === 'all') {
-                $(this).css('display', '');
-            } else {
-                const status = $(this).find('.status').text().toLowerCase();
-                $(this).css('display', status === filter ? '' : 'none');
-            }
-        });
+        console.log('Applied filter:', filter);
     });
 
     // Handle action buttons
@@ -65,11 +60,8 @@ $(document).ready(function() {
     // Handle add check-in button
     const addCheckInBtn = $('.btn-primary');
     addCheckInBtn.on('click', function() {
-        // Show add check-in modal
-        const modal = $('#addCheckInModal');
-        if (modal) {
-            modal.css('display', 'flex');
-        }
+        console.log('Add check-in button clicked');
+        // Show add check-in modal if needed
     });
 
     // Handle modal close buttons
@@ -86,229 +78,474 @@ $(document).ready(function() {
     if (addCheckInForm) {
         addCheckInForm.on('submit', function(e) {
             e.preventDefault();
-            // Handle form submission
             console.log('Adding new check-in');
-            // Close modal
-            const modal = $('#addCheckInModal');
-            if (modal) {
-                modal.css('display', 'none');
-            }
+            // Handle form submission
         });
     }
 
-    // View Toggle Functionality
-    $('.view-btn').on('click', function() {
-        const $this = $(this);
-        const viewType = $this.data('view');
-        
-        // Update buttons
-        $('.view-btn').removeClass('active');
-        $this.addClass('active');
-        
-        // Update views
-        $('.checkin-view').hide();
-        $(`.${viewType}-view`).fadeIn();
-        
-        // Update title
-        const title = viewType === 'in-house' ? 'In House Check-ins' : 'After Care Check-ins';
-        $('.main-header h1').text(title);
-        
-        // Load data for the selected view
-        loadCheckInData(viewType);
-    });
+    // Enhanced Calendar Functionality
+    let currentDate = new Date();
+    let selectedDate = null;
 
-    // Calendar Navigation
-    const $inHouseMonthElement = $('#checkinCurrentMonth');
-    const $afterCareMonthElement = $('#afterCareCurrentMonth');
-    let inHouseCurrentDate = new Date();
-    let afterCareCurrentDate = new Date();
+    // Initialize calendar
+    function initializeCalendar() {
+        updateCalendar();
+        setupCalendarNavigation();
+        setupCalendarAccessibility();
+    }
 
-    // In-house calendar navigation
-    $('#checkinPrevMonth').on('click', function() {
-        inHouseCurrentDate.setMonth(inHouseCurrentDate.getMonth() - 1);
-        updateCalendar('in-house');
-    });
-
-    $('#checkinNextMonth').on('click', function() {
-        inHouseCurrentDate.setMonth(inHouseCurrentDate.getMonth() + 1);
-        updateCalendar('in-house');
-    });
-
-    // After-care calendar navigation
-    $('#afterCarePrevMonth').on('click', function() {
-        afterCareCurrentDate.setMonth(afterCareCurrentDate.getMonth() - 1);
-        updateCalendar('after-care');
-    });
-
-    $('#afterCareNextMonth').on('click', function() {
-        afterCareCurrentDate.setMonth(afterCareCurrentDate.getMonth() + 1);
-        updateCalendar('after-care');
-    });
-
-    // Initialize calendars
-    updateCalendar('in-house');
-    updateCalendar('after-care');
-
-    // Load initial data for in-house view
-    loadCheckInData('in-house');
-
-    // Functions
-    function updateCalendar(viewType) {
-        const currentDate = viewType === 'in-house' ? inHouseCurrentDate : afterCareCurrentDate;
-        const year = currentDate.getFullYear();
+    // Update calendar display
+    function updateCalendar() {
         const month = currentDate.getMonth();
-        const firstDay = new Date(year, month, 1);
-        const lastDay = new Date(year, month + 1, 0);
+        const year = currentDate.getFullYear();
+        
+        // Update month/year display
         const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
                           'July', 'August', 'September', 'October', 'November', 'December'];
-
-        const $currentMonthElement = viewType === 'in-house' ? $inHouseMonthElement : $afterCareMonthElement;
-        $currentMonthElement.text(`${monthNames[month]} ${year}`);
-
-        const $calendarDays = viewType === 'in-house' ? $('#checkinCalendarDays') : $('#afterCareCalendarDays');
-        $calendarDays.empty();
-
-        // Add empty cells for days before the first day of the month
-        for (let i = 0; i < firstDay.getDay(); i++) {
-            $calendarDays.append($('<div>').addClass('calendar-day other-month'));
-        }
-
-        // Add days of the month
-        for (let day = 1; day <= lastDay.getDate(); day++) {
-            const $dayElement = $('<div>')
-                .addClass('calendar-day')
-                .text(day)
-                .on('click', function() {
-                    $('.calendar-day').removeClass('selected');
-                    $(this).addClass('selected');
-                    loadDayCheckIns(year, month, day, viewType);
-                });
-
-            if (isToday(year, month, day)) {
-                $dayElement.addClass('today');
-            }
-
-            $calendarDays.append($dayElement);
-        }
-    }
-
-    function isToday(year, month, day) {
-        const today = new Date();
-        return today.getFullYear() === year && 
-               today.getMonth() === month && 
-               today.getDate() === day;
-    }
-
-    function loadCheckInData(viewType) {
-        console.log('Loading data for:', viewType);
-        // Here you would normally fetch data from your backend
-        // For now, we'll just update the UI to show the change
+        $('#currentMonth').text(`${monthNames[month]} ${year}`);
         
-        // Example data update
-        if (viewType === 'in-house') {
-            $('.stat-value').first().text('24/30');
-            $('.stat-value').eq(1).text('😊 7.5');
-            $('.stat-value').last().text('18');
-        } else {
-            $('.stat-value').first().text('15/20');
-            $('.stat-value').eq(1).text('😊 8.2');
-            $('.stat-value').last().text('12');
+        // Generate calendar days
+        generateCalendarDays(month, year);
+        
+        // Add visual indicators for events
+        addEventIndicators();
+    }
+
+    // Generate calendar days - FIXED VERSION
+    function generateCalendarDays(month, year) {
+        const calendarDays = $('#calendarDays');
+        calendarDays.empty();
+        
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        const startingDay = firstDay.getDay(); // 0 = Sunday, 1 = Monday, etc.
+        const monthLength = lastDay.getDate();
+        
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
+        // Calculate the total number of days to display (6 weeks × 7 days = 42)
+        const totalDaysToShow = 42;
+        
+        // Calculate the start date (first day of the first week to display)
+        const startDate = new Date(firstDay);
+        startDate.setDate(startDate.getDate() - startingDay);
+        
+        for (let i = 0; i < totalDaysToShow; i++) {
+            const date = new Date(startDate);
+            date.setDate(startDate.getDate() + i);
+            
+            const dayElement = $('<div>')
+                .addClass('calendar-day')
+                .attr('data-date', date.toISOString().split('T')[0])
+                .attr('tabindex', '0')
+                .attr('role', 'button')
+                .attr('aria-label', `Select ${date.toLocaleDateString('en-US', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                })}`);
+            
+            const dayNumber = $('<span>')
+                .addClass('day-number')
+                .text(date.getDate());
+            
+            dayElement.append(dayNumber);
+            
+            // Add appropriate classes
+            if (date.getMonth() !== month) {
+                dayElement.addClass('other-month');
+            }
+            
+            if (date.getTime() === today.getTime()) {
+                dayElement.addClass('today');
+                dayElement.attr('aria-current', 'date');
+            }
+            
+            // Add click event with enhanced feedback
+            dayElement.on('click', function() {
+                selectDate(date, $(this));
+            });
+            
+            // Add keyboard navigation
+            dayElement.on('keydown', function(e) {
+                if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    selectDate(date, $(this));
+                }
+            });
+            
+            // Add hover effects
+            dayElement.on('mouseenter', function() {
+                $(this).addClass('hover');
+            }).on('mouseleave', function() {
+                $(this).removeClass('hover');
+            });
+            
+            calendarDays.append(dayElement);
         }
     }
 
-    function updateStats(stats) {
-        // Update the statistics in the checkin-stats section
-        $('.stat-value').first().text(`${stats.completed}/${stats.total}`);
-        $('.stat-value').eq(1).text(`😊 ${stats.averageMood}`);
-        $('.stat-value').last().text(stats.interventionsViewed);
+    // Select a date with enhanced feedback
+    function selectDate(date, element) {
+        // Remove previous selection
+        $('.calendar-day').removeClass('selected');
+        
+        // Add selection to current element
+        element.addClass('selected');
+        selectedDate = date;
+        
+        // Add visual feedback
+        element.addClass('selected-animation');
+        setTimeout(() => {
+            element.removeClass('selected-animation');
+        }, 300);
+        
+        // Show activity modal
+        const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' });
+        showActivityModal(dayOfWeek);
+        
+        // Announce selection to screen readers
+        const announcement = `Selected ${date.toLocaleDateString('en-US', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        })}`;
+        announceToScreenReader(announcement);
     }
 
-    function updateSubmissionsList(submissions) {
-        const submissionsList = $('.submissions-list');
-        submissionsList.empty();
-        submissions.forEach(submission => {
-            submissionsList.append(`
-                <div class="submission-item">
-                    <div class="submission-header">
-                        <div class="client-info">
-                            <div class="client-avatar">
-                                <span class="avatar-initials">${submission.initials}</span>
-                            </div>
-                            <div class="client-details">
-                                <h4>${submission.name}</h4>
-                                <div class="submission-meta">
-                                    <span class="submission-time">
-                                        <i class="fas fa-clock"></i> ${submission.time}
-                                    </span>
-                                    <span class="client-id">#${submission.clientId}</span>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="mood-indicator mood-${submission.moodLevel.toLowerCase()}">
-                            <span class="mood-emoji">${submission.moodEmoji}</span>
-                            <div class="mood-details">
-                                <span class="mood-score">${submission.moodScore}/10</span>
-                                <span class="mood-label">${submission.moodLevel}</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="submission-content">
-                        <p class="reflection-text">${submission.reflection}</p>
-                        <div class="engagement-metrics">
-                            ${submission.viewed ? `
-                                <div class="metric-badge viewed">
-                                    <i class="fas fa-eye"></i>
-                                    <span>Viewed Intervention</span>
-                                </div>
-                            ` : ''}
-                            ${submission.onTime ? `
-                                <div class="metric-badge on-time">
-                                    <i class="fas fa-check-circle"></i>
-                                    <span>On Time</span>
-                                </div>
-                            ` : ''}
-                            ${submission.streak ? `
-                                <div class="metric-badge streak">
-                                    <i class="fas fa-fire"></i>
-                                    <span>${submission.streak} Day Streak</span>
-                                </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                </div>
-            `);
-        });
-    }
-
-    function updateCalendarIndicators(calendarData) {
-        // Add indicators to calendar days based on check-in status
+    // Add event indicators to calendar
+    function addEventIndicators() {
+        // Sample event data - replace with actual data from your backend
+        const events = {
+            '2024-02-15': ['activity'],
+            '2024-02-20': ['intervention'],
+            '2024-02-25': ['activity', 'intervention'],
+        };
+        
         $('.calendar-day').each(function() {
-            const day = parseInt($(this).text());
-            if (day && calendarData[day]) {
-                const status = calendarData[day];
-                if (status.completed) {
-                    $(this).addClass('has-completed');
-                }
-                if (status.missed) {
-                    $(this).addClass('has-missed');
-                }
+            const dateStr = $(this).attr('data-date');
+            if (events[dateStr]) {
+                events[dateStr].forEach(eventType => {
+                    $(this).addClass(`has-${eventType}`);
+                    
+                    // Add indicator dot
+                    const indicator = $('<div>')
+                        .addClass(`day-indicator ${eventType}`)
+                        .attr('aria-label', `${eventType} scheduled`);
+                    $(this).append(indicator);
+                });
             }
         });
     }
 
-    async function loadDayCheckIns(year, month, day, viewType) {
-        try {
-            const response = await fetch(`/api/check-ins/${viewType}/${year}/${month + 1}/${day}`);
-            const data = await response.json();
-            updateSubmissionsList(data.submissions);
-        } catch (error) {
-            console.error('Error loading day check-ins:', error);
+    // Setup calendar navigation
+    function setupCalendarNavigation() {
+        $('#prevMonth').on('click', function() {
+            currentDate.setMonth(currentDate.getMonth() - 1);
+            updateCalendar();
+            announceToScreenReader(`Navigated to ${currentDate.toLocaleDateString('en-US', { 
+                month: 'long', 
+                year: 'numeric' 
+            })}`);
+        });
+        
+        $('#nextMonth').on('click', function() {
+            currentDate.setMonth(currentDate.getMonth() + 1);
+            updateCalendar();
+            announceToScreenReader(`Navigated to ${currentDate.toLocaleDateString('en-US', { 
+                month: 'long', 
+                year: 'numeric' 
+            })}`);
+        });
+    }
+
+    // Setup accessibility features
+    function setupCalendarAccessibility() {
+        // Add ARIA labels and roles
+        $('.calendar-grid').attr('role', 'grid');
+        $('.calendar-weekday').attr('role', 'columnheader');
+        $('.calendar-day').attr('role', 'gridcell');
+        
+        // Add keyboard navigation
+        $(document).on('keydown', function(e) {
+            const focusedDay = $('.calendar-day:focus');
+            if (focusedDay.length === 0) return;
+            
+            let targetDay;
+            const currentIndex = focusedDay.index();
+            
+            switch(e.key) {
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    targetDay = focusedDay.prev('.calendar-day');
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    targetDay = focusedDay.next('.calendar-day');
+                    break;
+                case 'ArrowUp':
+                    e.preventDefault();
+                    targetDay = focusedDay.parent().children().eq(currentIndex - 7);
+                    break;
+                case 'ArrowDown':
+                    e.preventDefault();
+                    targetDay = focusedDay.parent().children().eq(currentIndex + 7);
+                    break;
+                case 'Home':
+                    e.preventDefault();
+                    targetDay = focusedDay.parent().children().first();
+                    break;
+                case 'End':
+                    e.preventDefault();
+                    targetDay = focusedDay.parent().children().last();
+                    break;
+            }
+            
+            if (targetDay && targetDay.length > 0) {
+                targetDay.focus();
+            }
+        });
+    }
+
+    // Announce to screen readers
+    function announceToScreenReader(message) {
+        const announcement = $('<div>')
+            .attr('aria-live', 'polite')
+            .attr('aria-atomic', 'true')
+            .addClass('sr-only')
+            .text(message);
+        
+        $('body').append(announcement);
+        
+        setTimeout(() => {
+            announcement.remove();
+        }, 1000);
+    }
+
+    // Enhanced Activity Modal
+    function showActivityModal(dayOfWeek) {
+        const modal = $('#activityModal');
+        const modalTitle = $('#modalTitle');
+        const modalDate = $('#modalDate');
+        
+        modalTitle.text(`${dayOfWeek} Activities`);
+        modalDate.text(selectedDate.toLocaleDateString('en-US', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+        }));
+        
+        updateScheduleTable(dayOfWeek);
+        
+        // Enhanced modal display with animation
+        modal.fadeIn(300).css('display', 'flex');
+        $('body').css('overflow', 'hidden');
+        
+        // Focus management
+        setTimeout(() => {
+            $('#closeActivity').focus();
+        }, 350);
+    }
+
+    // Update schedule table with enhanced data
+    function updateScheduleTable(dayOfWeek) {
+        const scheduleBody = $('#scheduleBody');
+        scheduleBody.empty();
+        
+        // Sample schedule data - replace with actual data
+        const schedule = getScheduleForDay(dayOfWeek);
+        
+        let totalActivities = 0;
+        let interventionCount = 0;
+        let mealCount = 0;
+        
+        schedule.forEach(item => {
+            const row = $('<tr>');
+            
+            const timeCell = $('<td>')
+                .addClass('time-slot')
+                .text(item.time);
+            
+            const activityCell = $('<td>')
+                .addClass(`${item.type}-cell`)
+                .text(item.activity);
+            
+            row.append(timeCell, activityCell);
+            scheduleBody.append(row);
+            
+            // Count activities
+            totalActivities++;
+            if (item.type === 'intervention') interventionCount++;
+            if (item.type === 'meal') mealCount++;
+        });
+        
+        // Update summary
+        $('#totalActivities').text(totalActivities);
+        $('#interventionCount').text(interventionCount);
+        $('#mealCount').text(mealCount);
+    }
+
+    // Get schedule for specific day
+    function getScheduleForDay(dayOfWeek) {
+        // Sample data - replace with actual backend data
+        const schedules = {
+            'Monday': [
+                { time: '8:00 AM', activity: 'Morning Check-in', type: 'activity' },
+                { time: '10:00 AM', activity: 'Group Therapy', type: 'intervention' },
+                { time: '12:00 PM', activity: 'Lunch', type: 'meal' },
+                { time: '2:00 PM', activity: 'Individual Session', type: 'intervention' },
+                { time: '4:00 PM', activity: 'Evening Reflection', type: 'activity' }
+            ],
+            'Tuesday': [
+                { time: '8:00 AM', activity: 'Morning Check-in', type: 'activity' },
+                { time: '11:00 AM', activity: 'Medication Review', type: 'intervention' },
+                { time: '12:00 PM', activity: 'Lunch', type: 'meal' },
+                { time: '3:00 PM', activity: 'Support Group', type: 'activity' }
+            ],
+            'Wednesday': [
+                { time: '8:00 AM', activity: 'Morning Check-in', type: 'activity' },
+                { time: '9:30 AM', activity: 'Assessment', type: 'intervention' },
+                { time: '12:00 PM', activity: 'Lunch', type: 'meal' },
+                { time: '2:30 PM', activity: 'Skills Training', type: 'intervention' }
+            ],
+            'Thursday': [
+                { time: '8:00 AM', activity: 'Morning Check-in', type: 'activity' },
+                { time: '10:30 AM', activity: 'Family Meeting', type: 'intervention' },
+                { time: '12:00 PM', activity: 'Lunch', type: 'meal' },
+                { time: '4:00 PM', activity: 'Progress Review', type: 'activity' }
+            ],
+            'Friday': [
+                { time: '8:00 AM', activity: 'Morning Check-in', type: 'activity' },
+                { time: '11:00 AM', activity: 'Weekly Planning', type: 'intervention' },
+                { time: '12:00 PM', activity: 'Lunch', type: 'meal' },
+                { time: '3:00 PM', activity: 'Weekend Prep', type: 'activity' }
+            ],
+            'Saturday': [
+                { time: '9:00 AM', activity: 'Weekend Check-in', type: 'activity' },
+                { time: '12:00 PM', activity: 'Lunch', type: 'meal' },
+                { time: '2:00 PM', activity: 'Recreation Time', type: 'activity' }
+            ],
+            'Sunday': [
+                { time: '9:00 AM', activity: 'Weekend Check-in', type: 'activity' },
+                { time: '12:00 PM', activity: 'Lunch', type: 'meal' },
+                { time: '4:00 PM', activity: 'Week Review', type: 'activity' }
+            ]
+        };
+        
+        return schedules[dayOfWeek] || [];
+    }
+
+    // Enhanced modal close functionality
+    $('#closeActivity').on('click', function() {
+        closeActivityModal();
+    });
+
+    // Close modal when clicking outside
+    $(window).on('click', function(event) {
+        const modal = $('#activityModal');
+        if (event.target === modal[0]) {
+            closeActivityModal();
+        }
+    });
+
+    // Close modal with escape key
+    $(document).on('keydown', function(e) {
+        if (e.key === 'Escape') {
+            closeActivityModal();
+        }
+    });
+
+    function closeActivityModal() {
+        $('#activityModal').fadeOut(300);
+        $('body').css('overflow', 'auto');
+        
+        // Return focus to selected date
+        if (selectedDate) {
+            const selectedElement = $(`.calendar-day[data-date="${selectedDate.toISOString().split('T')[0]}"]`);
+            if (selectedElement.length > 0) {
+                setTimeout(() => {
+                    selectedElement.focus();
+                }, 350);
+            }
         }
     }
 
-    // Handle mood filter changes
-    $('.filter-select').on('change', function() {
-        const viewType = $('.view-btn.active').data('view');
-        loadCheckInData(viewType);
-    });
-}); 
+    // Initialize tooltips and other UI enhancements
+    $('[data-toggle="tooltip"]').tooltip();
+    
+    // Initialize calendar
+    initializeCalendar();
+    
+    // Initialize any other plugins or features
+    console.log('Enhanced check-in page initialized successfully');
+});
+
+// Add CSS for enhanced animations and accessibility
+const enhancedStyles = `
+<style>
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+.calendar-day.selected-animation {
+    animation: selectPulse 0.3s ease-in-out;
+}
+
+.calendar-day.hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.3);
+}
+
+@keyframes selectPulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1.05); }
+}
+
+.calendar-day:focus {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+}
+
+.calendar-nav-btn:focus {
+    outline: 2px solid #3b82f6;
+    outline-offset: 2px;
+    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
+}
+
+#activityModal {
+    display: none;
+}
+
+#activityModal.fadeIn {
+    animation: modalFadeIn 0.3s ease-out;
+}
+
+@keyframes modalFadeIn {
+    from {
+        opacity: 0;
+        transform: scale(0.95) translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+</style>
+`;
+
+// Inject enhanced styles
+$('head').append(enhancedStyles); 

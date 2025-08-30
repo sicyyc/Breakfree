@@ -1,271 +1,393 @@
 {% extends "base.html" %}
 
-{% block title %}Daily Check-ins - BreakFree{% endblock %}
+{% block title %}Daily Activities & Interventions - BreakFree{% endblock %}
 
 {% block page_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/check_in.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/calendar.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/stats.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/modals.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/submissions.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/calendar-enhancements.css') }}">
+<style>
+    .calendar-container {
+        background: white;
+        border-radius: 12px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        padding: 24px;
+        margin-bottom: 24px;
+    }
+
+    .calendar-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 24px;
+    }
+
+    .calendar-title {
+        font-size: 24px;
+        font-weight: 600;
+        color: #2c3e50;
+    }
+
+    .calendar-nav {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+
+    .nav-btn {
+        background: #3498db;
+        color: white;
+        border: none;
+        border-radius: 8px;
+        padding: 8px 16px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: background 0.3s;
+    }
+
+    .nav-btn:hover {
+        background: #2980b9;
+    }
+
+    .current-month {
+        font-size: 18px;
+        font-weight: 500;
+        color: #2c3e50;
+        min-width: 120px;
+        text-align: center;
+    }
+
+    .calendar-grid {
+        display: grid;
+        grid-template-columns: repeat(7, 1fr);
+        gap: 1px;
+        background: #ecf0f1;
+        border-radius: 8px;
+        overflow: hidden;
+    }
+
+    .calendar-weekday {
+        background: #34495e;
+        color: white;
+        padding: 12px 8px;
+        text-align: center;
+        font-weight: 500;
+        font-size: 14px;
+    }
+
+    .calendar-day {
+        background: white;
+        padding: 12px 8px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.3s;
+        min-height: 60px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+    }
+
+    .calendar-day:hover {
+        background: #f8f9fa;
+        transform: scale(1.02);
+    }
+
+    .calendar-day.other-month {
+        color: #bdc3c7;
+        background: #f8f9fa;
+    }
+
+    .calendar-day.today {
+        background: #3498db;
+        color: white;
+        font-weight: 600;
+    }
+
+    .calendar-day.has-activity {
+        background: #e8f5e8;
+        border: 2px solid #27ae60;
+    }
+
+    .calendar-day.has-intervention {
+        background: #fff3cd;
+        border: 2px solid #ffc107;
+    }
+
+    .day-number {
+        font-size: 16px;
+        font-weight: 500;
+    }
+
+    .day-indicator {
+        position: absolute;
+        top: 4px;
+        right: 4px;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #e74c3c;
+    }
+
+    .day-indicator.activity {
+        background: #27ae60;
+    }
+
+    .day-indicator.intervention {
+        background: #f39c12;
+    }
+
+    .activity-modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background-color: rgba(0, 0, 0, 0.5);
+    }
+
+    .activity-modal-content {
+        background-color: white;
+        margin: 5% auto;
+        padding: 0;
+        border-radius: 12px;
+        width: 90%;
+        max-width: 800px;
+        max-height: 80vh;
+        overflow-y: auto;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+    }
+
+    .activity-header {
+        background: linear-gradient(135deg, #3498db, #2980b9);
+        color: white;
+        padding: 20px;
+        border-radius: 12px 12px 0 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+
+    .activity-title {
+        font-size: 24px;
+        font-weight: 600;
+    }
+
+    .activity-date {
+        font-size: 16px;
+        opacity: 0.9;
+    }
+
+    .close-activity {
+        background: none;
+        border: none;
+        color: white;
+        font-size: 24px;
+        cursor: pointer;
+        padding: 0;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 50%;
+        transition: background 0.3s;
+    }
+
+    .close-activity:hover {
+        background: rgba(255, 255, 255, 0.2);
+    }
+
+    .activity-body {
+        padding: 24px;
+    }
+
+    .schedule-table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        border-radius: 8px;
+        overflow: hidden;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    .schedule-table th {
+        background: #34495e;
+        color: white;
+        padding: 12px 8px;
+        text-align: center;
+        font-weight: 500;
+        font-size: 14px;
+    }
+
+    .schedule-table td {
+        padding: 12px 8px;
+        text-align: center;
+        border-bottom: 1px solid #ecf0f1;
+        font-size: 13px;
+        vertical-align: middle;
+    }
+
+    .time-slot {
+        font-weight: 500;
+        color: #2c3e50;
+        background: #ecf0f1;
+    }
+
+    .activity-cell {
+        background: #e8f5e8;
+        color: #27ae60;
+        font-weight: 500;
+    }
+
+    .intervention-cell {
+        background: #fff3cd;
+        color: #856404;
+        font-weight: 500;
+    }
+
+    .meal-cell {
+        background: #ffeaa7;
+        color: #d63031;
+        font-weight: 500;
+    }
+
+    .view-toggle {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 24px;
+    }
+
+    .view-btn {
+        background: #ecf0f1;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 6px;
+        cursor: pointer;
+        font-size: 14px;
+        transition: all 0.3s;
+    }
+
+    .view-btn.active {
+        background: #3498db;
+        color: white;
+    }
+
+    .view-btn:hover {
+        background: #3498db;
+        color: white;
+    }
+</style>
 {% endblock %}
 
 {% block content %}
 <div class="main-header">
     <div>
-        <h1>In House Check-ins</h1>
-        <p>View client mood and reflections submissions</p>
+        <h1><i class="fas fa-calendar-check"></i> Daily Activities & Interventions</h1>
+        <p>Comprehensive daily schedules and therapeutic intervention tracking</p>
     </div>
-    <div class="actions">
-        <div class="view-toggle">
-            <button class="view-btn active" data-view="in-house">
-                <i class="fas fa-home"></i>
-                In House
-            </button>
-            <button class="view-btn" data-view="after-care">
-                <i class="fas fa-heart"></i>
-                After Care
-            </button>
-        </div>
+    <div class="view-toggle">
+        <button class="view-btn active" data-view="activities">
+            <i class="fas fa-calendar-alt"></i>
+            Daily Activities
+        </button>
+        <button class="view-btn" data-view="interventions">
+            <i class="fas fa-stethoscope"></i>
+            Interventions
+        </button>
     </div>
 </div>
 
-<!-- In House View -->
-<div class="checkin-view in-house-view" style="display: block;">
-    <div class="checkin-grid">
-        <div class="card checkin-calendar">
-            <div class="calendar-wrapper">
-                <div class="calendar-header">
-                    <button class="calendar-nav-btn" id="checkinPrevMonth">
-                        <i class="fas fa-chevron-left"></i>
-                    </button>
-                    <h4 id="checkinCurrentMonth">June 2025</h4>
-                    <button class="calendar-nav-btn" id="checkinNextMonth">
-                        <i class="fas fa-chevron-right"></i>
-                    </button>
-                </div>
-                <div class="calendar-weekdays">
-                    <div>Sun</div>
-                    <div>Mon</div>
-                    <div>Tue</div>
-                    <div>Wed</div>
-                    <div>Thu</div>
-                    <div>Fri</div>
-                    <div>Sat</div>
-                </div>
-                <div class="calendar-days" id="checkinCalendarDays">
-                    <!-- Days will be populated by JavaScript -->
-                </div>
-                <div class="calendar-legend">
-                    <div class="legend-item">
-                        <span class="legend-dot completed-checkin"></span>
-                        <span>Completed Check-in</span>
-                    </div>
-                    <div class="legend-item">
-                        <span class="legend-dot missed-checkin"></span>
-                        <span>Missed Check-in</span>
-                    </div>
-                </div>
+    <div class="calendar-container">
+        <div class="calendar-header">
+            <div class="calendar-title-section">
+                <h2 class="calendar-title">Activity Calendar</h2>
+                <p class="calendar-subtitle">Click any date to view daily activities and interventions</p>
+            </div>
+            <div class="calendar-nav">
+                <button class="nav-btn" id="prevMonth">
+                    <i class="fas fa-chevron-left"></i>
+                </button>
+                <div class="current-month" id="currentMonth">June 2025</div>
+                <button class="nav-btn" id="nextMonth">
+                    <i class="fas fa-chevron-right"></i>
+                </button>
             </div>
         </div>
 
-        <div class="card checkin-details">
-            <div class="checkin-stats">
-                <div class="stat-card">
-                    <h4>Today's Check-ins</h4>
-                    <div class="stat-value">24/30</div>
-                    <div class="stat-label">Clients Submitted</div>
-                </div>
-                <div class="stat-card">
-                    <h4>Average Mood</h4>
-                    <div class="stat-value">😊 7.5</div>
-                    <div class="stat-label">Positive</div>
-                </div>
-                <div class="stat-card">
-                    <h4>Interventions</h4>
-                    <div class="stat-value">18</div>
-                    <div class="stat-label">Viewed Today</div>
-                </div>
+            <div class="calendar-grid">
+            <div class="calendar-weekday">Sun</div>
+            <div class="calendar-weekday">Mon</div>
+            <div class="calendar-weekday">Tue</div>
+            <div class="calendar-weekday">Wed</div>
+            <div class="calendar-weekday">Thu</div>
+            <div class="calendar-weekday">Fri</div>
+            <div class="calendar-weekday">Sat</div>
+            <div id="calendarDays">
+                <!-- Calendar days will be populated by JavaScript -->
             </div>
         </div>
-    </div>
-
-    <div class="card checkin-submissions">
-        <div class="submissions-header">
-            <h3>Today's Submissions</h3>
-            <div class="submissions-filter">
-                <select class="filter-select">
-                    <option value="all">All Moods</option>
-                    <option value="excellent">Excellent (9-10)</option>
-                    <option value="good">Good (7-8)</option>
-                    <option value="okay">Okay (5-6)</option>
-                    <option value="low">Low (3-4)</option>
-                    <option value="critical">Critical (1-2)</option>
-                </select>
+        
+        <div class="calendar-legend">
+            <div class="legend-item">
+                <div class="legend-color regular"></div>
+                <span>Regular Activities</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color intervention"></div>
+                <span>Interventions</span>
+            </div>
+            <div class="legend-item">
+                <div class="legend-color today"></div>
+                <span>Today</span>
             </div>
         </div>
-        <div class="submissions-list">
-            <!-- Sample submission items -->
-            <div class="submission-item">
-                <div class="submission-header">
-                    <div class="client-info">
-                        <div class="client-avatar">
-                            <span class="avatar-initials">JD</span>
-                        </div>
-                        <div class="client-details">
-                            <h4>John Doe</h4>
-                            <div class="submission-meta">
-                                <span class="submission-time"><i class="fas fa-clock"></i> Today, 9:30 AM</span>
-                                <span class="client-id">#CLIENT123</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="mood-indicator mood-excellent">
-                        <span class="mood-emoji">🌟</span>
-                        <div class="mood-details">
-                            <span class="mood-score">9/10</span>
-                            <span class="mood-label">Excellent</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="submission-content">
-                    <p class="reflection-text">Had a productive therapy session today. Feeling more confident about my progress.</p>
-                    <div class="engagement-metrics">
-                        <div class="metric-badge viewed">
-                            <i class="fas fa-eye"></i>
-                            <span>Viewed Intervention</span>
-                        </div>
-                        <div class="metric-badge on-time">
-                            <i class="fas fa-check-circle"></i>
-                            <span>On Time</span>
-                        </div>
-                        <div class="metric-badge streak">
-                            <i class="fas fa-fire"></i>
-                            <span>5 Day Streak</span>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
 </div>
 
-<!-- After Care View -->
-<div class="checkin-view after-care-view" style="display: none;">
-    <div class="checkin-grid">
-        <div class="card checkin-calendar">
-            <div class="calendar-wrapper">
-                <div class="calendar-header">
-                    <button class="calendar-nav-btn" id="afterCarePrevMonth">
-                        <i class="fas fa-chevron-left"></i>
-                    </button>
-                    <h4 id="afterCareCurrentMonth">June 2025</h4>
-                    <button class="calendar-nav-btn" id="afterCareNextMonth">
-                        <i class="fas fa-chevron-right"></i>
-                    </button>
-                </div>
-                <div class="calendar-weekdays">
-                    <div>Sun</div>
-                    <div>Mon</div>
-                    <div>Tue</div>
-                    <div>Wed</div>
-                    <div>Thu</div>
-                    <div>Fri</div>
-                    <div>Sat</div>
-                </div>
-                <div class="calendar-days" id="afterCareCalendarDays">
-                    <!-- Days will be populated by JavaScript -->
-                </div>
-                <div class="calendar-legend">
-                    <div class="legend-item">
-                        <span class="legend-dot completed-checkin"></span>
-                        <span>Completed Check-in</span>
-                    </div>
-                    <div class="legend-item">
-                        <span class="legend-dot missed-checkin"></span>
-                        <span>Missed Check-in</span>
-                    </div>
-                </div>
+<!-- Activity Modal -->
+<div id="activityModal" class="activity-modal">
+    <div class="activity-modal-content">
+        <div class="activity-header">
+            <div>
+                <div class="activity-title" id="modalTitle">Daily Activities</div>
+                <div class="activity-date" id="modalDate">June 15, 2025</div>
             </div>
+            <button class="close-activity" id="closeActivity">&times;</button>
         </div>
-
-        <div class="card checkin-details">
-            <div class="checkin-stats">
-                <div class="stat-card">
-                    <h4>Today's Check-ins</h4>
-                    <div class="stat-value">15/20</div>
-                    <div class="stat-label">Clients Submitted</div>
+        <div class="activity-body">
+            <h3><i class="fas fa-clock"></i> Daily Schedule</h3>
+            <div class="schedule-summary">
+                <div class="summary-item">
+                    <i class="fas fa-tasks"></i>
+                    <span id="totalActivities">0</span>
+                    <label>Total Activities</label>
                 </div>
-                <div class="stat-card">
-                    <h4>Average Mood</h4>
-                    <div class="stat-value">😊 8.2</div>
-                    <div class="stat-label">Positive</div>
+                <div class="summary-item">
+                    <i class="fas fa-stethoscope"></i>
+                    <span id="interventionCount">0</span>
+                    <label>Interventions</label>
                 </div>
-                <div class="stat-card">
-                    <h4>Interventions</h4>
-                    <div class="stat-value">12</div>
-                    <div class="stat-label">Viewed Today</div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="card checkin-submissions">
-        <div class="submissions-header">
-            <h3>Today's Submissions</h3>
-            <div class="submissions-filter">
-                <select class="filter-select">
-                    <option value="all">All Moods</option>
-                    <option value="excellent">Excellent (9-10)</option>
-                    <option value="good">Good (7-8)</option>
-                    <option value="okay">Okay (5-6)</option>
-                    <option value="low">Low (3-4)</option>
-                    <option value="critical">Critical (1-2)</option>
-                </select>
-            </div>
-        </div>
-        <div class="submissions-list">
-            <!-- Sample submission items -->
-            <div class="submission-item">
-                <div class="submission-header">
-                    <div class="client-info">
-                        <div class="client-avatar">
-                            <span class="avatar-initials">JD</span>
-                        </div>
-                        <div class="client-details">
-                            <h4>John Doe</h4>
-                            <div class="submission-meta">
-                                <span class="submission-time"><i class="fas fa-clock"></i> Today, 9:30 AM</span>
-                                <span class="client-id">#CLIENT123</span>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="mood-indicator mood-excellent">
-                        <span class="mood-emoji">🌟</span>
-                        <div class="mood-details">
-                            <span class="mood-score">9/10</span>
-                            <span class="mood-label">Excellent</span>
-                        </div>
-                    </div>
-                </div>
-                <div class="submission-content">
-                    <p class="reflection-text">Had a productive therapy session today. Feeling more confident about my progress.</p>
-                    <div class="engagement-metrics">
-                        <div class="metric-badge viewed">
-                            <i class="fas fa-eye"></i>
-                            <span>Viewed Intervention</span>
-                        </div>
-                        <div class="metric-badge on-time">
-                            <i class="fas fa-check-circle"></i>
-                            <span>On Time</span>
-                        </div>
-                        <div class="metric-badge streak">
-                            <i class="fas fa-fire"></i>
-                            <span>5 Day Streak</span>
-                        </div>
-                    </div>
+                <div class="summary-item">
+                    <i class="fas fa-utensils"></i>
+                    <span id="mealCount">0</span>
+                    <label>Meal Times</label>
                 </div>
             </div>
+            <table class="schedule-table" id="scheduleTable">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Activity</th>
+                    </tr>
+                </thead>
+                <tbody id="scheduleBody">
+                    <!-- Schedule will be populated by JavaScript -->
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
@@ -273,4 +395,254 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/check_in.js') }}"></script>
+<script>
+// Daily Activities Data
+const dailyActivities = {
+    "5:00AM - 5:15AM": {
+        "Monday": "", "Tuesday": "", "Wednesday": "", "Thursday": "WAKING-UP", "Friday": "", "Saturday": "", "Sunday": ""
+    },
+    "5:15AM - 5:30AM": {
+        "Monday": "", "Tuesday": "", "Wednesday": "", "Thursday": "BREAKFAST PREPARATION / EXERCISE", "Friday": "", "Saturday": "", "Sunday": ""
+    },
+    "5:30AM - 6:00AM": {
+        "Monday": "", "Tuesday": "", "Wednesday": "", "Thursday": "BREAKFAST", "Friday": "", "Saturday": "", "Sunday": ""
+    },
+    "6:00AM - 6:30AM": {
+        "Monday": "", "Tuesday": "", "Wednesday": "", "Thursday": "WASHING DISHES & CLEANING OF DINING AREA", "Friday": "", "Saturday": "", "Sunday": ""
+    },
+    "6:30AM - 7:30AM": {
+        "Monday": "", "Tuesday": "", "Wednesday": "", "Thursday": "BATHING AND LAUNDRY TIME / CLEANING OF SURROUNDINGS", "Friday": "", "Saturday": "", "Sunday": ""
+    },
+    "7:30AM - 8:30AM": {
+        "Monday": "", "Tuesday": "", "Wednesday": "", "Thursday": "FLAG CEREMONY (MONDAY) / MORNING PRAYER, RECITAL OF THE HOLY ROSARY", "Friday": "", "Saturday": "", "Sunday": ""
+    },
+    "8:30AM - 9:00AM": {
+        "Monday": "MORNING SESSION", "Tuesday": "MORNING SESSION", "Wednesday": "MORNING SESSION", "Thursday": "MORNING SESSION", "Friday": "MORNING SESSION", "Saturday": "MORNING SESSION", "Sunday": "MORNING SESSION"
+    },
+    "9:00AM - 9:30AM": {
+        "Monday": "GARDENING", "Tuesday": "HEALTH & NUTRITION EDUCATION", "Wednesday": "SKILLS TRAINING / LECTURES/GARDENING", "Thursday": "PROJECT MAKING", "Friday": "PROJECT MAKING", "Saturday": "VISITING DAYS (9:00AM TO 3:00PM) RECREATIONAL ACTIVITY (INDOOR) Guitar Playing, Board Games, Movie Viewing", "Sunday": "GENERAL CLEANING"
+    },
+    "9:30AM - 10:00AM": {
+        "Monday": "GARDENING", "Tuesday": "CASECON/ GARDENING", "Wednesday": "SKILLS TRAINING / LECTURES/GARDENING", "Thursday": "PROJECT MAKING", "Friday": "PROJECT MAKING", "Saturday": "", "Sunday": "GENERAL CLEANING"
+    },
+    "10:00AM - 10:30AM": {
+        "Monday": "GARDENING", "Tuesday": "CASECON/ GARDENING", "Wednesday": "SKILLS TRAINING / LECTURES/GARDENING", "Thursday": "PROJECT MAKING", "Friday": "PROJECT MAKING", "Saturday": "", "Sunday": "GENERAL CLEANING"
+    },
+    "10:30AM - 11:00AM": {
+        "Monday": "LUNCH PREPARATION", "Tuesday": "LUNCH PREPARATION", "Wednesday": "LUNCH PREPARATION", "Thursday": "LUNCH PREPARATION", "Friday": "LUNCH PREPARATION", "Saturday": "", "Sunday": "LUNCH PREPARATION"
+    },
+    "11:00AM - 11:30AM": {
+        "Monday": "LUNCH PREPARATION", "Tuesday": "LUNCH PREPARATION", "Wednesday": "LUNCH PREPARATION", "Thursday": "LUNCH PREPARATION", "Friday": "LUNCH PREPARATION", "Saturday": "", "Sunday": "LUNCH PREPARATION"
+    },
+    "11:30AM - 12:00NN": {
+        "Monday": "LUNCH TIME", "Tuesday": "LUNCH TIME", "Wednesday": "LUNCH TIME", "Thursday": "LUNCH TIME", "Friday": "LUNCH TIME", "Saturday": "", "Sunday": "LUNCH TIME"
+    },
+    "12:00NN - 12:30PM": {
+        "Monday": "LUNCH TIME", "Tuesday": "LUNCH TIME", "Wednesday": "LUNCH TIME", "Thursday": "LUNCH TIME", "Friday": "LUNCH TIME", "Saturday": "", "Sunday": "LUNCH TIME"
+    },
+    "12:30PM - 1:00PM": {
+        "Monday": "TV VIEWING/USE OF PRAYER ROOM/NAP TIME", "Tuesday": "TV VIEWING/USE OF PRAYER ROOM/NAP TIME", "Wednesday": "TV VIEWING/USE OF PRAYER ROOM/NAP TIME", "Thursday": "TV VIEWING / NAP TIME", "Friday": "TV VIEWING/USE OF PRAYER ROOM/NAP TIME", "Saturday": "", "Sunday": "TV VIEWING / NAP TIME"
+    },
+    "1:00PM - 1:30PM": {
+        "Monday": "TV VIEWING/USE OF PRAYER ROOM/NAP TIME", "Tuesday": "TV VIEWING/USE OF PRAYER ROOM/NAP TIME", "Wednesday": "TV VIEWING/USE OF PRAYER ROOM/NAP TIME", "Thursday": "TV VIEWING / NAP TIME", "Friday": "TV VIEWING/USE OF PRAYER ROOM/NAP TIME", "Saturday": "", "Sunday": "TV VIEWING / NAP TIME"
+    },
+    "1:30PM - 2:00PM": {
+        "Monday": "TV VIEWING/USE OF PRAYER ROOM/NAP TIME", "Tuesday": "TV VIEWING/USE OF PRAYER ROOM/NAP TIME", "Wednesday": "TV VIEWING/USE OF PRAYER ROOM/NAP TIME", "Thursday": "TV VIEWING / NAP TIME", "Friday": "TV VIEWING/USE OF PRAYER ROOM/NAP TIME", "Saturday": "", "Sunday": "TV VIEWING / NAP TIME"
+    },
+    "2:00PM - 2:30PM": {
+        "Monday": "PROJECT MAKING", "Tuesday": "JOURNAL ACTIVITY/ PROJECT MAKING", "Wednesday": "ALS SESSION / PROJECT MAKING", "Thursday": "PROJECT MAKING", "Friday": "GROUP DYNAMICS/ MUSIC THERAPY", "Saturday": "", "Sunday": "PROJECT MAKING"
+    },
+    "2:30PM - 3:00PM": {
+        "Monday": "PROJECT MAKING", "Tuesday": "JOURNAL ACTIVITY/ PROJECT MAKING", "Wednesday": "ALS SESSION / PROJECT MAKING", "Thursday": "PROJECT MAKING", "Friday": "GROUP DYNAMICS/ MUSIC THERAPY", "Saturday": "", "Sunday": "PROJECT MAKING"
+    },
+    "3:00PM - 3:30PM": {
+        "Monday": "SNACK TIME", "Tuesday": "SNACK TIME", "Wednesday": "SNACK TIME", "Thursday": "SNACK TIME", "Friday": "SNACK TIME", "Saturday": "SNACK TIME", "Sunday": "SNACK TIME"
+    },
+    "3:30PM - 4:00PM": {
+        "Monday": "SPORTS ACTIVITIES", "Tuesday": "FITNESS TIME", "Wednesday": "SPORTS ACTIVITIES", "Thursday": "GARDENING", "Friday": "SPORTS ACTIVITIES", "Saturday": "GARDENING", "Sunday": "GARDENING"
+    },
+    "4:00PM - 4:30PM": {
+        "Monday": "SPORTS ACTIVITIES", "Tuesday": "FITNESS TIME", "Wednesday": "SPORTS ACTIVITIES", "Thursday": "GARDENING", "Friday": "SPORTS ACTIVITIES", "Saturday": "GARDENING", "Sunday": "GARDENING"
+    },
+    "4:30PM - 5:00PM": {
+        "Monday": "READING TIME / JOURNAL WRITING", "Tuesday": "READING TIME / JOURNAL WRITING", "Wednesday": "READING TIME / JOURNAL WRITING", "Thursday": "READING TIME / JOURNAL WRITING", "Friday": "READING TIME / JOURNAL WRITING", "Saturday": "READING TIME / JOURNAL WRITING", "Sunday": "PROJECT MAKING / JOURNAL WRITING"
+    },
+    "5:00PM - 5:30PM": {
+        "Monday": "READING TIME / JOURNAL WRITING", "Tuesday": "READING TIME / JOURNAL WRITING", "Wednesday": "READING TIME / JOURNAL WRITING", "Thursday": "READING TIME / JOURNAL WRITING", "Friday": "READING TIME / JOURNAL WRITING", "Saturday": "READING TIME / JOURNAL WRITING", "Sunday": "PROJECT MAKING / JOURNAL WRITING"
+    },
+    "5:30PM - 6:00PM": {
+        "Monday": "READING TIME / JOURNAL WRITING", "Tuesday": "READING TIME / JOURNAL WRITING", "Wednesday": "READING TIME / JOURNAL WRITING", "Thursday": "READING TIME / JOURNAL WRITING", "Friday": "READING TIME / JOURNAL WRITING", "Saturday": "READING TIME / JOURNAL WRITING", "Sunday": "PROJECT MAKING / JOURNAL WRITING"
+    },
+    "6:00PM - 6:30PM": {
+        "Monday": "FOOD PREPARATION", "Tuesday": "FOOD PREPARATION", "Wednesday": "FOOD PREPARATION", "Thursday": "FOOD PREPARATION", "Friday": "FOOD PREPARATION", "Saturday": "FOOD PREPARATION", "Sunday": "FOOD PREPARATION"
+    },
+    "6:30PM - 7:00PM": {
+        "Monday": "HYGIENE TIME", "Tuesday": "HYGIENE TIME", "Wednesday": "HYGIENE TIME", "Thursday": "HYGIENE TIME", "Friday": "HYGIENE TIME", "Saturday": "HYGIENE TIME", "Sunday": "HYGIENE TIME"
+    },
+    "7:00PM - 7:30PM": {
+        "Monday": "ANGELUS", "Tuesday": "ANGELUS", "Wednesday": "ANGELUS", "Thursday": "ANGELUS", "Friday": "ANGELUS", "Saturday": "ANGELUS", "Sunday": "ANGELUS"
+    },
+    "7:30PM - 8:00PM": {
+        "Monday": "DINNER", "Tuesday": "DINNER", "Wednesday": "DINNER", "Thursday": "DINNER", "Friday": "DINNER", "Saturday": "DINNER", "Sunday": "DINNER"
+    },
+    "8:00PM - 8:30PM": {
+        "Monday": "CLEANING OF DINING AREA / TV VIEWING", "Tuesday": "CLEANING OF DINING AREA / TV VIEWING", "Wednesday": "CLEANING OF DINING AREA / TV VIEWING", "Thursday": "CLEANING OF DINING AREA / TV VIEWING", "Friday": "CLEANING OF DINING AREA / TV VIEWING", "Saturday": "CLEANING OF DINING AREA / TV VIEWING", "Sunday": "CLEANING OF DINING AREA / TV VIEWING"
+    },
+    "8:30PM - 9:00PM": {
+        "Monday": "CLEANING OF DINING AREA / TV VIEWING", "Tuesday": "CLEANING OF DINING AREA / TV VIEWING", "Wednesday": "CLEANING OF DINING AREA / TV VIEWING", "Thursday": "CLEANING OF DINING AREA / TV VIEWING", "Friday": "CLEANING OF DINING AREA / TV VIEWING", "Saturday": "CLEANING OF DINING AREA / TV VIEWING", "Sunday": "CLEANING OF DINING AREA / TV VIEWING"
+    },
+    "9:00PM": {
+        "Monday": "LIGHTS OFF", "Tuesday": "LIGHTS OFF", "Wednesday": "LIGHTS OFF", "Thursday": "LIGHTS OFF", "Friday": "LIGHTS OFF", "Saturday": "LIGHTS OFF", "Sunday": "LIGHTS OFF"
+    }
+};
+
+let currentDate = new Date();
+let selectedDate = new Date();
+
+// Initialize calendar
+function initCalendar() {
+    updateCalendar();
+    setupEventListeners();
+}
+
+// Update calendar display
+function updateCalendar() {
+    const year = currentDate.getFullYear();
+    const month = currentDate.getMonth();
+    
+    document.getElementById('currentMonth').textContent = 
+        new Date(year, month).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startDate = new Date(firstDay);
+    startDate.setDate(startDate.getDate() - firstDay.getDay());
+    
+    const calendarDays = document.getElementById('calendarDays');
+    calendarDays.innerHTML = '';
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    for (let i = 0; i < 42; i++) {
+        const date = new Date(startDate);
+        date.setDate(startDate.getDate() + i);
+        
+        const dayElement = document.createElement('div');
+        dayElement.className = 'calendar-day';
+        dayElement.textContent = date.getDate();
+        
+        // Check if it's current month
+        if (date.getMonth() !== month) {
+            dayElement.classList.add('other-month');
+        }
+        
+        // Check if it's today
+        if (date.getTime() === today.getTime()) {
+            dayElement.classList.add('today');
+        }
+        
+        // Add click event
+        dayElement.addEventListener('click', () => {
+            selectedDate = date;
+            const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' });
+            showActivityModal(dayOfWeek);
+        });
+        
+        calendarDays.appendChild(dayElement);
+    }
+}
+
+// Show activity modal
+function showActivityModal(dayOfWeek) {
+    const modal = document.getElementById('activityModal');
+    const modalTitle = document.getElementById('modalTitle');
+    const modalDate = document.getElementById('modalDate');
+    
+    modalTitle.textContent = `${dayOfWeek} Activities`;
+    modalDate.textContent = selectedDate.toLocaleDateString('en-US', { 
+        weekday: 'long', 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+    });
+    
+    updateScheduleTable(dayOfWeek);
+    modal.style.display = 'block';
+}
+
+// Update schedule table
+function updateScheduleTable(dayOfWeek) {
+    const tbody = document.getElementById('scheduleBody');
+    tbody.innerHTML = '';
+    
+    let totalActivities = 0;
+    let interventionCount = 0;
+    let mealCount = 0;
+    
+    Object.entries(dailyActivities).forEach(([time, activities]) => {
+        const activity = activities[dayOfWeek] || '';
+        if (activity) {
+            totalActivities++;
+            
+            const row = document.createElement('tr');
+            
+            const timeCell = document.createElement('td');
+            timeCell.className = 'time-slot';
+            timeCell.textContent = time;
+            row.appendChild(timeCell);
+            
+            const activityCell = document.createElement('td');
+            if (activity.includes('GARDENING') || activity.includes('PROJECT MAKING') || activity.includes('SKILLS TRAINING') || activity.includes('HEALTH & NUTRITION') || activity.includes('ALS SESSION') || activity.includes('GROUP DYNAMICS') || activity.includes('JOURNAL ACTIVITY')) {
+                activityCell.className = 'intervention-cell';
+                interventionCount++;
+            } else if (activity.includes('LUNCH') || activity.includes('BREAKFAST') || activity.includes('DINNER') || activity.includes('SNACK')) {
+                activityCell.className = 'meal-cell';
+                mealCount++;
+            } else {
+                activityCell.className = 'activity-cell';
+            }
+            activityCell.textContent = activity;
+            row.appendChild(activityCell);
+            
+            tbody.appendChild(row);
+        }
+    });
+    
+    // Update summary statistics
+    document.getElementById('totalActivities').textContent = totalActivities;
+    document.getElementById('interventionCount').textContent = interventionCount;
+    document.getElementById('mealCount').textContent = mealCount;
+}
+
+// Setup event listeners
+function setupEventListeners() {
+    // Navigation buttons
+    document.getElementById('prevMonth').addEventListener('click', () => {
+        currentDate.setMonth(currentDate.getMonth() - 1);
+        updateCalendar();
+    });
+    
+    document.getElementById('nextMonth').addEventListener('click', () => {
+        currentDate.setMonth(currentDate.getMonth() + 1);
+        updateCalendar();
+    });
+    
+    // Close modal
+    document.getElementById('closeActivity').addEventListener('click', () => {
+        document.getElementById('activityModal').style.display = 'none';
+    });
+    
+    // Close modal when clicking outside
+    window.addEventListener('click', (event) => {
+        const modal = document.getElementById('activityModal');
+        if (event.target === modal) {
+            modal.style.display = 'none';
+        }
+    });
+}
+
+// Initialize when DOM is loaded
+document.addEventListener('DOMContentLoaded', initCalendar);
+</script>
 {% endblock %} 
