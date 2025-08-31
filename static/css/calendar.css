@@ -11,6 +11,55 @@
   border: 1px solid #e5e7eb;
 }
 
+/* Compact calendar for dashboard */
+.actions-activity-container .calendar {
+  padding: 0.75rem;
+  max-height: 350px;
+}
+
+.actions-activity-container .calendar-header {
+  margin-bottom: 0.75rem;
+  padding: 0.25rem 0;
+}
+
+.actions-activity-container .calendar-header h4 {
+  font-size: 0.95rem;
+}
+
+.actions-activity-container .calendar-nav-btn {
+  min-width: 28px;
+  height: 28px;
+  padding: 0.25rem;
+}
+
+.actions-activity-container .calendar-weekdays {
+  font-size: 0.7rem;
+  padding: 0.5rem 0;
+  margin-bottom: 0.25rem;
+}
+
+.actions-activity-container .calendar-days {
+  gap: 0.1rem;
+  padding: 0.25rem;
+}
+
+.actions-activity-container .calendar-day {
+  font-size: 0.7rem;
+  padding: 0.1rem;
+  min-height: 24px;
+}
+
+.actions-activity-container .calendar-legend {
+  margin-top: 0.75rem;
+  padding: 0.5rem;
+  gap: 1rem;
+}
+
+.actions-activity-container .legend-item {
+  font-size: 0.7rem;
+  padding: 0.2rem 0.4rem;
+}
+
 .calendar-header {
   display: flex;
   align-items: center;

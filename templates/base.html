@@ -99,6 +99,15 @@
           Settings
         </a>
         {% endif %}
+        {% if session['role'] == 'admin' %}
+        <a
+          href="{{ url_for('activity_log') }}"
+          class="nav-item {% if active_tab == 'activity-log' %}active{% endif %}"
+        >
+          <i class="fa-regular fa-clock"></i>
+          Activity Log
+        </a>
+        {% endif %}
       </nav>
       <div class="sidebar-footer">
         <a href="/logout" class="nav-item">

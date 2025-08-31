@@ -76,6 +76,35 @@ a.nav-item.active {
   font-weight: 500;
 }
 
+/* Exact image design for dashboard active state only */
+.nav-item.active[href*="dashboard"],
+.nav-item[aria-current="page"][href*="dashboard"],
+.sidebar .nav-item.active[href*="dashboard"],
+a.nav-item.active[href*="dashboard"] {
+  background: #E0D9F7 !important;
+  color: #6A5ACD !important;
+  font-weight: 500;
+  position: relative;
+  border: none !important;
+  border-radius: 12px;
+}
+
+/* Right edge accent for dashboard active state only */
+.nav-item.active[href*="dashboard"]::after,
+.nav-item[aria-current="page"][href*="dashboard"]::after,
+.sidebar .nav-item.active[href*="dashboard"]::after,
+a.nav-item.active[href*="dashboard"]::after {
+  content: '';
+  position: absolute;
+  right: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 4px;
+  height: 60%;
+  background: #6A5ACD;
+  border-radius: 2px 0 0 2px;
+}
+
 .nav-item i {
   width: 20px;
   text-align: center;

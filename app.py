@@ -15,7 +15,7 @@ import math
 load_dotenv()
 
 from firebase_config import db
-from firebase_admin import auth
+from firebase_admin import auth, firestore
 from datetime import datetime
 
 app = Flask(__name__)
@@ -375,6 +375,17 @@ def login():
             session['email'] = email
             session['role'] = actual_role
             
+            # Log login activity
+            log_activity(
+                user_id=uid,
+                user_email=email,
+                user_role=actual_role,
+                action='Login',
+                details=f'User logged in successfully from {request.remote_addr}',
+                target_id=uid,
+                target_type='user'
+            )
+            
             return jsonify({'success': True, 'redirect': url_for('dashboard')})
         except Exception as e:
             print(f"Login error: {e}")
@@ -426,12 +437,13 @@ def dashboard():
                          username=session['email'].split('@')[0],
                          total_clients=total_clients,
                          in_house_clients=in_house_clients,
-                         after_care_clients=after_care_clients)
+                         after_care_clients=after_care_clients,
+                         active_tab='dashboard')
 
 @app.route('/check_in')
 @role_required(['admin', 'psychometrician', 'house_worker'])
 def check_in():
-    return render_template('check_in.html', email=session['email'])
+    return render_template('check_in.html', email=session['email'], active_tab='check-in')
 
 @app.route('/debug/clients')
 @role_required(['admin', 'psychometrician', 'house_worker'])
@@ -644,7 +656,7 @@ def clients():
             'end_record': 0
         }
     
-    return render_template('clients.html', email=session['email'], clients=clients_data, pagination=pagination)
+    return render_template('clients.html', email=session['email'], clients=clients_data, pagination=pagination, active_tab='clients')
 
 @app.route('/pending-clients')
 @role_required(['admin'])
@@ -1011,6 +1023,17 @@ def add_client():
             # Add to Firestore
             new_client = db.collection('clients').add(client_data)
             
+            # Log client creation activity
+            log_activity(
+                user_id=session['user_id'],
+                user_email=session['email'],
+                user_role=session['role'],
+                action='Create Client',
+                details=f'Created new client: {client_data["name"]}',
+                target_id=new_client[1].id,
+                target_type='client'
+            )
+            
             response_data = {
                 'success': True, 
                 'message': 'Client assessment submitted successfully and is pending admin approval',
@@ -1106,6 +1129,17 @@ def archive_client(client_id):
             'archived_by': session['user_id']
         })
         
+        # Log client archiving activity
+        log_activity(
+            user_id=session['user_id'],
+            user_email=session['email'],
+            user_role=session['role'],
+            action='Archive Client',
+            details=f'Archived client: {client_doc.to_dict().get("name", "Unknown")}',
+            target_id=client_id,
+            target_type='client'
+        )
+        
         return jsonify({'success': True, 'message': 'Client archived successfully'})
         
     except Exception as e:
@@ -1135,6 +1169,17 @@ def approve_client(client_id):
             'approved_at': datetime.now(),
             'approved_by': session['user_id']
         })
+        
+        # Log client approval activity
+        log_activity(
+            user_id=session['user_id'],
+            user_email=session['email'],
+            user_role=session['role'],
+            action='Approve Client',
+            details=f'Approved client: {client_data.get("name", "Unknown")}',
+            target_id=client_id,
+            target_type='client'
+        )
         
         return jsonify({'success': True, 'message': 'Client approved successfully'})
         
@@ -1169,6 +1214,17 @@ def reject_client(client_id):
             'rejected_by': session['user_id'],
             'rejection_reason': rejection_reason
         })
+        
+        # Log client rejection activity
+        log_activity(
+            user_id=session['user_id'],
+            user_email=session['email'],
+            user_role=session['role'],
+            action='Reject Client',
+            details=f'Rejected client: {client_data.get("name", "Unknown")} - Reason: {rejection_reason}',
+            target_id=client_id,
+            target_type='client'
+        )
         
         return jsonify({'success': True, 'message': 'Client rejected successfully'})
         
@@ -1467,7 +1523,7 @@ def client_profile(client_id):
         if 'livingSituationNotes' not in client_data:
             client_data['livingSituationNotes'] = None
 
-        return render_template('client_profile.html', client=client_data)
+        return render_template('client_profile.html', client=client_data, active_tab='clients')
     except Exception as e:
         print(f"Error fetching client profile: {e}")
         flash('Error loading client profile', 'error')
@@ -1476,17 +1532,125 @@ def client_profile(client_id):
 @app.route('/interventions')
 @role_required(['admin', 'psychometrician'])
 def interventions():
-    return render_template('interventions.html', email=session['email'])
+    return render_template('interventions.html', email=session['email'], active_tab='interventions')
 
 @app.route('/map')
 @role_required(['admin', 'psychometrician', 'house_worker'])
 def map():
-    return render_template('map.html', email=session['email'])
+    return render_template('map.html', email=session['email'], active_tab='map')
 
 @app.route('/reports')
 @role_required(['admin', 'psychometrician', 'house_worker'])
 def reports():
-    return render_template('reports.html', email=session['email'])
+    return render_template('reports.html', email=session['email'], active_tab='reports')
+
+@app.route('/activity-log')
+@admin_required
+def activity_log():
+    try:
+        # Get pagination parameters
+        page = request.args.get('page', 1, type=int)
+        per_page = 20
+        user_filter = request.args.get('user', '')
+        action_filter = request.args.get('action', '')
+        date_filter = request.args.get('date', '')
+        
+        # Fetch activity logs from Firestore
+        logs_ref = db.collection('activity_logs')
+        query = logs_ref.order_by('timestamp', direction=firestore.Query.DESCENDING)
+        
+        # Apply filters
+        if user_filter:
+            query = query.where('user_email', '==', user_filter)
+        if action_filter:
+            query = query.where('action', '==', action_filter)
+        if date_filter:
+            # Parse date filter (assuming format: YYYY-MM-DD)
+            try:
+                from datetime import datetime, timedelta
+                filter_date = datetime.strptime(date_filter, '%Y-%m-%d')
+                next_date = filter_date + timedelta(days=1)
+                query = query.where('timestamp', '>=', filter_date).where('timestamp', '<', next_date)
+            except ValueError:
+                pass  # Invalid date format, ignore filter
+        
+        # Get all logs for pagination
+        all_logs = []
+        for log in query.stream():
+            log_data = log.to_dict()
+            log_data['id'] = log.id
+            all_logs.append(log_data)
+        
+        # Calculate pagination
+        total_logs = len(all_logs)
+        total_pages = (total_logs + per_page - 1) // per_page
+        
+        if page < 1:
+            page = 1
+        elif page > total_pages and total_pages > 0:
+            page = total_pages
+        
+        start_idx = (page - 1) * per_page
+        end_idx = start_idx + per_page
+        logs_for_page = all_logs[start_idx:end_idx]
+        
+        # Get unique users and actions for filter dropdowns
+        users_ref = db.collection('users')
+        all_users = []
+        for user in users_ref.stream():
+            user_data = user.to_dict()
+            all_users.append(user_data.get('email', ''))
+        
+        # Get unique actions from logs
+        unique_actions = list(set(log.get('action', '') for log in all_logs))
+        unique_actions.sort()
+        
+        pagination = {
+            'page': page,
+            'per_page': per_page,
+            'total': total_logs,
+            'total_pages': total_pages,
+            'has_prev': page > 1,
+            'has_next': page < total_pages,
+            'prev_num': page - 1 if page > 1 else None,
+            'next_num': page + 1 if page < total_pages else None,
+            'start_record': start_idx + 1 if total_logs > 0 else 0,
+            'end_record': min(end_idx, total_logs)
+        }
+        
+        return render_template('activity_log.html', 
+                             logs=logs_for_page, 
+                             pagination=pagination,
+                             users=all_users,
+                             actions=unique_actions,
+                             current_filters={
+                                 'user': user_filter,
+                                 'action': action_filter,
+                                 'date': date_filter
+                             },
+                             active_tab='activity-log')
+        
+    except Exception as e:
+        print(f"Error loading activity log: {e}")
+        flash('Error loading activity log. Please try again.', 'error')
+        return render_template('activity_log.html', 
+                             logs=[], 
+                             pagination={
+                                 'page': 1,
+                                 'per_page': 20,
+                                 'total': 0,
+                                 'total_pages': 0,
+                                 'has_prev': False,
+                                 'has_next': False,
+                                 'prev_num': None,
+                                 'next_num': None,
+                                 'start_record': 0,
+                                 'end_record': 0
+                             },
+                             users=[],
+                             actions=[],
+                             current_filters={},
+                             active_tab='activity-log')
 
 @app.route('/settings')
 @role_required(['admin', 'psychometrician', 'house_worker'])
@@ -1501,10 +1665,10 @@ def settings():
                 user_data['id'] = user.id
                 users.append(user_data)
         
-        return render_template('settings.html', email=session['email'], users=users)
+        return render_template('settings.html', email=session['email'], users=users, active_tab='settings')
     except Exception as e:
         print(f"Error loading settings: {e}")
-        return render_template('settings.html', email=session['email'], users=[])
+        return render_template('settings.html', email=session['email'], users=[], active_tab='settings')
 
 @app.route('/api/users', methods=['GET'])
 @admin_required
@@ -1572,6 +1736,17 @@ def create_user():
         
         new_user = users_ref.add(user_data)
         
+        # Log user creation activity
+        log_activity(
+            user_id=session['user_id'],
+            user_email=session['email'],
+            user_role=session['role'],
+            action='Create User',
+            details=f'Created new user: {email} with role: {role}',
+            target_id=new_user[1].id,
+            target_type='user'
+        )
+        
         return jsonify({
             'success': True, 
             'message': 'User created successfully',
@@ -1609,6 +1784,17 @@ def delete_user(user_id):
         
         # Delete from Firestore
         user_ref.delete()
+        
+        # Log user deletion activity
+        log_activity(
+            user_id=session['user_id'],
+            user_email=session['email'],
+            user_role=session['role'],
+            action='Delete User',
+            details=f'Deleted user: {user_data.get("email", "Unknown")}',
+            target_id=user_id,
+            target_type='user'
+        )
         
         return jsonify({'success': True, 'message': 'User deleted successfully'})
         
@@ -1652,6 +1838,23 @@ def update_user(user_id):
         
         user_ref.update(update_data)
         
+        # Log user update activity
+        update_details = []
+        if role:
+            update_details.append(f'role: {role}')
+        if status:
+            update_details.append(f'status: {status}')
+        
+        log_activity(
+            user_id=session['user_id'],
+            user_email=session['email'],
+            user_role=session['role'],
+            action='Update User',
+            details=f'Updated user: {user_doc.to_dict().get("email", "Unknown")} - {", ".join(update_details)}',
+            target_id=user_id,
+            target_type='user'
+        )
+        
         return jsonify({'success': True, 'message': 'User updated successfully'})
         
     except Exception as e:
@@ -1660,6 +1863,18 @@ def update_user(user_id):
 
 @app.route('/logout')
 def logout():
+    # Log logout activity before clearing session
+    if 'user_id' in session:
+        log_activity(
+            user_id=session['user_id'],
+            user_email=session['email'],
+            user_role=session['role'],
+            action='Logout',
+            details=f'User logged out from {request.remote_addr}',
+            target_id=session['user_id'],
+            target_type='user'
+        )
+    
     session.clear()
     return redirect(url_for('index'))
 
@@ -2700,6 +2915,257 @@ def search_locations():
         'results': results[:20],  # Limit to 20 results
         'total': len(results)
     })
+
+# Activity Log API Endpoints
+@app.route('/api/activity-log/check-updates')
+@admin_required
+def check_activity_updates():
+    """Check if there are new activities since last check"""
+    try:
+        # Get parameters
+        page = request.args.get('page', 1, type=int)
+        user_filter = request.args.get('user', '')
+        action_filter = request.args.get('action', '')
+        date_filter = request.args.get('date', '')
+        
+        # Get the latest activity timestamp from the current page
+        logs_ref = db.collection('activity_logs')
+        query = logs_ref.order_by('timestamp', direction=firestore.Query.DESCENDING)
+        
+        # Apply filters
+        if user_filter:
+            query = query.where('user_email', '==', user_filter)
+        if action_filter:
+            query = query.where('action', '==', action_filter)
+        if date_filter:
+            try:
+                from datetime import datetime, timedelta
+                filter_date = datetime.strptime(date_filter, '%Y-%m-%d')
+                next_date = filter_date + timedelta(days=1)
+                query = query.where('timestamp', '>=', filter_date).where('timestamp', '<', next_date)
+            except ValueError:
+                pass
+        
+        # Get the most recent activity
+        latest_activity = query.limit(1).stream()
+        latest_timestamp = None
+        
+        for activity in latest_activity:
+            activity_data = activity.to_dict()
+            latest_timestamp = activity_data.get('timestamp')
+            break
+        
+        # Check if there are newer activities
+        if latest_timestamp:
+            # Get activities newer than the latest one
+            newer_query = logs_ref.where('timestamp', '>', latest_timestamp)
+            newer_count = sum(1 for _ in newer_query.stream())
+            
+            return jsonify({
+                'success': True,
+                'has_new_activities': newer_count > 0,
+                'new_count': newer_count,
+                'latest_timestamp': latest_timestamp.isoformat() if latest_timestamp else None
+            })
+        
+        return jsonify({
+            'success': True,
+            'has_new_activities': False,
+            'new_count': 0,
+            'latest_timestamp': None
+        })
+        
+    except Exception as e:
+        print(f"Error checking activity updates: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/activity-log/export', methods=['POST'])
+@admin_required
+def export_activity_log():
+    """Export activity logs to CSV"""
+    try:
+        data = request.get_json()
+        user_filter = data.get('user', '')
+        action_filter = data.get('action', '')
+        date_filter = data.get('date', '')
+        
+        # Build query
+        logs_ref = db.collection('activity_logs')
+        query = logs_ref.order_by('timestamp', direction=firestore.Query.DESCENDING)
+        
+        # Apply filters
+        if user_filter:
+            query = query.where('user_email', '==', user_filter)
+        if action_filter:
+            query = query.where('action', '==', action_filter)
+        if date_filter:
+            try:
+                from datetime import datetime, timedelta
+                filter_date = datetime.strptime(date_filter, '%Y-%m-%d')
+                next_date = filter_date + timedelta(days=1)
+                query = query.where('timestamp', '>=', filter_date).where('timestamp', '<', next_date)
+            except ValueError:
+                pass
+        
+        # Get all logs
+        logs = []
+        for log in query.stream():
+            log_data = log.to_dict()
+            logs.append(log_data)
+        
+        # Create CSV content
+        import csv
+        import io
+        
+        output = io.StringIO()
+        writer = csv.writer(output)
+        
+        # Write header
+        writer.writerow([
+            'Timestamp', 'User Email', 'User Role', 'Action', 'Details', 
+            'Target Type', 'Target ID', 'IP Address', 'User Agent'
+        ])
+        
+        # Write data
+        for log in logs:
+            writer.writerow([
+                log.get('timestamp', '').strftime('%Y-%m-%d %H:%M:%S') if log.get('timestamp') else '',
+                log.get('user_email', ''),
+                log.get('user_role', ''),
+                log.get('action', ''),
+                log.get('details', ''),
+                log.get('target_type', ''),
+                log.get('target_id', ''),
+                log.get('ip_address', ''),
+                log.get('user_agent', '')
+            ])
+        
+        # Create response
+        from flask import Response
+        output.seek(0)
+        
+        return Response(
+            output.getvalue(),
+            mimetype='text/csv',
+            headers={'Content-Disposition': f'attachment; filename=activity_log_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv'}
+        )
+        
+    except Exception as e:
+        print(f"Error exporting activity log: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+@app.route('/api/activity-log/stats')
+@admin_required
+def get_activity_stats():
+    """Get activity statistics"""
+    try:
+        logs_ref = db.collection('activity_logs')
+        
+        # Get total count
+        total_activities = sum(1 for _ in logs_ref.stream())
+        
+        # Get unique users
+        users = set()
+        for log in logs_ref.stream():
+            log_data = log.to_dict()
+            users.add(log_data.get('user_email', ''))
+        
+        # Get unique actions
+        actions = set()
+        for log in logs_ref.stream():
+            log_data = log.to_dict()
+            actions.add(log_data.get('action', ''))
+        
+        # Get today's activities
+        from datetime import datetime, timedelta
+        today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        today_query = logs_ref.where('timestamp', '>=', today_start)
+        today_activities = sum(1 for _ in today_query.stream())
+        
+        # Get this week's activities
+        week_start = today_start - timedelta(days=today_start.weekday())
+        week_query = logs_ref.where('timestamp', '>=', week_start)
+        week_activities = sum(1 for _ in week_query.stream())
+        
+        # Get most active users
+        user_activity = {}
+        for log in logs_ref.stream():
+            log_data = log.to_dict()
+            user_email = log_data.get('user_email', '')
+            if user_email:
+                user_activity[user_email] = user_activity.get(user_email, 0) + 1
+        
+        top_users = sorted(user_activity.items(), key=lambda x: x[1], reverse=True)[:5]
+        
+        # Get most common actions
+        action_counts = {}
+        for log in logs_ref.stream():
+            log_data = log.to_dict()
+            action = log_data.get('action', '')
+            if action:
+                action_counts[action] = action_counts.get(action, 0) + 1
+        
+        top_actions = sorted(action_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+        
+        return jsonify({
+            'success': True,
+            'stats': {
+                'total_activities': total_activities,
+                'unique_users': len(users),
+                'unique_actions': len(actions),
+                'today_activities': today_activities,
+                'week_activities': week_activities,
+                'top_users': top_users,
+                'top_actions': top_actions
+            }
+        })
+        
+    except Exception as e:
+        print(f"Error getting activity stats: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+def log_activity(user_id, user_email, user_role, action, details=None, target_id=None, target_type=None):
+    """
+    Log user activity to Firestore for audit trail.
+    
+    Args:
+        user_id: ID of the user performing the action
+        user_email: Email of the user performing the action
+        user_role: Role of the user performing the action
+        action: Description of the action performed
+        details: Additional details about the action
+        target_id: ID of the target object (client, user, etc.)
+        target_type: Type of the target object (client, user, etc.)
+    """
+    try:
+        log_data = {
+            'user_id': user_id,
+            'user_email': user_email,
+            'user_role': user_role,
+            'action': action,
+            'details': details,
+            'target_id': target_id,
+            'target_type': target_type,
+            'timestamp': datetime.now(),
+            'ip_address': request.remote_addr if request else None,
+            'user_agent': request.headers.get('User-Agent') if request else None
+        }
+        
+        # Add to Firestore
+        db.collection('activity_logs').add(log_data)
+        
+    except Exception as e:
+        print(f"Error logging activity: {e}")
+        # Don't fail the main operation if logging fails
 
 def generate_offset_coordinates(base_coords, client_id, offset_radius=0.001):
     """
