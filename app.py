@@ -2019,6 +2019,68 @@ def update_all_client_coordinates():
     except Exception as e:
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/api/clients/list', methods=['GET'])
+@role_required(['admin', 'psychometrician', 'house_worker'])
+def get_clients_list():
+    """
+    API endpoint to get a list of clients for intervention assignment.
+    Returns only active, non-archived clients.
+    """
+    try:
+        # Fetch clients from Firestore
+        clients_ref = db.collection('clients')
+        clients_data = []
+        
+        for client in clients_ref.stream():
+            client_dict = client.to_dict()
+            client_dict['id'] = client.id
+            
+            # Skip clients with None names or archived clients
+            if client_dict.get('name') is None or client_dict.get('name') == '':
+                continue
+                
+            if client_dict.get('archived', False):
+                continue
+                
+            # Only include active clients (not pending)
+            if client_dict.get('status') == 'pending':
+                continue
+            
+            # Role-based filtering: House workers can only see in-house clients
+            user_role = session.get('role', '')
+            if user_role == 'house_worker':
+                if client_dict.get('care_type') == 'after_care':
+                    continue
+            
+            # Prepare client data for the list
+            client_info = {
+                'id': client.id,
+                'name': client_dict.get('name', 'Unknown'),
+                'clientId': client_dict.get('clientId', 'N/A'),
+                'age': client_dict.get('age', 'N/A'),
+                'gender': client_dict.get('gender', 'Not specified'),
+                'care_type': client_dict.get('care_type', 'in_house'),
+                'status': client_dict.get('status', 'active')
+            }
+            
+            clients_data.append(client_info)
+        
+        # Sort by name
+        clients_data.sort(key=lambda x: x.get('name', '').lower())
+        
+        return jsonify({
+            'success': True,
+            'clients': clients_data,
+            'total': len(clients_data)
+        })
+        
+    except Exception as e:
+        print(f"Error fetching clients for intervention: {e}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 # Add debug endpoint to check client data
 @app.route('/api/debug/client/<client_id>')
 @role_required(['admin'])

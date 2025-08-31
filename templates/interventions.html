@@ -4,227 +4,505 @@
 
 {% block page_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/interventions.css') }}">
-<link rel="stylesheet" href="{{ url_for('static', filename='css/stats.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/clients.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/modals.css') }}">
 {% endblock %}
 
 {% block content %}
-<div class="main-header">
-    <div>
-        <h1>Interventions</h1>
-        <p>Manage and schedule mental health interventions</p>
+<div class="main-header-clients">
+  <div class="actions actions-left">
+    <div class="search-container">
+      <span class="search-icon"><i class="fas fa-search"></i></span>
+      <input type="text" placeholder="Search interventions by title, category, or client..." />
     </div>
-    <div class="actions">
-        <button class="btn-primary" id="createInterventionBtn">
-            <i class="fas fa-plus"></i> Create Intervention
+  </div>
+  <div class="actions actions-right">
+    <button class="btn-secondary" id="interventionScanBtn">
+      <i class="fas fa-qrcode"></i> Scan Intervention
+    </button>
+    <button class="btn-primary" id="createInterventionBtn">
+      <i class="fas fa-plus"></i> Create Intervention
+    </button>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-header-bar">
+    <h2 class="table-title">Interventions</h2>
+    <div class="header-controls">
+      <div class="date-input">
+        <i class="far fa-calendar"></i>
+        <input type="text" placeholder="dd/mm/yyyy" aria-label="From date" />
+        <span class="date-label">From</span>
+      </div>
+      <div class="date-input">
+        <i class="far fa-calendar"></i>
+        <input type="text" placeholder="dd/mm/yyyy" aria-label="To date" />
+        <span class="date-label">To</span>
+      </div>
+      <div class="filter-input" data-label="Status">
+        <select class="filter-select" data-filter="status">
+          <option value="all">All</option>
+          <option value="active">Active</option>
+          <option value="completed">Completed</option>
+          <option value="pending">Pending</option>
+          <option value="overdue">Overdue</option>
+        </select>
+      </div>
+      <div class="filter-input" data-label="Category">
+        <select class="filter-select" data-filter="category">
+          <option value="all">All</option>
+          <option value="coping">Coping Skills</option>
+          <option value="reflection">Reflection</option>
+          <option value="mindfulness">Mindfulness</option>
+          <option value="therapy">Therapy</option>
+          <option value="assessment">Assessment</option>
+        </select>
+      </div>
+      <div class="export-dropdown">
+        <button class="btn-export" id="exportDropdownBtn">
+          <i class="fas fa-download"></i> Export
+          <i class="fas fa-chevron-down"></i>
         </button>
+        <div class="export-menu" id="exportMenu">
+          <button class="export-item" data-export="filtered">
+            Export Filtered Data
+          </button>
+          <button class="export-item" data-export="all">
+            Export All to Excel
+          </button>
+          <button class="export-item" data-export="status">
+            Export by Status
+          </button>
+          <button class="export-item" data-export="category">
+            Export by Category
+          </button>
+        </div>
+      </div>
     </div>
-</div>
+  </div>
 
-<!-- Status Overview Cards -->
-<div class="stats-grid">
-    <div class="card">
-        <div class="stat-content">
-            <i class="fas fa-eye stat-icon"></i>
-            <div class="stat-details">
-                <h3>Viewed Today</h3>
-                <p class="stat-number">24/30</p>
-                <span class="stat-label">80% Response Rate</span>
+  <div class="table-container">
+    <table class="clients-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Title</th>
+          <th>Client</th>
+          <th>Category</th>
+          <th>Status</th>
+          <th>Assigned Date</th>
+          <th>Due Date</th>
+          <th>Progress</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- Sample intervention data - replace with actual data from backend -->
+        <tr data-intervention-id="INT001">
+          <td>INT001</td>
+          <td>Mindful Breathing Exercise</td>
+          <td>John Doe</td>
+          <td>
+            <span class="care-type-badge care-type-mindfulness">
+              Mindfulness
+            </span>
+          </td>
+          <td>
+            <span class="stage-badge stage-active">
+              <i class="fas fa-play-circle"></i> Active
+            </span>
+          </td>
+          <td>2024-02-15</td>
+          <td>2024-02-22</td>
+          <td>
+            <div class="progress-bar">
+              <div class="progress-fill" style="width: 75%"></div>
+              <span class="progress-text">75%</span>
             </div>
-        </div>
-    </div>
-    <div class="card">
-        <div class="stat-content">
-            <i class="fas fa-check-circle stat-icon"></i>
-            <div class="stat-details">
-                <h3>Completed</h3>
-                <p class="stat-number">18/24</p>
-                <span class="stat-label">75% Completion Rate</span>
+          </td>
+          <td class="actions-cell">
+            <button class="action-btn" title="View Details">
+              <i class="fas fa-eye"></i>
+            </button>
+            <button class="action-btn" title="Edit">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button class="action-btn" title="Track Progress">
+              <i class="fas fa-chart-line"></i>
+            </button>
+            <button class="action-btn" title="Archive">
+              <i class="fas fa-archive"></i>
+            </button>
+          </td>
+        </tr>
+        <tr data-intervention-id="INT002">
+          <td>INT002</td>
+          <td>Coping Skills Assessment</td>
+          <td>Jane Smith</td>
+          <td>
+            <span class="care-type-badge care-type-assessment">
+              Assessment
+            </span>
+          </td>
+          <td>
+            <span class="stage-badge stage-completed">
+              <i class="fas fa-check-circle"></i> Completed
+            </span>
+          </td>
+          <td>2024-02-10</td>
+          <td>2024-02-17</td>
+          <td>
+            <div class="progress-bar">
+              <div class="progress-fill" style="width: 100%"></div>
+              <span class="progress-text">100%</span>
             </div>
-        </div>
-    </div>
-    <div class="card">
-        <div class="stat-content">
-            <i class="fas fa-clock stat-icon"></i>
-            <div class="stat-details">
-                <h3>Pending</h3>
-                <p class="stat-number">6</p>
-                <span class="stat-label">Awaiting Response</span>
+          </td>
+          <td class="actions-cell">
+            <button class="action-btn" title="View Details">
+              <i class="fas fa-eye"></i>
+            </button>
+            <button class="action-btn" title="View Report">
+              <i class="fas fa-file-alt"></i>
+            </button>
+            <button class="action-btn" title="Archive">
+              <i class="fas fa-archive"></i>
+            </button>
+          </td>
+        </tr>
+        <tr data-intervention-id="INT003">
+          <td>INT003</td>
+          <td>Daily Reflection Journal</td>
+          <td>Mike Johnson</td>
+          <td>
+            <span class="care-type-badge care-type-reflection">
+              Reflection
+            </span>
+          </td>
+          <td>
+            <span class="stage-badge stage-pending">
+              <i class="fas fa-clock"></i> Pending
+            </span>
+          </td>
+          <td>2024-02-20</td>
+          <td>2024-02-27</td>
+          <td>
+            <div class="progress-bar">
+              <div class="progress-fill" style="width: 0%"></div>
+              <span class="progress-text">0%</span>
             </div>
-        </div>
-    </div>
-</div>
-
-<div class="interventions-grid">
-    <!-- Intervention Calendar Section -->
-    <div class="card intervention-calendar">
-        <h3>Intervention Schedule</h3>
-        <div class="calendar-toolbar">
-            <div class="calendar-nav">
-                <button class="calendar-nav-btn" id="prevWeek">
-                    <i class="fas fa-chevron-left"></i>
-                </button>
-                <h4 id="currentWeek">February 19-25, 2024</h4>
-                <button class="calendar-nav-btn" id="nextWeek">
-                    <i class="fas fa-chevron-right"></i>
-                </button>
+          </td>
+          <td class="actions-cell">
+            <button class="action-btn" title="View Details">
+              <i class="fas fa-eye"></i>
+            </button>
+            <button class="action-btn" title="Edit">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button class="action-btn" title="Send Reminder">
+              <i class="fas fa-bell"></i>
+            </button>
+            <button class="action-btn" title="Archive">
+              <i class="fas fa-archive"></i>
+            </button>
+          </td>
+        </tr>
+        <tr data-intervention-id="INT004">
+          <td>INT004</td>
+          <td>Stress Management Techniques</td>
+          <td>Sarah Wilson</td>
+          <td>
+            <span class="care-type-badge care-type-coping">
+              Coping Skills
+            </span>
+          </td>
+          <td>
+            <span class="stage-badge stage-overdue">
+              <i class="fas fa-exclamation-triangle"></i> Overdue
+            </span>
+          </td>
+          <td>2024-02-08</td>
+          <td>2024-02-15</td>
+          <td>
+            <div class="progress-bar">
+              <div class="progress-fill" style="width: 45%"></div>
+              <span class="progress-text">45%</span>
             </div>
-            <div class="view-options">
-                <button class="view-btn active" data-view="week">Week</button>
-                <button class="view-btn" data-view="day">Day</button>
-            </div>
-        </div>
-        
-        <div class="schedule-timeline">
-            <div class="timeline-hours">
-                <div class="hour-slot">8:00 AM</div>
-                <div class="hour-slot">9:00 AM</div>
-                <div class="hour-slot">10:00 AM</div>
-                <div class="hour-slot">11:00 AM</div>
-                <div class="hour-slot">12:00 PM</div>
-                <div class="hour-slot">1:00 PM</div>
-                <div class="hour-slot">2:00 PM</div>
-                <div class="hour-slot">3:00 PM</div>
-                <div class="hour-slot">4:00 PM</div>
-                <div class="hour-slot">5:00 PM</div>
-            </div>
-            <div class="timeline-events" id="timelineEvents">
-                <!-- Events will be populated by JavaScript -->
-            </div>
-        </div>
-    </div>
-
-    <!-- Intervention Library Section -->
-    <div class="card intervention-library">
-        <div class="library-header">
-            <h3>Intervention Library</h3>
-            <div class="library-search">
-                <span class="search-icon"><i class="fas fa-search"></i></span>
-                <input type="text" placeholder="Search interventions...">
-            </div>
-        </div>
-        
-        <div class="intervention-categories">
-            <button class="category-btn active" data-category="all">All</button>
-            <button class="category-btn" data-category="coping">Coping Skills</button>
-            <button class="category-btn" data-category="reflection">Reflections</button>
-            <button class="category-btn" data-category="mindfulness">Mindfulness</button>
-        </div>
-
-        <div class="interventions-list" id="interventionsList">
-            <!-- Sample intervention items -->
-            <div class="intervention-item">
-                <div class="intervention-icon">
-                    <i class="fas fa-brain"></i>
-                </div>
-                <div class="intervention-details">
-                    <h4>Mindful Breathing Exercise</h4>
-                    <p>5-minute guided breathing technique</p>
-                    <div class="intervention-meta">
-                        <span class="category-tag">Mindfulness</span>
-                        <div class="status-indicators">
-                            <span class="status-badge viewed" title="Viewed">
-                                <i class="fas fa-eye"></i> 24
-                            </span>
-                            <span class="status-badge completed" title="Completed">
-                                <i class="fas fa-check"></i> 18
-                            </span>
-                            <span class="status-badge response-rate" title="Response Rate">
-                                <i class="fas fa-chart-line"></i> 75%
-                            </span>
-                        </div>
-                    </div>
-                </div>
-                <button class="btn-assign" title="Assign Intervention">
-                    <i class="fas fa-plus"></i>
-                </button>
-            </div>
-        </div>
-    </div>
+          </td>
+          <td class="actions-cell">
+            <button class="action-btn" title="View Details">
+              <i class="fas fa-eye"></i>
+            </button>
+            <button class="action-btn" title="Edit">
+              <i class="fas fa-edit"></i>
+            </button>
+            <button class="action-btn" title="Send Urgent Reminder">
+              <i class="fas fa-exclamation"></i>
+            </button>
+            <button class="action-btn" title="Archive">
+              <i class="fas fa-archive"></i>
+            </button>
+          </td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
 </div>
 
 <!-- Create Intervention Modal -->
 <div class="modal" id="createInterventionModal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>Create New Intervention</h3>
-            <button class="modal-close"><i class="fas fa-times"></i></button>
-        </div>
-        <div class="modal-body">
-            <form id="interventionForm">
-                <div class="form-group">
-                    <label>Title</label>
-                    <input type="text" name="title" placeholder="Enter intervention title" required>
-                </div>
-                
-                <div class="form-group">
-                    <label>Category</label>
-                    <select name="category" required>
-                        <option value="">Select category</option>
-                        <option value="coping">Coping Skills</option>
-                        <option value="reflection">Reflection</option>
-                        <option value="mindfulness">Mindfulness</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label>Description</label>
-                    <textarea name="description" placeholder="Enter intervention description" rows="4" required></textarea>
-                </div>
-
-                <div class="form-group">
-                    <label>Schedule</label>
-                    <div class="schedule-inputs">
-                        <input type="date" name="date" required>
-                        <input type="time" name="time" required>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label>Recurring</label>
-                    <div class="recurring-options">
-                        <label class="checkbox-label">
-                            <input type="checkbox" name="recurring" value="daily">
-                            <span>Daily</span>
-                        </label>
-                        <label class="checkbox-label">
-                            <input type="checkbox" name="recurring" value="weekly">
-                            <span>Weekly</span>
-                        </label>
-                        <label class="checkbox-label">
-                            <input type="checkbox" name="recurring" value="monthly">
-                            <span>Monthly</span>
-                        </label>
-                    </div>
-                </div>
-
-                <div class="form-group">
-                    <label>Tracking Options</label>
-                    <div class="tracking-options">
-                        <label class="checkbox-label">
-                            <input type="checkbox" name="track_views" checked>
-                            <span>Track Views</span>
-                        </label>
-                        <label class="checkbox-label">
-                            <input type="checkbox" name="track_completion" checked>
-                            <span>Track Completion</span>
-                        </label>
-                        <label class="checkbox-label">
-                            <input type="checkbox" name="require_response" checked>
-                            <span>Require Response</span>
-                        </label>
-                    </div>
-                </div>
-            </form>
-        </div>
-        <div class="modal-footer">
-            <button class="btn-secondary" id="cancelIntervention">Cancel</button>
-            <button class="btn-primary" id="saveIntervention">Save Intervention</button>
-        </div>
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Create New Intervention</h3>
+      <button class="modal-close"><i class="fas fa-times"></i></button>
     </div>
+    <div class="modal-body">
+      <form id="interventionForm">
+        <div class="form-group">
+          <label>Title</label>
+          <input type="text" name="title" placeholder="Enter intervention title" required>
+        </div>
+        
+        <div class="form-group">
+          <label>Client</label>
+          <select name="client" required>
+            <option value="">Select client</option>
+            <option value="client1">John Doe</option>
+            <option value="client2">Jane Smith</option>
+            <option value="client3">Mike Johnson</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Category</label>
+          <select name="category" required>
+            <option value="">Select category</option>
+            <option value="coping">Coping Skills</option>
+            <option value="reflection">Reflection</option>
+            <option value="mindfulness">Mindfulness</option>
+            <option value="therapy">Therapy</option>
+            <option value="assessment">Assessment</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Description</label>
+          <textarea name="description" placeholder="Enter intervention description" rows="4" required></textarea>
+        </div>
+
+        <div class="form-group">
+          <label>Schedule</label>
+          <div class="schedule-inputs">
+            <input type="date" name="assigned_date" required>
+            <input type="date" name="due_date" required>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Priority</label>
+          <select name="priority" required>
+            <option value="low">Low</option>
+            <option value="medium" selected>Medium</option>
+            <option value="high">High</option>
+            <option value="urgent">Urgent</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Tracking Options</label>
+          <div class="tracking-options">
+            <label class="checkbox-label">
+              <input type="checkbox" name="track_progress" checked>
+              <span>Track Progress</span>
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" name="send_reminders" checked>
+              <span>Send Reminders</span>
+            </label>
+            <label class="checkbox-label">
+              <input type="checkbox" name="require_completion" checked>
+              <span>Require Completion</span>
+            </label>
+          </div>
+        </div>
+      </form>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-secondary" id="cancelIntervention">Cancel</button>
+      <button class="btn-primary" id="saveIntervention">Save Intervention</button>
+    </div>
+  </div>
+</div>
+
+<!-- Intervention Scan Modal -->
+<div class="modal" id="interventionScanModal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>Scan Intervention QR Code</h3>
+      <button class="modal-close"><i class="fas fa-times"></i></button>
+    </div>
+          <div class="modal-body">
+        <!-- Step 1: Client Selection -->
+        <div class="scan-step" id="clientSelectionStep">
+          <div class="step-header">
+            <h4><i class="fas fa-user"></i> Step 1: Select Client</h4>
+            <p>Choose the client for this intervention scan</p>
+          </div>
+          <div class="client-selection">
+            <div class="search-container">
+              <span class="search-icon"><i class="fas fa-search"></i></span>
+              <input type="text" id="clientSearchInput" placeholder="Search clients by name or ID..." />
+            </div>
+            <div class="clients-list" id="clientsList">
+              <!-- Clients will be loaded dynamically -->
+              <div class="loading-clients">
+                <i class="fas fa-spinner fa-spin"></i>
+                <p>Loading clients...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: QR Scan -->
+        <div class="scan-step" id="qrScanStep" style="display: none;">
+          <div class="step-header">
+            <h4><i class="fas fa-qrcode"></i> Step 2: Scan QR Code</h4>
+            <p>Scan the intervention QR code for <span id="selectedClientName" class="client-name"></span></p>
+          </div>
+          <div class="scan-container">
+            <div class="scan-area">
+              <i class="fas fa-qrcode scan-icon"></i>
+              <p>Position the QR code within the frame to scan</p>
+              <div class="scan-frame"></div>
+            </div>
+            <div class="scan-options">
+              <button class="btn-secondary" id="uploadQRBtn">
+                <i class="fas fa-upload"></i> Upload QR Image
+              </button>
+              <button class="btn-secondary" id="manualEntryBtn">
+                <i class="fas fa-keyboard"></i> Manual Entry
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 3: Intervention Details -->
+        <div class="scan-step" id="interventionDetailsStep" style="display: none;">
+          <div class="step-header">
+            <h4><i class="fas fa-clipboard-list"></i> Step 3: Intervention Details</h4>
+            <p>Review and confirm intervention details</p>
+          </div>
+          <div class="intervention-details-form">
+            <div class="form-group">
+              <label>Intervention Title</label>
+              <input type="text" id="interventionTitle" placeholder="Enter intervention title" required>
+            </div>
+            <div class="form-group">
+              <label>Category</label>
+              <select id="interventionCategory" required>
+                <option value="">Select category</option>
+                <option value="coping">Coping Skills</option>
+                <option value="reflection">Reflection</option>
+                <option value="mindfulness">Mindfulness</option>
+                <option value="therapy">Therapy</option>
+                <option value="assessment">Assessment</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Description</label>
+              <textarea id="interventionDescription" placeholder="Enter intervention description" rows="3" required></textarea>
+            </div>
+            <div class="form-group">
+              <label>Due Date</label>
+              <input type="date" id="interventionDueDate" required>
+            </div>
+            <div class="form-group">
+              <label>Priority</label>
+              <select id="interventionPriority" required>
+                <option value="low">Low</option>
+                <option value="medium" selected>Medium</option>
+                <option value="high">High</option>
+                <option value="urgent">Urgent</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+          <div class="modal-footer">
+        <button class="btn-secondary" id="cancelScan">Cancel</button>
+        <button class="btn-secondary" id="backStep" style="display: none;">Back</button>
+        <button class="btn-primary" id="nextStep">Next</button>
+        <button class="btn-primary" id="startScan" style="display: none;">Start Scan</button>
+        <button class="btn-primary" id="saveInterventionFromScan" style="display: none;">Save Intervention</button>
+      </div>
+  </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/interventions.js') }}"></script>
+<script>
+  // Export dropdown toggle
+  (function () {
+    const btn = document.getElementById("exportDropdownBtn");
+    const menu = document.getElementById("exportMenu");
+    if (btn && menu) {
+      btn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        menu.classList.toggle("active");
+      });
+      document.addEventListener("click", function () {
+        menu.classList.remove("active");
+      });
+    }
+  })();
+
+  // Create Intervention Modal
+  const createInterventionModal = document.getElementById('createInterventionModal');
+  const createInterventionBtn = document.getElementById('createInterventionBtn');
+  const closeModalBtn = createInterventionModal.querySelector('.modal-close');
+
+  createInterventionBtn.addEventListener('click', () => {
+    createInterventionModal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  });
+
+  closeModalBtn.addEventListener('click', () => {
+    createInterventionModal.classList.remove('active');
+    document.body.style.overflow = 'auto';
+  });
+
+  // Intervention Scan Modal
+  const interventionScanModal = document.getElementById('interventionScanModal');
+  const interventionScanBtn = document.getElementById('interventionScanBtn');
+  const closeScanModalBtn = interventionScanModal.querySelector('.modal-close');
+
+  interventionScanBtn.addEventListener('click', () => {
+    interventionScanModal.classList.add('active');
+    document.body.style.overflow = 'hidden';
+  });
+
+  closeScanModalBtn.addEventListener('click', () => {
+    interventionScanModal.classList.remove('active');
+    document.body.style.overflow = 'auto';
+  });
+
+  // Handle form submission
+  const interventionForm = document.getElementById('interventionForm');
+  interventionForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    // Handle form submission here
+    console.log('Intervention form submitted');
+    createInterventionModal.classList.remove('active');
+    document.body.style.overflow = 'auto';
+  });
+
+  // Close modals when clicking outside
+  window.addEventListener('click', (e) => {
+    if (e.target.classList.contains('modal')) {
+      e.target.classList.remove('active');
+      document.body.style.overflow = 'auto';
+    }
+  });
+</script>
 {% endblock %} 
