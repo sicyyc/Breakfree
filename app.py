@@ -2257,8 +2257,9 @@ def get_clients_list():
             if client_dict.get('archived', False):
                 continue
                 
-            # Only include active clients (not pending)
-            if client_dict.get('status') == 'pending':
+            # Only include clients eligible for interventions
+            # Exclude pending and rejected clients
+            if client_dict.get('status') in ['pending', 'rejected']:
                 continue
             
             # Role-based filtering: House workers can only see in-house clients

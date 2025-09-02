@@ -257,3 +257,4 @@ For issues or questions regarding the Activity Log feature:
 2. Review the Flask application logs
 3. Verify Firestore permissions and connectivity
 4. Contact the development team with specific error messages
+

@@ -48,10 +48,7 @@
                 <i class="fas fa-edit"></i>
                 Edit Profile
             </button>
-            <button class="btn-primary" id="scheduleInterventionBtn">
-                <i class="fas fa-calendar-plus"></i>
-                Schedule Intervention
-            </button>
+            
             
             <!-- Progress and Aftercare Actions -->
             {% if client.care_type == 'in_house' and client.status == 'active' %}
@@ -93,10 +90,12 @@
         <i class="fas fa-clipboard-check"></i>
         Assessment
     </button>
+    {% if client.status != 'rejected' %}
     <button class="tab-button" data-tab="intervention">
         <i class="fas fa-bullseye"></i>
         Intervention
     </button>
+    {% endif %}
     <button class="tab-button" data-tab="progress">
         <i class="fas fa-chart-line"></i>
         Progress
@@ -125,24 +124,52 @@
                 </div>
                 <div class="card-content">
                     <div class="info-grid">
-                        <!-- Basic Information Group -->
+                        <!-- Ordered Basic Information (no separators) -->
+                        
                         <div class="info-item">
-                            <label>Full Name</label>
-                            <div class="field-input">
-                                <div class="field-icon">
-                                    <i class="far fa-user"></i>
-                                </div>
-                                <div class="field-value">{{ client.name }}</div>
-                            </div>
-                        </div>
-                        {% if client.firstName or client.surname %}
-                        <div class="info-item">
-                            <label>Name Breakdown</label>
+                            <label>Surname</label>
                             <div class="field-input">
                                 <div class="field-icon">
                                     <i class="far fa-id-card"></i>
                                 </div>
-                                <div class="field-value">{{ client.firstName or '' }} {{ client.middleInitial or '' }} {{ client.surname or '' }}</div>
+                                <div class="field-value">{{ client.surname or 'Not provided' }}</div>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <label>First Name</label>
+                            <div class="field-input">
+                                <div class="field-icon">
+                                    <i class="far fa-id-card"></i>
+                                </div>
+                                <div class="field-value">{{ client.firstName or 'Not provided' }}</div>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <label>Middle Initial</label>
+                            <div class="field-input">
+                                <div class="field-icon">
+                                    <i class="far fa-id-card"></i>
+                                </div>
+                                <div class="field-value">{{ client.middleInitial or 'Not provided' }}</div>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <label>Suffix</label>
+                            <div class="field-input">
+                                <div class="field-icon">
+                                    <i class="far fa-id-card"></i>
+                                </div>
+                                <div class="field-value">{{ client.suffix or 'Not provided' }}</div>
+                            </div>
+                        </div>
+                        {% if client.birthday or client.date_of_birth or client.birthdate %}
+                        <div class="info-item">
+                            <label>Birth Date</label>
+                            <div class="field-input">
+                                <div class="field-icon">
+                                    <i class="fas fa-birthday-cake"></i>
+                                </div>
+                                <div class="field-value">{{ client.birthday or client.date_of_birth or client.birthdate }}</div>
                             </div>
                         </div>
                         {% endif %}
@@ -155,110 +182,14 @@
                                 <div class="field-value">{{ client.age }}</div>
                             </div>
                         </div>
-                        <div class="info-item">
-                            <label>Gender</label>
-                            <div class="field-input">
-                                <div class="field-icon">
-                                    <i class="far fa-venus-mars"></i>
-                                </div>
-                                <div class="field-value">{{ client.gender|title if client.gender else 'Not provided' }}</div>
-                            </div>
-                        </div>
-                        
-                        <!-- Separator -->
-                        <div class="info-separator"></div>
-                        
-                        <!-- Contact Information Group -->
-                        <div class="info-item">
-                            <label>Contact Number</label>
-                            <div class="field-input">
-                                <div class="field-icon">
-                                    <i class="far fa-phone"></i>
-                                </div>
-                                <div class="field-value">{{ client.phone if client.phone else 'Not provided' }}</div>
-                            </div>
-                        </div>
-                        <div class="info-item">
-                            <label>Emergency Contact</label>
-                            <div class="field-input">
-                                <div class="field-icon">
-                                    <i class="far fa-user-friends"></i>
-                                </div>
-                                <div class="field-value">
-                                    {% if client.emergency_contact %}
-                                        {{ client.emergency_contact.name }} - {{ client.emergency_contact.phone }}
-                                    {% else %}
-                                        Not provided
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                        <div class="info-item">
-                            <label>Address</label>
-                            <div class="field-input">
-                                <div class="field-icon">
-                                    <i class="far fa-map-marker-alt"></i>
-                                </div>
-                                <div class="field-value">{{ client.address if client.address else 'Not provided' }}</div>
-                            </div>
-                        </div>
-                        
-                        <!-- Separator -->
-                        <div class="info-separator"></div>
-                        
-                        <!-- Program Information Group -->
-                        <div class="info-item">
-                            <label>Care Type</label>
-                            <div class="field-input">
-                                <div class="field-icon">
-                                    <i class="far fa-home"></i>
-                                </div>
-                                <div class="field-value">{{ client.care_type|replace('_', ' ')|title if client.care_type else 'Not provided' }}</div>
-                            </div>
-                        </div>
-                        <div class="info-item">
-                            <label>Registration Date</label>
-                            <div class="field-input">
-                                <div class="field-icon">
-                                    <i class="far fa-calendar-plus"></i>
-                                </div>
-                                <div class="field-value">
-                                    {% if client.registrationDate %}
-                                        {{ client.registrationDate }}
-                                    {% else %}
-                                        Not provided
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                        <div class="info-item">
-                            <label>Check-in Date</label>
-                            <div class="field-input">
-                                <div class="field-icon">
-                                    <i class="far fa-calendar-check"></i>
-                                </div>
-                                <div class="field-value">
-                                    {% if client.checkInDate %}
-                                        {{ client.checkInDate }}
-                                    {% else %}
-                                        Not provided
-                                    {% endif %}
-                                </div>
-                            </div>
-                        </div>
-                        
-                        <!-- Separator -->
-                        <div class="info-separator"></div>
-                        
-                        <!-- Family Information Group -->
-                        {% if client.civil_status or client.spouse_name or client.number_of_children or client.father_name or client.mother_name %}
+                        {% if client.civil_status %}
                         <div class="info-item">
                             <label>Civil Status</label>
                             <div class="field-input">
                                 <div class="field-icon">
                                     <i class="fas fa-heart"></i>
                                 </div>
-                                <div class="field-value">{{ client.civil_status|title if client.civil_status else 'Not provided' }}</div>
+                                <div class="field-value">{{ client.civil_status|title }}</div>
                             </div>
                         </div>
                         {% endif %}
@@ -295,14 +226,14 @@
                             </div>
                         </div>
                         {% endif %}
-                        {% if client.father_name %}
+                        {% if client.relationship_with_children %}
                         <div class="info-item">
-                            <label>Father's Name</label>
+                            <label>Relationship with Children</label>
                             <div class="field-input">
                                 <div class="field-icon">
-                                    <i class="fas fa-male"></i>
+                                    <i class="fas fa-children"></i>
                                 </div>
-                                <div class="field-value">{{ client.father_name }}</div>
+                                <div class="field-value">{{ client.relationship_with_children }}</div>
                             </div>
                         </div>
                         {% endif %}
@@ -314,6 +245,39 @@
                                     <i class="fas fa-female"></i>
                                 </div>
                                 <div class="field-value">{{ client.mother_name }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if client.relationship_with_mother %}
+                        <div class="info-item">
+                            <label>Relationship with Mother</label>
+                            <div class="field-input">
+                                <div class="field-icon">
+                                    <i class="fas fa-hand-holding-heart"></i>
+                                </div>
+                                <div class="field-value">{{ client.relationship_with_mother }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if client.father_name %}
+                        <div class="info-item">
+                            <label>Father's Name</label>
+                            <div class="field-input">
+                                <div class="field-icon">
+                                    <i class="fas fa-male"></i>
+                                </div>
+                                <div class="field-value">{{ client.father_name }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        {% if client.relationship_with_father %}
+                        <div class="info-item">
+                            <label>Relationship with Father</label>
+                            <div class="field-input">
+                                <div class="field-icon">
+                                    <i class="fas fa-handshake"></i>
+                                </div>
+                                <div class="field-value">{{ client.relationship_with_father }}</div>
                             </div>
                         </div>
                         {% endif %}
@@ -339,48 +303,74 @@
                             </div>
                         </div>
                         {% endif %}
+                        {% if client.relationship_with_siblings %}
+                        <div class="info-item">
+                            <label>Relationship with Siblings</label>
+                            <div class="field-input">
+                                <div class="field-icon">
+                                    <i class="fas fa-people-arrows"></i>
+                                </div>
+                                <div class="field-value">{{ client.relationship_with_siblings }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+
+                        <!-- Additional contact/program info (kept without separators) -->
+
+                        {% if client.gender %}
+                        <div class="info-item">
+                            <label>Gender</label>
+                            <div class="field-input">
+                                <div class="field-icon">
+                                    <i class="far fa-venus-mars"></i>
+                                </div>
+                                <div class="field-value">{{ client.gender|title }}</div>
+                            </div>
+                        </div>
+                        {% endif %}
+                        <div class="info-item">
+                            <label>Address</label>
+                            <div class="field-input">
+                                <div class="field-icon">
+                                    <i class="far fa-map-marker-alt"></i>
+                                </div>
+                                <div class="field-value">{{ client.address if client.address else 'Not provided' }}</div>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <label>Registration Date</label>
+                            <div class="field-input">
+                                <div class="field-icon">
+                                    <i class="far fa-calendar-plus"></i>
+                                </div>
+                                <div class="field-value">
+                                    {% if client.registrationDate %}
+                                        {{ client.registrationDate }}
+                                    {% else %}
+                                        Not provided
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                        <div class="info-item">
+                            <label>Check-in Date</label>
+                            <div class="field-input">
+                                <div class="field-icon">
+                                    <i class="far fa-calendar-check"></i>
+                                </div>
+                                <div class="field-value">
+                                    {% if client.checkInDate %}
+                                        {{ client.checkInDate }}
+                                    {% else %}
+                                        Not provided
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Notes & Observations Card -->
-            <div class="card notes-card" data-card="notes">
-                <div class="card-header" data-target="notes">
-                    <h3><i class="fas fa-sticky-note"></i> Notes & Observations</h3>
-                    <div class="header-actions">
-                        <button class="btn-primary btn-sm">
-                            <i class="fas fa-plus"></i>
-                            Add Note
-                        </button>
-                    </div>
-                </div>
-                <div class="card-content" data-content="notes">
-                    <div class="notes-list">
-                        <div class="note-item">
-                            <div class="note-header">
-                                <span class="note-date">March 12, 2024</span>
-                                <span class="note-author">Dr. Smith</span>
-                            </div>
-                            <p class="note-content">Client showed significant improvement in stress management techniques. Actively participated in group discussions.</p>
-                            <div class="note-tags">
-                                <span class="tag">Progress</span>
-                                <span class="tag">Group Session</span>
-                            </div>
-                        </div>
-                        <div class="note-item">
-                            <div class="note-header">
-                                <span class="note-date">March 10, 2024</span>
-                                <span class="note-author">Nurse Johnson</span>
-                            </div>
-                            <p class="note-content">Regular medication schedule maintained. Sleep pattern showing improvement.</p>
-                            <div class="note-tags">
-                                <span class="tag">Medical</span>
-                                <span class="tag">Routine</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
         </div>
     </div>
 
@@ -752,6 +742,7 @@
     </div>
 
     <!-- Intervention Tab -->
+    {% if client.status != 'rejected' %}
     <div class="tab-pane" id="intervention">
         <div class="profile-grid">
             <!-- Intervention Information Card -->
@@ -1333,6 +1324,7 @@
             </div>
         </div>
     </div>
+    {% endif %}
 
     <!-- Progress Tab -->
     <div class="tab-pane" id="progress">

@@ -1,24 +1,44 @@
+// Firebase imports are deferred to runtime where needed to avoid blocking UI initialization
+
 document.addEventListener('DOMContentLoaded', function() {
     console.log('Client Profile JS loaded');
     
     // Tab Navigation Functionality
     const tabButtons = document.querySelectorAll('.tab-button');
     const tabPanes = document.querySelectorAll('.tab-pane');
+
+    // Ensure initial pane visibility
+    (function ensureInitialTabVisibility() {
+        tabPanes.forEach(pane => {
+            pane.style.display = 'none';
+            pane.style.visibility = 'hidden';
+        });
+        const initiallyActive = document.querySelector('.tab-pane.active');
+        if (initiallyActive) {
+            initiallyActive.style.display = 'block';
+            initiallyActive.style.visibility = 'visible';
+        }
+    })();
     
     // Function to switch tabs
     function switchTab(targetTab) {
-        // Remove active class from all buttons and panes
+        // Remove active class and hide all panes
         tabButtons.forEach(btn => btn.classList.remove('active'));
-        tabPanes.forEach(pane => pane.classList.remove('active'));
-        
+        tabPanes.forEach(pane => {
+            pane.classList.remove('active');
+            pane.style.display = 'none';
+            pane.style.visibility = 'hidden';
+        });
+
         // Add active class to target button and pane
         const targetButton = document.querySelector(`[data-tab="${targetTab}"]`);
         const targetPane = document.getElementById(targetTab);
-        
+
         if (targetButton && targetPane) {
             targetButton.classList.add('active');
             targetPane.classList.add('active');
-            
+            targetPane.style.display = 'block';
+            targetPane.style.visibility = 'visible';
             // Update URL hash
             window.location.hash = targetTab;
         }
@@ -37,6 +57,12 @@ document.addEventListener('DOMContentLoaded', function() {
         const hash = window.location.hash.substring(1);
         if (hash && document.getElementById(hash)) {
             switchTab(hash);
+        } else {
+            // Default to the first pane if none selected
+            const firstPane = tabPanes[0];
+            if (firstPane) {
+                switchTab(firstPane.id);
+            }
         }
     });
     
@@ -48,9 +74,11 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
     
-    // Initialize Recovery Progress Chart
-    const ctx = document.getElementById('recoveryChart').getContext('2d');
-    window.recoveryChart = new Chart(ctx, {
+    // Initialize Recovery Progress Chart (guarded)
+    const recoveryCanvas = document.getElementById('recoveryChart');
+    if (recoveryCanvas && window.Chart) {
+        const ctx = recoveryCanvas.getContext('2d');
+        window.recoveryChart = new Chart(ctx, {
         type: 'line',
         data: {
             labels: ['Week 1', 'Week 2', 'Week 3', 'Week 4', 'Week 5', 'Week 6'],
@@ -81,7 +109,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         }
-    });
+        });
+    }
 
     // Period Selector Functionality
     const periodButtons = document.querySelectorAll('.period-selector .btn-text');
@@ -123,9 +152,49 @@ document.addEventListener('DOMContentLoaded', function() {
     // Edit Profile Button
     const editProfileBtn = document.getElementById('editClientBtn');
     if (editProfileBtn) {
-        editProfileBtn.addEventListener('click', function() {
-            // Implement edit profile functionality
-            console.log('Edit profile clicked');
+        editProfileBtn.addEventListener('click', async function() {
+            try {
+                // Lazy-load Firebase only when editing is requested
+                const firebaseModule = await import('./firebase-config.js');
+                const firestore = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
+                const { db } = firebaseModule;
+                const { doc, getDoc, updateDoc } = firestore;
+
+                const clientId = this.getAttribute('data-client-id');
+                if (!clientId) {
+                    alert('Client ID missing.');
+                    return;
+                }
+
+                const clientRef = doc(db, 'clients', clientId);
+                const clientSnap = await getDoc(clientRef);
+                if (!clientSnap.exists()) {
+                    alert('Client record not found in Firestore.');
+                    return;
+                }
+
+                const current = clientSnap.data() || {};
+
+                const newName = prompt('Edit Name', current.name || this.getAttribute('data-client-name') || '');
+                if (newName === null) return;
+                const newAddress = prompt('Edit Address', current.address || this.getAttribute('data-client-address') || '');
+                if (newAddress === null) return;
+                const newCivilStatus = prompt('Edit Civil Status', current.civil_status || this.getAttribute('data-client-civil-status') || '');
+                if (newCivilStatus === null) return;
+
+                const updates = {
+                    name: newName.trim(),
+                    address: newAddress.trim(),
+                    civil_status: newCivilStatus.trim()
+                };
+
+                await updateDoc(clientRef, updates);
+                alert('Client updated successfully.');
+                window.location.reload();
+            } catch (error) {
+                console.error('Failed to update client:', error);
+                alert('Failed to update client. See console for details.');
+            }
         });
     }
 
