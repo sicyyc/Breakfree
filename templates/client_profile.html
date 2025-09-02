@@ -116,7 +116,7 @@
                 <div class="card-header">
                     <h3><i class="far fa-user"></i> Personal Information</h3>
                     <div class="header-actions">
-                        <button class="btn-edit" title="Edit">
+                        <button class="btn-edit" title="Edit" data-edit-section="personal" data-client-id="{{ client.id }}">
                             <i class="far fa-edit"></i>
                             Edit
                         </button>
@@ -132,7 +132,7 @@
                                 <div class="field-icon">
                                     <i class="far fa-id-card"></i>
                                 </div>
-                                <div class="field-value">{{ client.surname or 'Not provided' }}</div>
+                                <div class="field-value editable-field" data-client-id="{{ client.id }}" data-field="surname" title="Click to edit">{{ client.surname or 'Not provided' }}</div>
                             </div>
                         </div>
                         <div class="info-item">
@@ -141,7 +141,7 @@
                                 <div class="field-icon">
                                     <i class="far fa-id-card"></i>
                                 </div>
-                                <div class="field-value">{{ client.firstName or 'Not provided' }}</div>
+                                <div class="field-value editable-field" data-client-id="{{ client.id }}" data-field="firstName" title="Click to edit">{{ client.firstName or 'Not provided' }}</div>
                             </div>
                         </div>
                         <div class="info-item">
@@ -150,7 +150,7 @@
                                 <div class="field-icon">
                                     <i class="far fa-id-card"></i>
                                 </div>
-                                <div class="field-value">{{ client.middleInitial or 'Not provided' }}</div>
+                                <div class="field-value editable-field" data-client-id="{{ client.id }}" data-field="middleInitial" title="Click to edit">{{ client.middleInitial or 'Not provided' }}</div>
                             </div>
                         </div>
                         <div class="info-item">
@@ -159,7 +159,7 @@
                                 <div class="field-icon">
                                     <i class="far fa-id-card"></i>
                                 </div>
-                                <div class="field-value">{{ client.suffix or 'Not provided' }}</div>
+                                <div class="field-value editable-field" data-client-id="{{ client.id }}" data-field="suffix" title="Click to edit">{{ client.suffix or 'Not provided' }}</div>
                             </div>
                         </div>
                         {% if client.birthday or client.date_of_birth or client.birthdate %}
@@ -169,7 +169,7 @@
                                 <div class="field-icon">
                                     <i class="fas fa-birthday-cake"></i>
                                 </div>
-                                <div class="field-value">{{ client.birthday or client.date_of_birth or client.birthdate }}</div>
+                                <div class="field-value editable-field" data-client-id="{{ client.id }}" data-field="birthdate" title="Click to edit">{{ client.birthday or client.date_of_birth or client.birthdate }}</div>
                             </div>
                         </div>
                         {% endif %}
@@ -179,7 +179,7 @@
                                 <div class="field-icon">
                                     <i class="far fa-calendar-alt"></i>
                                 </div>
-                                <div class="field-value">{{ client.age }}</div>
+                                <div class="field-value editable-field" data-client-id="{{ client.id }}" data-field="age" title="Click to edit">{{ client.age }}</div>
                             </div>
                         </div>
                         {% if client.civil_status %}
@@ -189,7 +189,7 @@
                                 <div class="field-icon">
                                     <i class="fas fa-heart"></i>
                                 </div>
-                                <div class="field-value">{{ client.civil_status|title }}</div>
+                                <div class="field-value editable-field" data-client-id="{{ client.id }}" data-field="civil_status" title="Click to edit">{{ client.civil_status|title }}</div>
                             </div>
                         </div>
                         {% endif %}
@@ -200,7 +200,7 @@
                                 <div class="field-icon">
                                     <i class="fas fa-user-friends"></i>
                                 </div>
-                                <div class="field-value">{{ client.spouse_name }}</div>
+                                <div class="field-value editable-field" data-client-id="{{ client.id }}" data-field="spouse_name" title="Click to edit">{{ client.spouse_name }}</div>
                             </div>
                         </div>
                         {% endif %}
@@ -211,7 +211,7 @@
                                 <div class="field-icon">
                                     <i class="fas fa-calendar-heart"></i>
                                 </div>
-                                <div class="field-value">{{ client.years_married }} years</div>
+                                <div class="field-value editable-field" data-client-id="{{ client.id }}" data-field="years_married" title="Click to edit">{{ client.years_married }} years</div>
                             </div>
                         </div>
                         {% endif %}
@@ -222,7 +222,7 @@
                                 <div class="field-icon">
                                     <i class="fas fa-baby"></i>
                                 </div>
-                                <div class="field-value">{{ client.number_of_children }}</div>
+                                <div class="field-value editable-field" data-client-id="{{ client.id }}" data-field="number_of_children" title="Click to edit">{{ client.number_of_children }}</div>
                             </div>
                         </div>
                         {% endif %}
@@ -233,7 +233,7 @@
                                 <div class="field-icon">
                                     <i class="fas fa-children"></i>
                                 </div>
-                                <div class="field-value">{{ client.relationship_with_children }}</div>
+                                <div class="field-value editable-field" data-client-id="{{ client.id }}" data-field="relationship_with_children" title="Click to edit">{{ client.relationship_with_children }}</div>
                             </div>
                         </div>
                         {% endif %}
@@ -244,7 +244,7 @@
                                 <div class="field-icon">
                                     <i class="fas fa-female"></i>
                                 </div>
-                                <div class="field-value">{{ client.mother_name }}</div>
+                                <div class="field-value editable-field" data-client-id="{{ client.id }}" data-field="mother_name" title="Click to edit">{{ client.mother_name }}</div>
                             </div>
                         </div>
                         {% endif %}
@@ -255,7 +255,7 @@
                                 <div class="field-icon">
                                     <i class="fas fa-hand-holding-heart"></i>
                                 </div>
-                                <div class="field-value">{{ client.relationship_with_mother }}</div>
+                                <div class="field-value editable-field" data-client-id="{{ client.id }}" data-field="relationship_with_mother" title="Click to edit">{{ client.relationship_with_mother }}</div>
                             </div>
                         </div>
                         {% endif %}
@@ -266,7 +266,7 @@
                                 <div class="field-icon">
                                     <i class="fas fa-male"></i>
                                 </div>
-                                <div class="field-value">{{ client.father_name }}</div>
+                                <div class="field-value editable-field" data-client-id="{{ client.id }}" data-field="father_name" title="Click to edit">{{ client.father_name }}</div>
                             </div>
                         </div>
                         {% endif %}
@@ -277,7 +277,7 @@
                                 <div class="field-icon">
                                     <i class="fas fa-handshake"></i>
                                 </div>
-                                <div class="field-value">{{ client.relationship_with_father }}</div>
+                                <div class="field-value editable-field" data-client-id="{{ client.id }}" data-field="relationship_with_father" title="Click to edit">{{ client.relationship_with_father }}</div>
                             </div>
                         </div>
                         {% endif %}
@@ -288,7 +288,7 @@
                                 <div class="field-icon">
                                     <i class="fas fa-users"></i>
                                 </div>
-                                <div class="field-value">{{ client.number_of_siblings }}</div>
+                                <div class="field-value editable-field" data-client-id="{{ client.id }}" data-field="number_of_siblings" title="Click to edit">{{ client.number_of_siblings }}</div>
                             </div>
                         </div>
                         {% endif %}
@@ -299,7 +299,7 @@
                                 <div class="field-icon">
                                     <i class="fas fa-sort-numeric-up"></i>
                                 </div>
-                                <div class="field-value">{{ client.birth_order }}</div>
+                                <div class="field-value editable-field" data-client-id="{{ client.id }}" data-field="birth_order" title="Click to edit">{{ client.birth_order }}</div>
                             </div>
                         </div>
                         {% endif %}
@@ -310,7 +310,7 @@
                                 <div class="field-icon">
                                     <i class="fas fa-people-arrows"></i>
                                 </div>
-                                <div class="field-value">{{ client.relationship_with_siblings }}</div>
+                                <div class="field-value editable-field" data-client-id="{{ client.id }}" data-field="relationship_with_siblings" title="Click to edit">{{ client.relationship_with_siblings }}</div>
                             </div>
                         </div>
                         {% endif %}
@@ -334,7 +334,7 @@
                                 <div class="field-icon">
                                     <i class="far fa-map-marker-alt"></i>
                                 </div>
-                                <div class="field-value">{{ client.address if client.address else 'Not provided' }}</div>
+                                <div class="field-value editable-field" data-client-id="{{ client.id }}" data-field="address" title="Click to edit">{{ client.address if client.address else 'Not provided' }}</div>
                             </div>
                         </div>
                         <div class="info-item">
@@ -391,7 +391,7 @@
                         <div class="section-header">
                             <h4><i class="fas fa-graduation-cap"></i> Education Assessment</h4>
                             <div class="section-actions">
-                                <button class="btn-edit" title="Edit Education">
+                                <button class="btn-edit" title="Edit Education" data-edit-section="education" data-client-id="{{ client.id }}">
                                     <i class="far fa-edit"></i>
                                     Edit
                                 </button>
@@ -406,7 +406,7 @@
                                     <div class="field-icon">
                                         <i class="fas fa-school"></i>
                                     </div>
-                                    <div class="field-value">{{ client.elementary_school }}</div>
+                                    <div class="field-value editable-field" data-client-id="{{ client.id }}" data-field="elementary_school" title="Click to edit">{{ client.elementary_school }}</div>
                                 </div>
                             </div>
                             {% endif %}
@@ -417,7 +417,7 @@
                                     <div class="field-icon">
                                         <i class="fas fa-graduation-cap"></i>
                                     </div>
-                                    <div class="field-value">{{ client.secondary_school }}</div>
+                                    <div class="field-value editable-field" data-client-id="{{ client.id }}" data-field="secondary_school" title="Click to edit">{{ client.secondary_school }}</div>
                                 </div>
                             </div>
                             {% endif %}
@@ -428,7 +428,7 @@
                                     <div class="field-icon">
                                         <i class="fas fa-university"></i>
                                     </div>
-                                    <div class="field-value">{{ client.college }}</div>
+                                    <div class="field-value editable-field" data-client-id="{{ client.id }}" data-field="college" title="Click to edit">{{ client.college }}</div>
                                 </div>
                             </div>
                             {% endif %}
@@ -439,7 +439,7 @@
                                     <div class="field-icon">
                                         <i class="fas fa-certificate"></i>
                                     </div>
-                                    <div class="field-value">{{ client.education_completed|replace('_', ' ')|title }}</div>
+                                    <div class="field-value editable-field" data-client-id="{{ client.id }}" data-field="education_completed" title="Click to edit">{{ client.education_completed|replace('_', ' ')|title }}</div>
                                 </div>
                             </div>
                             {% endif %}
@@ -450,7 +450,7 @@
                                     <div class="field-icon">
                                         <i class="fas fa-exclamation-triangle"></i>
                                     </div>
-                                    <div class="field-value">{{ client.reason_for_incomplete }}</div>
+                                    <div class="field-value editable-field" data-client-id="{{ client.id }}" data-field="reason_for_incomplete" title="Click to edit">{{ client.reason_for_incomplete }}</div>
                                 </div>
                             </div>
                             {% endif %}
@@ -470,7 +470,7 @@
                         <div class="section-header">
                             <h4><i class="fas fa-briefcase"></i> Work Experience Assessment</h4>
                             <div class="section-actions">
-                                <button class="btn-edit" title="Edit Work Experience">
+                                <button class="btn-edit" title="Edit Work Experience" data-edit-section="work" data-client-id="{{ client.id }}">
                                     <i class="far fa-edit"></i>
                                     Edit
                                 </button>
@@ -485,7 +485,7 @@
                                     <div class="field-icon">
                                         <i class="fas fa-briefcase"></i>
                                     </div>
-                                    <div class="field-value">{{ client.work_experience }}</div>
+                                    <div class="field-value editable-field" data-client-id="{{ client.id }}" data-field="work_experience" title="Click to edit">{{ client.work_experience }}</div>
                                 </div>
                             </div>
                             {% endif %}
@@ -505,7 +505,7 @@
                         <div class="section-header">
                             <h4><i class="fas fa-heartbeat"></i> Drug Usage Assessment</h4>
                             <div class="section-actions">
-                                <button class="btn-edit" title="Edit Drug Usage">
+                                <button class="btn-edit" title="Edit Drug Usage" data-edit-section="drug" data-client-id="{{ client.id }}">
                                     <i class="far fa-edit"></i>
                                     Edit
                                 </button>
@@ -520,7 +520,7 @@
                                     <div class="field-icon">
                                         <i class="fas fa-pills"></i>
                                     </div>
-                                    <div class="field-value">{{ client.drug_usage_amount }}</div>
+                                    <div class="field-value editable-field" data-client-id="{{ client.id }}" data-field="drug_usage_amount" title="Click to edit">{{ client.drug_usage_amount }}</div>
                                 </div>
                             </div>
                             {% endif %}
@@ -531,7 +531,7 @@
                                     <div class="field-icon">
                                         <i class="fas fa-exclamation-triangle"></i>
                                     </div>
-                                    <div class="field-value">{{ client.drug_effects }}</div>
+                                    <div class="field-value editable-field" data-client-id="{{ client.id }}" data-field="drug_effects" title="Click to edit">{{ client.drug_effects }}</div>
                                 </div>
                             </div>
                             {% endif %}
@@ -542,7 +542,7 @@
                                     <div class="field-icon">
                                         <i class="fas fa-life-ring"></i>
                                     </div>
-                                    <div class="field-value">{{ client.drug_impact }}</div>
+                                    <div class="field-value editable-field" data-client-id="{{ client.id }}" data-field="drug_impact" title="Click to edit">{{ client.drug_impact }}</div>
                                 </div>
                             </div>
                             {% endif %}
@@ -553,7 +553,7 @@
                                     <div class="field-icon">
                                         <i class="fas fa-calendar-times"></i>
                                     </div>
-                                    <div class="field-value">{{ client.last_drug_use }}</div>
+                                    <div class="field-value editable-field" data-client-id="{{ client.id }}" data-field="last_drug_use" title="Click to edit">{{ client.last_drug_use }}</div>
                                 </div>
                             </div>
                             {% endif %}
@@ -564,7 +564,7 @@
                                     <div class="field-icon">
                                         <i class="fas fa-calendar-plus"></i>
                                     </div>
-                                    <div class="field-value">{{ client.first_drug_use }}</div>
+                                    <div class="field-value editable-field" data-client-id="{{ client.id }}" data-field="first_drug_use" title="Click to edit">{{ client.first_drug_use }}</div>
                                 </div>
                             </div>
                             {% endif %}
@@ -575,7 +575,7 @@
                                     <div class="field-icon">
                                         <i class="fas fa-list"></i>
                                     </div>
-                                    <div class="field-value">{{ client.drug_types }}</div>
+                                    <div class="field-value editable-field" data-client-id="{{ client.id }}" data-field="drug_types" title="Click to edit">{{ client.drug_types }}</div>
                                 </div>
                             </div>
                             {% endif %}
@@ -586,7 +586,7 @@
                                     <div class="field-icon">
                                         <i class="fas fa-question-circle"></i>
                                     </div>
-                                    <div class="field-value">{{ client.drug_reasons }}</div>
+                                    <div class="field-value editable-field" data-client-id="{{ client.id }}" data-field="drug_reasons" title="Click to edit">{{ client.drug_reasons }}</div>
                                 </div>
                             </div>
                             {% endif %}
@@ -597,7 +597,7 @@
                                     <div class="field-icon">
                                         <i class="fas fa-clock"></i>
                                     </div>
-                                    <div class="field-value">{{ client.drug_duration }}</div>
+                                    <div class="field-value editable-field" data-client-id="{{ client.id }}" data-field="drug_duration" title="Click to edit">{{ client.drug_duration }}</div>
                                 </div>
                             </div>
                             {% endif %}
@@ -608,7 +608,7 @@
                                     <div class="field-icon">
                                         <i class="fas fa-heart"></i>
                                     </div>
-                                    <div class="field-value">{{ client.why_rehabilitation }}</div>
+                                    <div class="field-value editable-field" data-client-id="{{ client.id }}" data-field="why_rehabilitation" title="Click to edit">{{ client.why_rehabilitation }}</div>
                                 </div>
                             </div>
                             {% endif %}
@@ -619,7 +619,7 @@
                                     <div class="field-icon">
                                         <i class="fas fa-check-circle"></i>
                                     </div>
-                                    <div class="field-value">{{ client.wants_rehabilitation|title }}</div>
+                                    <div class="field-value editable-field" data-client-id="{{ client.id }}" data-field="wants_rehabilitation" title="Click to edit">{{ client.wants_rehabilitation|title }}</div>
                                 </div>
                             </div>
                             {% endif %}
@@ -630,7 +630,7 @@
                                     <div class="field-icon">
                                         <i class="fas fa-history"></i>
                                     </div>
-                                    <div class="field-value">{{ client.previous_rehabilitation|title }}</div>
+                                    <div class="field-value editable-field" data-client-id="{{ client.id }}" data-field="previous_rehabilitation" title="Click to edit">{{ client.previous_rehabilitation|title }}</div>
                                 </div>
                             </div>
                             {% endif %}
@@ -641,7 +641,7 @@
                                     <div class="field-icon">
                                         <i class="fas fa-map-marker-alt"></i>
                                     </div>
-                                    <div class="field-value">{{ client.previous_rehabilitation_location }}</div>
+                                    <div class="field-value editable-field" data-client-id="{{ client.id }}" data-field="previous_rehabilitation_location" title="Click to edit">{{ client.previous_rehabilitation_location }}</div>
                                 </div>
                             </div>
                             {% endif %}
@@ -652,7 +652,7 @@
                                     <div class="field-icon">
                                         <i class="fas fa-bullseye"></i>
                                     </div>
-                                    <div class="field-value">{{ client.rehabilitation_goals }}</div>
+                                    <div class="field-value editable-field" data-client-id="{{ client.id }}" data-field="rehabilitation_goals" title="Click to edit">{{ client.rehabilitation_goals }}</div>
                                 </div>
                             </div>
                             {% endif %}
@@ -672,7 +672,7 @@
                         <div class="section-header">
                             <h4><i class="fas fa-brain"></i> Rehabilitation Assessment</h4>
                             <div class="section-actions">
-                                <button class="btn-edit" title="Edit Rehabilitation">
+                                <button class="btn-edit" title="Edit Rehabilitation" data-edit-section="rehab" data-client-id="{{ client.id }}">
                                     <i class="far fa-edit"></i>
                                     Edit
                                 </button>
@@ -702,7 +702,7 @@
                                     <div class="field-icon">
                                         <i class="fas fa-sticky-note"></i>
                                     </div>
-                                    <div class="field-value">{{ client.mentalHealthNotes }}</div>
+                                    <div class="field-value editable-field" data-client-id="{{ client.id }}" data-field="mentalHealthNotes" title="Click to edit">{{ client.mentalHealthNotes }}</div>
                                 </div>
                             </div>
                             {% endif %}
@@ -713,7 +713,7 @@
                                     <div class="field-icon">
                                         <i class="fas fa-smile"></i>
                                     </div>
-                                    <div class="field-value">{{ client.currentMood }}/5</div>
+                                    <div class="field-value editable-field" data-client-id="{{ client.id }}" data-field="currentMood" title="Click to edit">{{ client.currentMood }}/5</div>
                                 </div>
                             </div>
                             {% endif %}
@@ -724,7 +724,7 @@
                                     <div class="field-icon">
                                         <i class="fas fa-tachometer-alt"></i>
                                     </div>
-                                    <div class="field-value">{{ client.stressLevel }}/5</div>
+                                    <div class="field-value editable-field" data-client-id="{{ client.id }}" data-field="stressLevel" title="Click to edit">{{ client.stressLevel }}/5</div>
                                 </div>
                             </div>
                             {% endif %}

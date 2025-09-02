@@ -1,551 +1,670 @@
-$(document).ready(function() {
-    // View toggle functionality
-    $('.view-btn').on('click', function() {
-        $('.view-btn').removeClass('active');
-        $(this).addClass('active');
+// Daily Activities Schedule JavaScript - BreakFree Design System with Firebase Integration
+document.addEventListener('DOMContentLoaded', function() {
+    initializeSchedule();
+});
+
+function initializeSchedule() {
+    // Load activities from Firebase
+    loadActivitiesFromFirebase();
+    
+    // Add search functionality
+    addSearchBar();
+    
+    // Add activity highlighting
+    highlightCurrentTime();
+    
+    // Add edit functionality
+    addEditFunctionality();
+    
+    // Add activity filtering
+    addActivityFilter();
+    
+    // Add responsive behavior
+    handleResponsiveBehavior();
+    
+    // Add activity type highlighting
+    highlightActivityTypes();
+}
+
+async function loadActivitiesFromFirebase() {
+    try {
+        showLoadingIndicator();
         
-        const view = $(this).data('view');
-        console.log('Switched to view:', view);
+        const response = await fetch('/api/activities/load');
+        const data = await response.json();
         
-        // You can add different functionality for different views here
-        if (view === 'interventions') {
-            // Show intervention-specific features
-            console.log('Showing intervention view');
+        if (data.success && data.activities.length > 0) {
+            // Load saved activities from Firebase
+            loadSavedActivities(data.activities);
+            showNotification('Activities loaded from database', 'success');
         } else {
-            // Show activities view
-            console.log('Showing activities view');
+            // Use default activities if none saved
+            console.log('No saved activities found, using defaults');
+        }
+        
+        hideLoadingIndicator();
+    } catch (error) {
+        console.error('Error loading activities:', error);
+        hideLoadingIndicator();
+        showNotification('Error loading activities from database', 'error');
+    }
+}
+
+function loadSavedActivities(activities) {
+    activities.forEach(activity => {
+        // Find the row by time using a more reliable method
+        const timeCells = document.querySelectorAll('.time-cell');
+        let targetRow = null;
+        
+        for (let timeCell of timeCells) {
+            if (timeCell.textContent.trim() === activity.time.trim()) {
+                targetRow = timeCell.closest('tr');
+                break;
+            }
+        }
+        
+        if (targetRow) {
+            const cell = targetRow.querySelector(`.activity-cell:nth-child(${activity.column + 1})`);
+            if (cell) {
+                cell.textContent = activity.activity;
+                cell.dataset.activity = activity.activity;
+                
+                // Update merged cells if necessary
+                if (activity.colspan > 1) {
+                    updateMergedCells(cell, activity.activity);
+                }
+            }
         }
     });
+}
 
-    // Search functionality for future use
-    const searchInput = $('.search-container input');
-    if (searchInput.length > 0) {
-        searchInput.on('input', function(e) {
-            const searchTerm = e.target.value.toLowerCase();
-            // Add search functionality here when needed
+function addSearchBar() {
+    const searchInput = document.getElementById('activitySearch');
+    if (!searchInput) return;
+    
+    // Search functionality
+    searchInput.addEventListener('input', function() {
+        const searchTerm = this.value.toLowerCase();
+        filterActivities(searchTerm);
+    });
+}
+
+function filterActivities(searchTerm) {
+    const activityCells = document.querySelectorAll('.activity-cell');
+    let matchCount = 0;
+    
+    activityCells.forEach(cell => {
+        const activityText = cell.textContent.toLowerCase();
+        if (searchTerm === '' || activityText.includes(searchTerm)) {
+            cell.style.display = '';
+            cell.style.opacity = '1';
+            matchCount++;
+        } else {
+            cell.style.display = 'none';
+            cell.style.opacity = '0.3';
+        }
+    });
+}
+
+function highlightCurrentTime() {
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+    const currentTime = currentHour * 60 + currentMinute;
+    
+    // Find the current time slot
+    const timeCells = document.querySelectorAll('.time-cell');
+    timeCells.forEach(cell => {
+        const timeText = cell.textContent;
+        const timeRange = parseTimeRange(timeText);
+        
+        if (timeRange && currentTime >= timeRange.start && currentTime <= timeRange.end) {
+            // Highlight current time row
+            const row = cell.closest('tr');
+            if (row) {
+                row.style.backgroundColor = 'var(--warning-light)';
+                row.style.border = '2px solid var(--warning)';
+                
+                // Add current time indicator
+                addCurrentTimeIndicator(row);
+                
+                // Scroll to current time
+                setTimeout(() => {
+                    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }, 500);
+            }
+        }
+    });
+}
+
+function parseTimeRange(timeText) {
+    // Parse time ranges like "5:00AM-5:15AM" or "9:00PM"
+    const timeRegex = /(\d{1,2}):(\d{2})(AM|PM)(?:-(\d{1,2}):(\d{2})(AM|PM))?/;
+    const match = timeText.match(timeRegex);
+    
+    if (match) {
+        let startHour = parseInt(match[1]);
+        let startMinute = parseInt(match[2]);
+        let startPeriod = match[3];
+        
+        // Convert to 24-hour format
+        if (startPeriod === 'PM' && startHour !== 12) startHour += 12;
+        if (startPeriod === 'AM' && startHour === 12) startHour = 0;
+        
+        let startTime = startHour * 60 + startMinute;
+        
+        if (match[4]) {
+            // Has end time
+            let endHour = parseInt(match[4]);
+            let endMinute = parseInt(match[5]);
+            let endPeriod = match[6];
+            
+            if (endPeriod === 'PM' && endHour !== 12) endHour += 12;
+            if (endPeriod === 'AM' && endHour === 12) endHour = 0;
+            
+            let endTime = endHour * 60 + endMinute;
+            
+            return { start: startTime, end: endTime };
+        } else {
+            // Single time point (like 9:00PM)
+            return { start: startTime, end: startTime + 15 }; // Assume 15-minute slot
+        }
+    }
+    
+    return null;
+}
+
+function addCurrentTimeIndicator(row) {
+    // Remove existing indicator
+    const existingIndicator = row.querySelector('.current-time-indicator');
+    if (existingIndicator) existingIndicator.remove();
+    
+    // Add new indicator
+    const indicator = document.createElement('div');
+    indicator.className = 'current-time-indicator';
+    indicator.innerHTML = '<i class="fa-solid fa-clock"></i> Current Time';
+    
+    row.style.position = 'relative';
+    row.appendChild(indicator);
+}
+
+function addEditFunctionality() {
+    const editModeBtn = document.getElementById('editModeBtn');
+    const saveChangesBtn = document.getElementById('saveChangesBtn');
+    const printScheduleBtn = document.getElementById('printScheduleBtn');
+    
+    if (!editModeBtn || !saveChangesBtn || !printScheduleBtn) return;
+    
+    let isEditMode = false;
+    
+    // Edit Mode Toggle
+    editModeBtn.addEventListener('click', function() {
+        isEditMode = !isEditMode;
+        toggleEditMode(isEditMode);
+        
+        if (isEditMode) {
+            this.innerHTML = '<i class="fa-solid fa-times"></i> Exit Edit Mode';
+            this.classList.remove('btn-secondary');
+            this.classList.add('btn-danger');
+            saveChangesBtn.style.display = 'flex';
+        } else {
+            this.innerHTML = '<i class="fa-regular fa-edit"></i> Edit Mode';
+            this.classList.remove('btn-danger');
+            this.classList.add('btn-secondary');
+            saveChangesBtn.style.display = 'none';
+        }
+    });
+    
+    // Save Changes
+    saveChangesBtn.addEventListener('click', async function() {
+        try {
+            await saveActivitiesToFirebase();
+            isEditMode = false;
+            editModeBtn.innerHTML = '<i class="fa-regular fa-edit"></i> Edit Mode';
+            editModeBtn.classList.remove('btn-danger');
+            editModeBtn.classList.add('btn-secondary');
+            this.style.display = 'none';
+            toggleEditMode(false);
+        } catch (error) {
+            console.error('Error saving activities:', error);
+            showNotification('Error saving activities to database', 'error');
+        }
+    });
+    
+    // Print Schedule
+    printScheduleBtn.addEventListener('click', function() {
+        window.print();
+    });
+    
+    // Add click handlers to activity cells
+    const activityCells = document.querySelectorAll('.activity-cell');
+    activityCells.forEach(cell => {
+        cell.addEventListener('click', function() {
+            if (isEditMode && !this.classList.contains('empty-cell')) {
+                openEditModal(this);
+            }
+        });
+    });
+}
+
+function toggleEditMode(enabled) {
+    const scheduleTable = document.getElementById('scheduleTable');
+    const activityCells = document.querySelectorAll('.activity-cell');
+    
+    if (enabled) {
+        scheduleTable.classList.add('edit-mode');
+        activityCells.forEach(cell => {
+            if (!cell.classList.contains('empty-cell')) {
+                cell.style.cursor = 'pointer';
+                cell.title = 'Click to edit activity';
+            }
+        });
+    } else {
+        scheduleTable.classList.remove('edit-mode');
+        activityCells.forEach(cell => {
+            cell.style.cursor = 'default';
+            cell.title = '';
         });
     }
+}
 
-    // Filter functionality for future use
-    const filterButtons = $('.filter-btn');
-    filterButtons.on('click', function() {
-        filterButtons.removeClass('active');
-        $(this).addClass('active');
-        
-        const filter = $(this).data('filter');
-        console.log('Applied filter:', filter);
-    });
+function openEditModal(cell) {
+    const modal = document.getElementById('editModal');
+    const editActivityText = document.getElementById('editActivityText');
+    const editActivityTime = document.getElementById('editActivityTime');
+    const editActivityDay = document.getElementById('editActivityDay');
+    
+    if (!modal || !editActivityText || !editActivityText || !editActivityDay) return;
+    
+    // Get cell information
+    const row = cell.closest('tr');
+    const timeCell = row.querySelector('.time-cell');
+    const dayCell = row.querySelector('.day-cell');
+    
+    // Fill modal with current values
+    editActivityText.value = cell.textContent;
+    editActivityTime.value = timeCell.textContent;
+    editActivityDay.value = getDayFromCell(cell);
+    
+    // Store reference to the cell being edited
+    modal.dataset.editingCell = cell.dataset.activity;
+    modal.dataset.cellElement = cell;
+    
+    // Show modal
+    modal.style.display = 'block';
+    
+    // Focus on text input
+    editActivityText.focus();
+    
+    // Add event listeners
+    addModalEventListeners(modal, cell);
+}
 
-    // Handle action buttons
-    const actionButtons = $('.action-btn');
-    actionButtons.on('click', function() {
-        const action = $(this).data('action');
-        const clientId = $(this).closest('.check-in-item').data('client-id');
-        
-        switch(action) {
-            case 'view':
-                console.log(`Viewing check-in details for client ${clientId}`);
-                break;
-            case 'edit':
-                console.log(`Editing check-in for client ${clientId}`);
-                break;
-            case 'delete':
-                if (confirm('Are you sure you want to delete this check-in?')) {
-                    console.log(`Deleting check-in for client ${clientId}`);
-                }
-                break;
-        }
-    });
-
-    // Handle add check-in button
-    const addCheckInBtn = $('.btn-primary');
-    addCheckInBtn.on('click', function() {
-        console.log('Add check-in button clicked');
-        // Show add check-in modal if needed
-    });
-
-    // Handle modal close buttons
-    const closeButtons = $('.close-modal');
-    closeButtons.on('click', function() {
-        const modal = $(this).closest('.modal');
-        if (modal) {
-            modal.css('display', 'none');
-        }
-    });
-
-    // Handle form submission
-    const addCheckInForm = $('#addCheckInForm');
-    if (addCheckInForm) {
-        addCheckInForm.on('submit', function(e) {
-            e.preventDefault();
-            console.log('Adding new check-in');
-            // Handle form submission
-        });
+function getDayFromCell(cell) {
+    const columnIndex = cell.cellIndex;
+    const headers = document.querySelectorAll('.daily-schedule-table th');
+    
+    if (columnIndex >= 2 && columnIndex < headers.length) {
+        return headers[columnIndex].textContent;
     }
+    return 'All Days';
+}
 
-    // Enhanced Calendar Functionality
-    let currentDate = new Date();
-    let selectedDate = null;
-
-    // Initialize calendar
-    function initializeCalendar() {
-        updateCalendar();
-        setupCalendarNavigation();
-        setupCalendarAccessibility();
-    }
-
-    // Update calendar display
-    function updateCalendar() {
-        const month = currentDate.getMonth();
-        const year = currentDate.getFullYear();
-        
-        // Update month/year display
-        const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
-                          'July', 'August', 'September', 'October', 'November', 'December'];
-        $('#currentMonth').text(`${monthNames[month]} ${year}`);
-        
-        // Generate calendar days
-        generateCalendarDays(month, year);
-        
-        // Add visual indicators for events
-        addEventIndicators();
-    }
-
-    // Generate calendar days - FIXED VERSION
-    function generateCalendarDays(month, year) {
-        const calendarDays = $('#calendarDays');
-        calendarDays.empty();
-        
-        const firstDay = new Date(year, month, 1);
-        const lastDay = new Date(year, month + 1, 0);
-        const startingDay = firstDay.getDay(); // 0 = Sunday, 1 = Monday, etc.
-        const monthLength = lastDay.getDate();
-        
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        // Calculate the total number of days to display (6 weeks × 7 days = 42)
-        const totalDaysToShow = 42;
-        
-        // Calculate the start date (first day of the first week to display)
-        const startDate = new Date(firstDay);
-        startDate.setDate(startDate.getDate() - startingDay);
-        
-        for (let i = 0; i < totalDaysToShow; i++) {
-            const date = new Date(startDate);
-            date.setDate(startDate.getDate() + i);
+function addModalEventListeners(modal, cell) {
+    const closeBtn = modal.querySelector('.close');
+    const saveBtn = document.getElementById('saveActivityBtn');
+    const cancelBtn = document.getElementById('cancelEditBtn');
+    const editActivityText = document.getElementById('editActivityText');
+    
+    // Close modal
+    closeBtn.onclick = function() {
+        modal.style.display = 'none';
+    };
+    
+    // Save changes
+    saveBtn.onclick = async function() {
+        const newText = editActivityText.value.trim();
+        if (newText) {
+            cell.textContent = newText;
+            cell.dataset.activity = newText;
             
-            const dayElement = $('<div>')
-                .addClass('calendar-day')
-                .attr('data-date', date.toISOString().split('T')[0])
-                .attr('tabindex', '0')
-                .attr('role', 'button')
-                .attr('aria-label', `Select ${date.toLocaleDateString('en-US', { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                })}`);
-            
-            const dayNumber = $('<span>')
-                .addClass('day-number')
-                .text(date.getDate());
-            
-            dayElement.append(dayNumber);
-            
-            // Add appropriate classes
-            if (date.getMonth() !== month) {
-                dayElement.addClass('other-month');
+            // Update same-activity cells if this is a merged cell
+            if (cell.colSpan > 1) {
+                updateMergedCells(cell, newText);
             }
             
-            if (date.getTime() === today.getTime()) {
-                dayElement.addClass('today');
-                dayElement.attr('aria-current', 'date');
-            }
-            
-            // Add click event with enhanced feedback
-            dayElement.on('click', function() {
-                selectDate(date, $(this));
-            });
-            
-            // Add keyboard navigation
-            dayElement.on('keydown', function(e) {
-                if (e.key === 'Enter' || e.key === ' ') {
-                    e.preventDefault();
-                    selectDate(date, $(this));
-                }
-            });
-            
-            // Add hover effects
-            dayElement.on('mouseenter', function() {
-                $(this).addClass('hover');
-            }).on('mouseleave', function() {
-                $(this).removeClass('hover');
-            });
-            
-            calendarDays.append(dayElement);
+            modal.style.display = 'none';
+            showNotification('Activity updated successfully!', 'success');
         }
-    }
+    };
+    
+    // Cancel edit
+    cancelBtn.onclick = function() {
+        modal.style.display = 'none';
+    };
+    
+    // Close modal when clicking outside
+    window.onclick = function(event) {
+        if (event.target === modal) {
+            modal.style.display = 'none';
+        }
+    };
+    
+    // Handle Enter key
+    editActivityText.addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            saveBtn.click();
+        }
+    });
+}
 
-    // Select a date with enhanced feedback
-    function selectDate(date, element) {
-        // Remove previous selection
-        $('.calendar-day').removeClass('selected');
-        
-        // Add selection to current element
-        element.addClass('selected');
-        selectedDate = date;
-        
-        // Add visual feedback
-        element.addClass('selected-animation');
-        setTimeout(() => {
-            element.removeClass('selected-animation');
-        }, 300);
-        
-        // Show activity modal
-        const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'long' });
-        showActivityModal(dayOfWeek);
-        
-        // Announce selection to screen readers
-        const announcement = `Selected ${date.toLocaleDateString('en-US', { 
-            weekday: 'long', 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
-        })}`;
-        announceToScreenReader(announcement);
-    }
+function updateMergedCells(cell, newText) {
+    // Find all cells in the same row with the same colspan
+    const row = cell.closest('tr');
+    const cells = row.querySelectorAll('.activity-cell');
+    
+    cells.forEach(c => {
+        if (c.colSpan === cell.colSpan && c !== cell) {
+            c.textContent = newText;
+            c.dataset.activity = newText;
+        }
+    });
+}
 
-    // Add event indicators to calendar
-    function addEventIndicators() {
-        // Sample event data - replace with actual data from your backend
-        const events = {
-            '2024-02-15': ['activity'],
-            '2024-02-20': ['intervention'],
-            '2024-02-25': ['activity', 'intervention'],
-        };
+async function saveActivitiesToFirebase() {
+    try {
+        showLoadingIndicator();
         
-        $('.calendar-day').each(function() {
-            const dateStr = $(this).attr('data-date');
-            if (events[dateStr]) {
-                events[dateStr].forEach(eventType => {
-                    $(this).addClass(`has-${eventType}`);
-                    
-                    // Add indicator dot
-                    const indicator = $('<div>')
-                        .addClass(`day-indicator ${eventType}`)
-                        .attr('aria-label', `${eventType} scheduled`);
-                    $(this).append(indicator);
+        // Collect all activity data
+        const activities = [];
+        const activityCells = document.querySelectorAll('.activity-cell');
+        
+        activityCells.forEach(cell => {
+            if (!cell.classList.contains('empty-cell')) {
+                const row = cell.closest('tr');
+                const timeCell = row.querySelector('.time-cell');
+                const dayCell = row.querySelector('.day-cell');
+                
+                activities.push({
+                    time: timeCell.textContent,
+                    day: dayCell.textContent,
+                    activity: cell.textContent,
+                    column: cell.cellIndex,
+                    colspan: cell.colSpan
                 });
             }
         });
-    }
-
-    // Setup calendar navigation
-    function setupCalendarNavigation() {
-        $('#prevMonth').on('click', function() {
-            currentDate.setMonth(currentDate.getMonth() - 1);
-            updateCalendar();
-            announceToScreenReader(`Navigated to ${currentDate.toLocaleDateString('en-US', { 
-                month: 'long', 
-                year: 'numeric' 
-            })}`);
+        
+        // Send to backend
+        const response = await fetch('/api/activities/save', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ activities: activities })
         });
         
-        $('#nextMonth').on('click', function() {
-            currentDate.setMonth(currentDate.getMonth() + 1);
-            updateCalendar();
-            announceToScreenReader(`Navigated to ${currentDate.toLocaleDateString('en-US', { 
-                month: 'long', 
-                year: 'numeric' 
-            })}`);
-        });
-    }
-
-    // Setup accessibility features
-    function setupCalendarAccessibility() {
-        // Add ARIA labels and roles
-        $('.calendar-grid').attr('role', 'grid');
-        $('.calendar-weekday').attr('role', 'columnheader');
-        $('.calendar-day').attr('role', 'gridcell');
+        const data = await response.json();
         
-        // Add keyboard navigation
-        $(document).on('keydown', function(e) {
-            const focusedDay = $('.calendar-day:focus');
-            if (focusedDay.length === 0) return;
-            
-            let targetDay;
-            const currentIndex = focusedDay.index();
-            
-            switch(e.key) {
-                case 'ArrowLeft':
-                    e.preventDefault();
-                    targetDay = focusedDay.prev('.calendar-day');
-                    break;
-                case 'ArrowRight':
-                    e.preventDefault();
-                    targetDay = focusedDay.next('.calendar-day');
-                    break;
-                case 'ArrowUp':
-                    e.preventDefault();
-                    targetDay = focusedDay.parent().children().eq(currentIndex - 7);
-                    break;
-                case 'ArrowDown':
-                    e.preventDefault();
-                    targetDay = focusedDay.parent().children().eq(currentIndex + 7);
-                    break;
-                case 'Home':
-                    e.preventDefault();
-                    targetDay = focusedDay.parent().children().first();
-                    break;
-                case 'End':
-                    e.preventDefault();
-                    targetDay = focusedDay.parent().children().last();
-                    break;
-            }
-            
-            if (targetDay && targetDay.length > 0) {
-                targetDay.focus();
-            }
-        });
-    }
-
-    // Announce to screen readers
-    function announceToScreenReader(message) {
-        const announcement = $('<div>')
-            .attr('aria-live', 'polite')
-            .attr('aria-atomic', 'true')
-            .addClass('sr-only')
-            .text(message);
-        
-        $('body').append(announcement);
-        
-        setTimeout(() => {
-            announcement.remove();
-        }, 1000);
-    }
-
-    // Enhanced Activity Modal
-    function showActivityModal(dayOfWeek) {
-        const modal = $('#activityModal');
-        const modalTitle = $('#modalTitle');
-        const modalDate = $('#modalDate');
-        
-        modalTitle.text(`${dayOfWeek} Activities`);
-        modalDate.text(selectedDate.toLocaleDateString('en-US', { 
-            weekday: 'long', 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
-        }));
-        
-        updateScheduleTable(dayOfWeek);
-        
-        // Enhanced modal display with animation
-        modal.fadeIn(300).css('display', 'flex');
-        $('body').css('overflow', 'hidden');
-        
-        // Focus management
-        setTimeout(() => {
-            $('#closeActivity').focus();
-        }, 350);
-    }
-
-    // Update schedule table with enhanced data
-    function updateScheduleTable(dayOfWeek) {
-        const scheduleBody = $('#scheduleBody');
-        scheduleBody.empty();
-        
-        // Sample schedule data - replace with actual data
-        const schedule = getScheduleForDay(dayOfWeek);
-        
-        let totalActivities = 0;
-        let interventionCount = 0;
-        let mealCount = 0;
-        
-        schedule.forEach(item => {
-            const row = $('<tr>');
-            
-            const timeCell = $('<td>')
-                .addClass('time-slot')
-                .text(item.time);
-            
-            const activityCell = $('<td>')
-                .addClass(`${item.type}-cell`)
-                .text(item.activity);
-            
-            row.append(timeCell, activityCell);
-            scheduleBody.append(row);
-            
-            // Count activities
-            totalActivities++;
-            if (item.type === 'intervention') interventionCount++;
-            if (item.type === 'meal') mealCount++;
-        });
-        
-        // Update summary
-        $('#totalActivities').text(totalActivities);
-        $('#interventionCount').text(interventionCount);
-        $('#mealCount').text(mealCount);
-    }
-
-    // Get schedule for specific day
-    function getScheduleForDay(dayOfWeek) {
-        // Sample data - replace with actual backend data
-        const schedules = {
-            'Monday': [
-                { time: '8:00 AM', activity: 'Morning Check-in', type: 'activity' },
-                { time: '10:00 AM', activity: 'Group Therapy', type: 'intervention' },
-                { time: '12:00 PM', activity: 'Lunch', type: 'meal' },
-                { time: '2:00 PM', activity: 'Individual Session', type: 'intervention' },
-                { time: '4:00 PM', activity: 'Evening Reflection', type: 'activity' }
-            ],
-            'Tuesday': [
-                { time: '8:00 AM', activity: 'Morning Check-in', type: 'activity' },
-                { time: '11:00 AM', activity: 'Medication Review', type: 'intervention' },
-                { time: '12:00 PM', activity: 'Lunch', type: 'meal' },
-                { time: '3:00 PM', activity: 'Support Group', type: 'activity' }
-            ],
-            'Wednesday': [
-                { time: '8:00 AM', activity: 'Morning Check-in', type: 'activity' },
-                { time: '9:30 AM', activity: 'Assessment', type: 'intervention' },
-                { time: '12:00 PM', activity: 'Lunch', type: 'meal' },
-                { time: '2:30 PM', activity: 'Skills Training', type: 'intervention' }
-            ],
-            'Thursday': [
-                { time: '8:00 AM', activity: 'Morning Check-in', type: 'activity' },
-                { time: '10:30 AM', activity: 'Family Meeting', type: 'intervention' },
-                { time: '12:00 PM', activity: 'Lunch', type: 'meal' },
-                { time: '4:00 PM', activity: 'Progress Review', type: 'activity' }
-            ],
-            'Friday': [
-                { time: '8:00 AM', activity: 'Morning Check-in', type: 'activity' },
-                { time: '11:00 AM', activity: 'Weekly Planning', type: 'intervention' },
-                { time: '12:00 PM', activity: 'Lunch', type: 'meal' },
-                { time: '3:00 PM', activity: 'Weekend Prep', type: 'activity' }
-            ],
-            'Saturday': [
-                { time: '9:00 AM', activity: 'Weekend Check-in', type: 'activity' },
-                { time: '12:00 PM', activity: 'Lunch', type: 'meal' },
-                { time: '2:00 PM', activity: 'Recreation Time', type: 'activity' }
-            ],
-            'Sunday': [
-                { time: '9:00 AM', activity: 'Weekend Check-in', type: 'activity' },
-                { time: '12:00 PM', activity: 'Lunch', type: 'meal' },
-                { time: '4:00 PM', activity: 'Week Review', type: 'activity' }
-            ]
-        };
-        
-        return schedules[dayOfWeek] || [];
-    }
-
-    // Enhanced modal close functionality
-    $('#closeActivity').on('click', function() {
-        closeActivityModal();
-    });
-
-    // Close modal when clicking outside
-    $(window).on('click', function(event) {
-        const modal = $('#activityModal');
-        if (event.target === modal[0]) {
-            closeActivityModal();
+        if (data.success) {
+            showNotification('All activities saved successfully to database!', 'success');
+        } else {
+            throw new Error(data.message);
         }
-    });
-
-    // Close modal with escape key
-    $(document).on('keydown', function(e) {
-        if (e.key === 'Escape') {
-            closeActivityModal();
-        }
-    });
-
-    function closeActivityModal() {
-        $('#activityModal').fadeOut(300);
-        $('body').css('overflow', 'auto');
         
-        // Return focus to selected date
-        if (selectedDate) {
-            const selectedElement = $(`.calendar-day[data-date="${selectedDate.toISOString().split('T')[0]}"]`);
-            if (selectedElement.length > 0) {
-                setTimeout(() => {
-                    selectedElement.focus();
-                }, 350);
-            }
-        }
+        hideLoadingIndicator();
+        
+    } catch (error) {
+        console.error('Error saving activities:', error);
+        hideLoadingIndicator();
+        throw error;
     }
+}
 
-    // Initialize tooltips and other UI enhancements
-    $('[data-toggle="tooltip"]').tooltip();
+function addActivityFilter() {
+    const filterButtons = document.querySelectorAll('.filter-btn');
     
-    // Initialize calendar
-    initializeCalendar();
+    filterButtons.forEach(btn => {
+        btn.addEventListener('click', function() {
+            // Remove active class from all buttons
+            filterButtons.forEach(b => b.classList.remove('active'));
+            // Add active class to clicked button
+            this.classList.add('active');
+            
+            const filterType = this.dataset.filter;
+            filterByType(filterType);
+        });
+    });
+}
+
+function filterByType(filterType) {
+    const activityCells = document.querySelectorAll('.activity-cell');
     
-    // Initialize any other plugins or features
-    console.log('Enhanced check-in page initialized successfully');
-});
-
-// Add CSS for enhanced animations and accessibility
-const enhancedStyles = `
-<style>
-.sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    padding: 0;
-    margin: -1px;
-    overflow: hidden;
-    clip: rect(0, 0, 0, 0);
-    white-space: nowrap;
-    border: 0;
+    activityCells.forEach(cell => {
+        const activityText = cell.textContent.toLowerCase();
+        let shouldShow = false;
+        
+        switch(filterType) {
+            case 'meals':
+                shouldShow = activityText.includes('breakfast') || 
+                           activityText.includes('lunch') || 
+                           activityText.includes('dinner') ||
+                           activityText.includes('snack') ||
+                           activityText.includes('food preparation');
+                break;
+            case 'activities':
+                shouldShow = activityText.includes('sports') || 
+                           activityText.includes('exercise') || 
+                           activityText.includes('gardening') ||
+                           activityText.includes('project') ||
+                           activityText.includes('recreational') ||
+                           activityText.includes('skills training');
+                break;
+            case 'cleaning':
+                shouldShow = activityText.includes('cleaning') || 
+                           activityText.includes('washing') || 
+                           activityText.includes('general cleaning') ||
+                           activityText.includes('dining area');
+                break;
+            case 'spiritual':
+                shouldShow = activityText.includes('prayer') || 
+                           activityText.includes('mass') || 
+                           activityText.includes('angelus') ||
+                           activityText.includes('rosary') ||
+                           activityText.includes('flag ceremony');
+                break;
+            case 'personal':
+                shouldShow = activityText.includes('bathing') || 
+                           activityText.includes('laundry') || 
+                           activityText.includes('hygiene') ||
+                           activityText.includes('waking') ||
+                           activityText.includes('nap');
+                break;
+            default:
+                shouldShow = true;
+        }
+        
+        if (shouldShow) {
+            cell.style.display = '';
+            cell.style.opacity = '1';
+        } else {
+            cell.style.display = 'none';
+            cell.style.opacity = '0.3';
+        }
+    });
 }
 
-.calendar-day.selected-animation {
-    animation: selectPulse 0.3s ease-in-out;
+function highlightActivityTypes() {
+    const activityCells = document.querySelectorAll('.activity-cell');
+    
+    activityCells.forEach(cell => {
+        const activityText = cell.textContent;
+        
+        // Add activity type classes for better styling
+        if (activityText.includes('BREAKFAST') || activityText.includes('LUNCH') || activityText.includes('DINNER')) {
+            cell.classList.add('meal-activity');
+        } else if (activityText.includes('SPORTS') || activityText.includes('EXERCISE')) {
+            cell.classList.add('sports-activity');
+        } else if (activityText.includes('GARDENING')) {
+            cell.classList.add('garden-activity');
+        } else if (activityText.includes('PROJECT')) {
+            cell.classList.add('project-activity');
+        } else if (activityText.includes('CLEANING') || activityText.includes('WASHING')) {
+            cell.classList.add('cleaning-activity');
+        } else if (activityText.includes('PRAYER') || activityText.includes('MASS')) {
+            cell.classList.add('spiritual-activity');
+        }
+    });
 }
 
-.calendar-day.hover {
-    transform: scale(1.05);
-    box-shadow: 0 6px 20px rgba(59, 130, 246, 0.3);
-}
-
-@keyframes selectPulse {
-    0% { transform: scale(1); }
-    50% { transform: scale(1.1); }
-    100% { transform: scale(1.05); }
-}
-
-.calendar-day:focus {
-    outline: 2px solid #3b82f6;
-    outline-offset: 2px;
-    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
-}
-
-.calendar-nav-btn:focus {
-    outline: 2px solid #3b82f6;
-    outline-offset: 2px;
-    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2);
-}
-
-#activityModal {
-    display: none;
-}
-
-#activityModal.fadeIn {
-    animation: modalFadeIn 0.3s ease-out;
-}
-
-@keyframes modalFadeIn {
-    from {
-        opacity: 0;
-        transform: scale(0.95) translateY(-20px);
+function handleResponsiveBehavior() {
+    // Add touch support for mobile
+    if ('ontouchstart' in window) {
+        const activityCells = document.querySelectorAll('.activity-cell');
+        activityCells.forEach(cell => {
+            cell.addEventListener('touchstart', function() {
+                this.style.transform = 'scale(0.98)';
+            });
+            
+            cell.addEventListener('touchend', function() {
+                this.style.transform = 'scale(1)';
+            });
+        });
     }
-    to {
-        opacity: 1;
-        transform: scale(1) translateY(0);
+    
+    // Handle window resize
+    window.addEventListener('resize', function() {
+        const table = document.querySelector('.daily-schedule-table');
+        if (table) {
+            if (window.innerWidth < 768) {
+                table.style.fontSize = '0.75rem';
+            } else if (window.innerWidth < 1200) {
+                table.style.fontSize = '0.8rem';
+            } else {
+                table.style.fontSize = '0.875rem';
+            }
+        }
+    });
+}
+
+function showLoadingIndicator() {
+    // Create loading indicator
+    const loading = document.createElement('div');
+    loading.id = 'loadingIndicator';
+    loading.innerHTML = `
+        <div class="loading-spinner">
+            <i class="fa-solid fa-spinner fa-spin"></i>
+            <span>Saving to database...</span>
+        </div>
+    `;
+    
+    loading.style.cssText = `
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        z-index: 10000;
+    `;
+    
+    document.body.appendChild(loading);
+}
+
+function hideLoadingIndicator() {
+    const loading = document.getElementById('loadingIndicator');
+    if (loading) {
+        loading.remove();
     }
 }
-</style>
+
+function showNotification(message, type = 'info') {
+    // Create notification element
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.innerHTML = `
+        <i class="fa-solid fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
+        <span>${message}</span>
+    `;
+    
+    // Style the notification
+    notification.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: ${type === 'success' ? 'var(--success)' : type === 'error' ? 'var(--danger)' : 'var(--info)'};
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        z-index: 10000;
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        font-weight: 500;
+        animation: slideInRight 0.3s ease-out;
+    `;
+    
+    // Add to page
+    document.body.appendChild(notification);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+        notification.style.animation = 'slideOutRight 0.3s ease-out';
+        setTimeout(() => {
+            if (notification.parentNode) {
+                notification.parentNode.removeChild(notification);
+            }
+        }, 300);
+    }, 3000);
+}
+
+// Add CSS animations for notifications and loading
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideInRight {
+        from { transform: translateX(100%); opacity: 0; }
+        to { transform: translateX(0); opacity: 1; }
+    }
+    
+    @keyframes slideOutRight {
+        from { transform: translateX(0); opacity: 1; }
+        to { transform: translateX(100%); opacity: 0; }
+    }
+    
+    .btn-danger {
+        background: var(--danger);
+        color: var(--text-light);
+    }
+    
+    .btn-danger:hover {
+        background: #c0392b;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 15px rgba(231, 76, 60, 0.3);
+    }
+    
+    .loading-spinner {
+        background: white;
+        padding: 2rem;
+        border-radius: 12px;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 1rem;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+    }
+    
+    .loading-spinner i {
+        font-size: 2rem;
+        color: var(--primary-color);
+    }
+    
+    .loading-spinner span {
+        color: var(--text-dark);
+        font-weight: 500;
+    }
 `;
-
-// Inject enhanced styles
-$('head').append(enhancedStyles); 
+document.head.appendChild(style);

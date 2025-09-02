@@ -149,54 +149,205 @@ document.addEventListener('DOMContentLoaded', function() {
         window.recoveryChart.update();
     }
 
-    // Edit Profile Button
-    const editProfileBtn = document.getElementById('editClientBtn');
-    if (editProfileBtn) {
-        editProfileBtn.addEventListener('click', async function() {
-            try {
-                // Lazy-load Firebase only when editing is requested
-                const firebaseModule = await import('./firebase-config.js');
-                const firestore = await import('https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore.js');
-                const { db } = firebaseModule;
-                const { doc, getDoc, updateDoc } = firestore;
+    // Section edit buttons → inline edit mode (no prompts)
+    document.querySelectorAll('.btn-edit[data-edit-section]').forEach(button => {
+        button.addEventListener('click', function() {
+            const clientId = this.getAttribute('data-client-id');
+            if (!clientId) { alert('Client ID missing.'); return; }
 
-                const clientId = this.getAttribute('data-client-id');
-                if (!clientId) {
-                    alert('Client ID missing.');
-                    return;
+            const card = this.closest('.card');
+            if (!card) return;
+            if (card.dataset.editing === 'true') return; // already editing
+            card.dataset.editing = 'true';
+
+            // Hide the Edit button and inject Save/Cancel
+            const headerActions = card.querySelector('.card-header .header-actions') || card.querySelector('.header-actions');
+            if (!headerActions) return;
+
+            this.style.display = 'none';
+
+            const saveBtn = document.createElement('button');
+            saveBtn.className = 'btn-primary';
+            saveBtn.textContent = 'Save';
+
+            const cancelBtn = document.createElement('button');
+            cancelBtn.className = 'btn-secondary';
+            cancelBtn.textContent = 'Cancel';
+
+            headerActions.appendChild(saveBtn);
+            headerActions.appendChild(cancelBtn);
+
+            // Turn editable display fields into inputs
+            const displayFields = Array.from(card.querySelectorAll('.editable-field[data-field]'));
+
+            const inputFor = (displayEl) => {
+                const field = displayEl.getAttribute('data-field');
+                const originalText = displayEl.textContent.trim();
+
+                // prevent per-field click editor while in section-edit mode
+                displayEl.dataset.editing = 'true';
+
+                const fieldLower = field.toLowerCase();
+                let inputType = 'text';
+                if (['age', 'number_of_children', 'years_married', 'number_of_siblings', 'birth_order', 'currentmood', 'stresslevel'].includes(fieldLower)) {
+                    inputType = 'number';
+                } else if (['birthdate', 'birthday', 'date_of_birth', 'checkindate', 'registrationdate'].includes(fieldLower)) {
+                    inputType = 'date';
                 }
 
-                const clientRef = doc(db, 'clients', clientId);
-                const clientSnap = await getDoc(clientRef);
-                if (!clientSnap.exists()) {
-                    alert('Client record not found in Firestore.');
-                    return;
+                const input = document.createElement('input');
+                input.type = inputType;
+                input.className = 'inline-edit-input';
+                input.value = (inputType === 'number') ? originalText.replace(/\D+/g, '') : originalText;
+                input.dataset.original = originalText;
+                input.dataset.field = field;
+                input.style.width = '100%';
+
+                displayEl.textContent = '';
+                displayEl.appendChild(input);
+                return input;
+            };
+
+            const inputs = displayFields.map(inputFor);
+            if (inputs.length) { inputs[0].focus(); inputs[0].select(); }
+
+            const teardown = () => {
+                // Restore texts and state
+                displayFields.forEach(el => {
+                    const input = el.querySelector('input.inline-edit-input');
+                    if (input) {
+                        el.textContent = input.dataset.original || '';
+                    }
+                    delete el.dataset.editing;
+                });
+                saveBtn.remove();
+                cancelBtn.remove();
+                button.style.display = '';
+                delete card.dataset.editing;
+            };
+
+            cancelBtn.addEventListener('click', function() {
+                teardown();
+            });
+
+            saveBtn.addEventListener('click', async function() {
+                const updates = {};
+                inputs.forEach(input => {
+                    const field = input.dataset.field;
+                    const original = input.dataset.original || '';
+                    const value = input.value;
+                    if (value !== original) {
+                        const isNumber = input.type === 'number';
+                        updates[field] = isNumber ? (value === '' ? null : Number(value)) : value;
+                    }
+                });
+
+                if (Object.keys(updates).length === 0) { teardown(); return; }
+
+                try {
+                    const res = await fetch(`/clients/${clientId}/update-fields`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(updates)
+                    });
+                    const result = await res.json();
+                    if (!result.success) throw new Error(result.error || 'Update failed');
+
+                    // Reflect new values
+                    displayFields.forEach(el => {
+                        const input = el.querySelector('input.inline-edit-input');
+                        if (input) {
+                            el.textContent = input.value;
+                        }
+                        delete el.dataset.editing;
+                    });
+                    saveBtn.remove();
+                    cancelBtn.remove();
+                    button.style.display = '';
+                    delete card.dataset.editing;
+                } catch (e) {
+                    console.error(e);
+                    alert('Failed to save changes');
                 }
-
-                const current = clientSnap.data() || {};
-
-                const newName = prompt('Edit Name', current.name || this.getAttribute('data-client-name') || '');
-                if (newName === null) return;
-                const newAddress = prompt('Edit Address', current.address || this.getAttribute('data-client-address') || '');
-                if (newAddress === null) return;
-                const newCivilStatus = prompt('Edit Civil Status', current.civil_status || this.getAttribute('data-client-civil-status') || '');
-                if (newCivilStatus === null) return;
-
-                const updates = {
-                    name: newName.trim(),
-                    address: newAddress.trim(),
-                    civil_status: newCivilStatus.trim()
-                };
-
-                await updateDoc(clientRef, updates);
-                alert('Client updated successfully.');
-                window.location.reload();
-            } catch (error) {
-                console.error('Failed to update client:', error);
-                alert('Failed to update client. See console for details.');
-            }
+            });
         });
-    }
+    });
+
+    // Inline per-field editing on click (input field, no prompt)
+    document.querySelectorAll('.editable-field[data-field]').forEach(displayEl => {
+        displayEl.style.cursor = 'text';
+        displayEl.addEventListener('click', function() {
+            // Prevent duplicate editors
+            if (this.dataset.editing === 'true') return;
+            this.dataset.editing = 'true';
+
+            const clientId = this.getAttribute('data-client-id');
+            const field = this.getAttribute('data-field');
+            const originalText = this.textContent.trim();
+
+            // Decide input type based on field
+            const fieldLower = field.toLowerCase();
+            let inputType = 'text';
+            if (['age', 'number_of_children', 'years_married', 'number_of_siblings', 'birth_order', 'currentmood', 'stresslevel'].includes(fieldLower)) {
+                inputType = 'number';
+            } else if (['birthdate', 'birthday', 'date_of_birth', 'checkindate', 'registrationdate'].includes(fieldLower)) {
+                inputType = 'date';
+            }
+
+            const input = document.createElement('input');
+            input.type = inputType;
+            input.className = 'inline-edit-input';
+            input.value = (inputType === 'number') ? originalText.replace(/\D+/g, '') : originalText;
+            input.style.width = '100%';
+
+            // Replace content with input
+            this.textContent = '';
+            this.appendChild(input);
+            input.focus();
+            input.select();
+
+            const cancelEdit = () => {
+                this.textContent = originalText;
+                delete this.dataset.editing;
+            };
+
+            const saveEdit = async () => {
+                const newValueRaw = input.value;
+                // No change
+                if (newValueRaw === originalText) { cancelEdit(); return; }
+                const updates = {};
+                // Parse numbers
+                updates[field] = (inputType === 'number') ? (newValueRaw === '' ? null : Number(newValueRaw)) : newValueRaw;
+                try {
+                    const res = await fetch(`/clients/${clientId}/update-fields`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(updates)
+                    });
+                    const result = await res.json();
+                    if (!result.success) throw new Error(result.error || 'Update failed');
+                    this.textContent = newValueRaw;
+                } catch (e) {
+                    console.error(e);
+                    this.textContent = originalText;
+                    alert('Failed to update field');
+                } finally {
+                    delete this.dataset.editing;
+                }
+            };
+
+            input.addEventListener('keydown', e => {
+                if (e.key === 'Enter') {
+                    e.preventDefault();
+                    saveEdit();
+                } else if (e.key === 'Escape') {
+                    e.preventDefault();
+                    cancelEdit();
+                }
+            });
+            input.addEventListener('blur', saveEdit);
+        });
+    });
 
     // Schedule Intervention Button
     const scheduleInterventionBtn = document.getElementById('scheduleInterventionBtn');

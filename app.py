@@ -443,7 +443,53 @@ def dashboard():
 @app.route('/check_in')
 @role_required(['admin', 'psychometrician', 'house_worker'])
 def check_in():
+    if session['role'] in ['admin', 'psychometrician', 'house_worker']:
+        return render_template('check_in.html', email=session['email'], active_tab='check-in')
+    else:
+        return render_template('check_in.html', email=session['email'], active_tab='check-in')
+
+# Weekly Schedule page
+@app.route('/weekly_schedule')
+@role_required(['admin', 'psychometrician', 'house_worker'])
+def weekly_schedule_page():
+    # Use a single unified template for weekly schedule and check-in
     return render_template('check_in.html', email=session['email'], active_tab='check-in')
+
+# Weekly Schedule API (Firestore-backed)
+@app.route('/api/schedule', methods=['GET', 'POST'])
+@role_required(['admin', 'psychometrician', 'house_worker'])
+def api_schedule():
+    from flask import jsonify
+    try:
+        schedule_doc_ref = db.collection('meta').document('weekly_schedule')
+        if request.method == 'GET':
+            snapshot = schedule_doc_ref.get()
+            data = snapshot.to_dict() if snapshot.exists else {}
+            # Ensure consistent structure
+            if not isinstance(data, dict):
+                data = {}
+            return jsonify(data)
+        else:
+            body = request.get_json(silent=True) or {}
+            if not isinstance(body, dict):
+                body = {}
+            schedule_doc_ref.set(body)
+            return jsonify({'status': 'ok'})
+    except Exception as e:
+        from flask import jsonify
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/schedule/reset', methods=['POST'])
+@role_required(['admin', 'psychometrician', 'house_worker'])
+def api_schedule_reset():
+    from flask import jsonify
+    try:
+        schedule_doc_ref = db.collection('meta').document('weekly_schedule')
+        # Clearing the stored custom schedule lets the client fall back to defaults
+        schedule_doc_ref.delete()
+        return jsonify({'status': 'ok'})
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/debug/clients')
 @role_required(['admin', 'psychometrician', 'house_worker'])
@@ -1543,6 +1589,30 @@ def map():
 @role_required(['admin', 'psychometrician', 'house_worker'])
 def reports():
     return render_template('reports.html', email=session['email'], active_tab='reports')
+
+@app.route('/clients/<client_id>/update-fields', methods=['POST', 'PATCH'])
+@role_required(['admin', 'psychometrician', 'facilitator'])
+def update_client_fields(client_id):
+    try:
+        payload = request.get_json(force=True, silent=True) or {}
+        if not isinstance(payload, dict) or not payload:
+            return jsonify({'success': False, 'error': 'No fields provided'}), 400
+
+        client_ref = db.collection('clients').document(client_id)
+        doc = client_ref.get()
+        if not doc.exists:
+            return jsonify({'success': False, 'error': 'Client not found'}), 404
+
+        # Normalize potential birth date keys
+        if 'birthday' in payload and 'birthdate' not in payload:
+            payload['birthdate'] = payload.pop('birthday')
+        if 'date_of_birth' in payload and 'birthdate' not in payload:
+            payload['birthdate'] = payload.pop('date_of_birth')
+
+        client_ref.update(payload)
+        return jsonify({'success': True, 'updated': list(payload.keys())})
+    except Exception as e:
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/activity-log')
 @admin_required
@@ -3245,6 +3315,126 @@ def debug_client(client_id):
     except Exception as e:
         from flask import jsonify
         return jsonify({'error': str(e)}), 500
+
+# Daily Activities Schedule Firebase Routes
+@app.route('/api/activities/save', methods=['POST'])
+@role_required(['admin', 'psychometrician', 'house_worker'])
+def save_activities():
+    try:
+        data = request.get_json()
+        activities = data.get('activities', [])
+        user_id = session.get('user_id', session.get('email'))
+        
+        # Save to Firebase
+        activities_ref = db.collection('daily_activities')
+        
+        # Delete existing activities for this user
+        existing_docs = activities_ref.where('user_id', '==', user_id).stream()
+        for doc in existing_docs:
+            doc.reference.delete()
+        
+        # Save new activities
+        batch = db.batch()
+        for activity in activities:
+            doc_ref = activities_ref.document()
+            batch.set(doc_ref, {
+                'user_id': user_id,
+                'time': activity['time'],
+                'day': activity['day'],
+                'activity': activity['activity'],
+                'column': activity['column'],
+                'colspan': activity['colspan'],
+                'created_at': firestore.SERVER_TIMESTAMP,
+                'updated_at': firestore.SERVER_TIMESTAMP
+            })
+        
+        batch.commit()
+        
+        return jsonify({
+            'success': True,
+            'message': 'Activities saved successfully',
+            'count': len(activities)
+        })
+        
+    except Exception as e:
+        print(f"Error saving activities: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Error saving activities: {str(e)}'
+        }), 500
+
+@app.route('/api/activities/load')
+@role_required(['admin', 'psychometrician', 'house_worker'])
+def load_activities():
+    try:
+        user_id = session.get('user_id', session.get('email'))
+        
+        # Load from Firebase
+        activities_ref = db.collection('daily_activities')
+        docs = activities_ref.where('user_id', '==', user_id).order_by('created_at').stream()
+        
+        activities = []
+        for doc in docs:
+            data = doc.to_dict()
+            activities.append({
+                'time': data.get('time'),
+                'day': data.get('day'),
+                'activity': data.get('activity'),
+                'column': data.get('column'),
+                'colspan': data.get('colspan')
+            })
+        
+        return jsonify({
+            'success': True,
+            'activities': activities,
+            'count': len(activities)
+        })
+        
+    except Exception as e:
+        print(f"Error loading activities: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Error loading activities: {str(e)}'
+        }), 500
+
+@app.route('/api/activities/update', methods=['POST'])
+@role_required(['admin', 'psychometrician', 'house_worker'])
+def update_activity():
+    try:
+        data = request.get_json()
+        activity_id = data.get('activity_id')
+        new_activity = data.get('activity')
+        time_slot = data.get('time')
+        day_info = data.get('day')
+        column = data.get('column')
+        colspan = data.get('colspan')
+        
+        user_id = session.get('user_id', session.get('email'))
+        
+        # Update in Firebase
+        activities_ref = db.collection('daily_activities')
+        
+        # Find and update the specific activity
+        docs = activities_ref.where('user_id', '==', user_id).where('time', '==', time_slot).where('column', '==', column).stream()
+        
+        for doc in docs:
+            doc.reference.update({
+                'activity': new_activity,
+                'updated_at': firestore.SERVER_TIMESTAMP
+            })
+            break
+        
+        return jsonify({
+            'success': True,
+            'message': 'Activity updated successfully'
+        })
+        
+    except Exception as e:
+        print(f"Error updating activity: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': f'Error updating activity: {str(e)}'
+        }), 500
 
 if __name__ == '__main__':
     app.run(debug=True)
