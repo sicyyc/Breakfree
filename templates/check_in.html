@@ -1,365 +1,746 @@
-{% extends "base.html" %}
-
-{% block title %}Daily Activities - BreakFree{% endblock %}
-
-{% block page_css %}
-<link rel="stylesheet" href="{{ url_for('static', filename='css/check_in.css') }}">
-{% endblock %}
-
-{% block content %}
+{% extends "base.html" %} {% block title %}Daily Activities - BreakFree{%
+endblock %} {% block page_css %}
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/check_in.css') }}"
+/>
+{% endblock %} {% block content %}
 <div class="main-content">
-    <div class="content-header">
-        <h1><i class="fa-regular fa-calendar-check"></i> Daily Activities Schedule</h1>
-        <p>Complete weekly schedule of activities and routines</p>
+  <!-- Compact Top Toolbar -->
+  <div class="schedule-toolbar">
+    <div class="toolbar-left">
+      <h1>Daily Activities</h1>
     </div>
-
-    <!-- Control Panel -->
-    <div class="control-panel">
-        <div class="search-container">
-            <i class="fa-solid fa-search search-icon"></i>
-            <input type="text" id="activitySearch" placeholder="Search activities..." class="search-input">
-        </div>
-        
-        <div class="control-buttons">
-            <button id="editModeBtn" class="btn btn-secondary">
-                <i class="fa-regular fa-edit"></i> Edit Mode
-            </button>
-            <button id="saveChangesBtn" class="btn btn-primary" style="display: none;">
-                <i class="fa-solid fa-save"></i> Save Changes
-            </button>
-            <button id="printScheduleBtn" class="btn btn-outline">
-                <i class="fa-solid fa-print"></i> Print Schedule
-            </button>
-        </div>
+    <div class="toolbar-right">
+      <div class="btn-group">
+        <button id="editModeBtn" class="btn btn-secondary">
+          <i class="fa-regular fa-edit"></i> Edit Mode
+        </button>
+        <button id="printScheduleBtn" class="btn btn-outline">
+          <i class="fa-solid fa-print"></i> Print Schedule
+        </button>
+      </div>
     </div>
+  </div>
 
-    <!-- Filter Buttons -->
-    <div class="filter-container">
-        <div class="filter-buttons">
-            <button class="filter-btn active" data-filter="all">All Activities</button>
-            <button class="filter-btn" data-filter="meals">Meals</button>
-            <button class="filter-btn" data-filter="activities">Activities</button>
-            <button class="filter-btn" data-filter="cleaning">Cleaning</button>
-            <button class="filter-btn" data-filter="spiritual">Spiritual</button>
-            <button class="filter-btn" data-filter="personal">Personal Care</button>
-        </div>
+  <!-- Floating Save Button (shown only in Edit Mode) -->
+  <button
+    id="saveChangesBtn"
+    class="btn btn-primary floating-save"
+    style="display: none"
+  >
+    <i class="fa-solid fa-save"></i> Save Changes
+  </button>
+
+  <div class="schedule-container">
+    <div class="schedule-table-wrapper">
+      <table class="daily-schedule-table" id="scheduleTable">
+        <thead>
+          <tr>
+            <th class="time-header" style="text-align: left">TIME</th>
+            <th>MONDAY</th>
+            <th>TUESDAY</th>
+            <th>WEDNESDAY</th>
+            <th>THURSDAY</th>
+            <th>FRIDAY</th>
+            <th>SATURDAY</th>
+            <th>SUNDAY</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- 5:00 AM - 5:15 AM -->
+          <tr>
+            <td class="time-cell" rowspan="1">5:00AM-5:15AM</td>
+
+            <td
+              colspan="7"
+              class="activity-cell same-activity"
+              data-activity="WAKING-UP"
+              contenteditable="false"
+            >
+              WAKING-UP
+            </td>
+          </tr>
+
+          <!-- 5:15 AM - 5:30 AM -->
+          <tr>
+            <td class="time-cell" rowspan="1">5:15AM-5:30AM</td>
+
+            <td
+              colspan="7"
+              class="activity-cell same-activity"
+              data-activity="BREAKFAST PREPARATION/EXERCISE"
+              contenteditable="false"
+            >
+              BREAKFAST PREPARATION/EXERCISE
+            </td>
+          </tr>
+
+          <!-- 5:30 AM - 6:00 AM -->
+          <tr>
+            <td class="time-cell" rowspan="1">5:30AM-6:00AM</td>
+            <td class="day-cell">DAY</td>
+            <td
+              colspan="7"
+              class="activity-cell same-activity"
+              data-activity="BREAKFAST"
+              contenteditable="false"
+            >
+              BREAKFAST
+            </td>
+          </tr>
+
+          <!-- 6:00 AM - 6:30 AM -->
+          <tr>
+            <td class="time-cell" rowspan="1">6:00AM-6:30AM</td>
+            <td class="day-cell">DAY</td>
+            <td
+              colspan="7"
+              class="activity-cell same-activity"
+              data-activity="WASHING DISHES & CLEANING OF DINING AREA"
+              contenteditable="false"
+            >
+              WASHING DISHES & CLEANING OF DINING AREA
+            </td>
+          </tr>
+
+          <!-- 6:30 AM - 7:00 AM -->
+          <tr>
+            <td class="time-cell" rowspan="1">6:30AM-7:00AM</td>
+            <td class="day-cell">DAY</td>
+            <td
+              colspan="7"
+              class="activity-cell same-activity"
+              data-activity="BATHING AND LAUNDRY TIME / CLEANING OF SURROUNDINGS"
+              contenteditable="false"
+            >
+              BATHING AND LAUNDRY TIME / CLEANING OF SURROUNDINGS
+            </td>
+          </tr>
+
+          <!-- 7:00 AM - 7:30 AM -->
+          <tr>
+            <td class="time-cell" rowspan="1">7:00AM-7:30AM</td>
+            <td class="day-cell">DAY</td>
+            <td
+              class="activity-cell"
+              data-activity="FLAG CEREMONY"
+              contenteditable="false"
+            >
+              FLAG CEREMONY
+            </td>
+            <td
+              colspan="6"
+              class="activity-cell same-activity"
+              data-activity="MORNING PRAYER, RECITAL OF THE HOLY ROSARY"
+              contenteditable="false"
+            >
+              MORNING PRAYER, RECITAL OF THE HOLY ROSARY
+            </td>
+          </tr>
+
+          <!-- 7:30 AM - 8:00 AM -->
+          <tr>
+            <td class="time-cell" rowspan="1">7:30AM-8:00AM</td>
+            <td class="day-cell">DAY</td>
+            <td
+              colspan="7"
+              class="activity-cell empty-cell"
+              contenteditable="false"
+            ></td>
+          </tr>
+
+          <!-- 8:00 AM - 8:30 AM -->
+          <tr>
+            <td class="time-cell" rowspan="1">8:00AM-8:30AM</td>
+            <td class="day-cell">DAY</td>
+            <td
+              colspan="7"
+              class="activity-cell empty-cell"
+              contenteditable="false"
+            ></td>
+          </tr>
+
+          <!-- 8:30 AM - 9:00 AM -->
+          <tr>
+            <td class="time-cell" rowspan="1">8:30AM-9:00AM</td>
+            <td class="day-cell">DAY</td>
+            <td
+              colspan="7"
+              class="activity-cell same-activity"
+              data-activity="MORNING SESSION"
+              contenteditable="false"
+            >
+              MORNING SESSION
+            </td>
+          </tr>
+
+          <!-- 9:00 AM - 9:30 AM -->
+          <tr>
+            <td class="time-cell" rowspan="1">9:00AM-9:30AM</td>
+            <td class="day-cell">DAY</td>
+            <td
+              class="activity-cell"
+              data-activity="HEALTH & NUTRITION EDUCATION"
+              contenteditable="false"
+            >
+              HEALTH & NUTRITION EDUCATION
+            </td>
+            <td
+              class="activity-cell"
+              data-activity="CASECON/GARDENING"
+              contenteditable="false"
+            >
+              CASECON/GARDENING
+            </td>
+            <td
+              class="activity-cell"
+              data-activity="VISITING DAY (STARTS AT 9AM TO 3PM) / PREPARATION FOR THE HOLY MASS"
+              contenteditable="false"
+            >
+              VISITING DAY (STARTS AT 9AM TO 3PM) / PREPARATION FOR THE HOLY
+              MASS
+            </td>
+            <td
+              class="activity-cell"
+              data-activity="SKILLS TRAINING/LECTURES/GARDENING"
+              contenteditable="false"
+            >
+              SKILLS TRAINING/LECTURES/GARDENING
+            </td>
+            <td
+              class="activity-cell"
+              data-activity="PROJECT MAKING"
+              contenteditable="false"
+            >
+              PROJECT MAKING
+            </td>
+            <td
+              class="activity-cell"
+              data-activity="VISITING DAYS (9:00AM TO 3:00PM) / RECREATIONAL ACTIVITY (INDOOR) Guitar Playing, Board Games, Movie Viewing"
+              contenteditable="false"
+            >
+              VISITING DAYS (9:00AM TO 3:00PM) / RECREATIONAL ACTIVITY (INDOOR)
+              Guitar Playing, Board Games, Movie Viewing
+            </td>
+            <td
+              class="activity-cell"
+              data-activity="GENERAL CLEANING"
+              contenteditable="false"
+            >
+              GENERAL CLEANING
+            </td>
+          </tr>
+
+          <!-- 9:30 AM - 10:00 AM -->
+          <tr>
+            <td class="time-cell" rowspan="1">9:30AM-10:00AM</td>
+            <td class="day-cell">DAY</td>
+            <td
+              class="activity-cell"
+              data-activity="HEALTH & NUTRITION EDUCATION"
+              contenteditable="false"
+            >
+              HEALTH & NUTRITION EDUCATION
+            </td>
+            <td
+              class="activity-cell"
+              data-activity="CASECON/GARDENING"
+              contenteditable="false"
+            >
+              CASECON/GARDENING
+            </td>
+            <td
+              class="activity-cell"
+              data-activity="HOLY MASS"
+              contenteditable="false"
+            >
+              HOLY MASS
+            </td>
+            <td
+              class="activity-cell"
+              data-activity="SKILLS TRAINING/LECTURES/GARDENING"
+              contenteditable="false"
+            >
+              SKILLS TRAINING/LECTURES/GARDENING
+            </td>
+            <td
+              class="activity-cell"
+              data-activity="PROJECT MAKING"
+              contenteditable="false"
+            >
+              PROJECT MAKING
+            </td>
+            <td
+              class="activity-cell"
+              data-activity="RECREATIONAL ACTIVITY (INDOOR) Guitar Playing, Board Games, Movie Viewing"
+              contenteditable="false"
+            >
+              RECREATIONAL ACTIVITY (INDOOR) Guitar Playing, Board Games, Movie
+              Viewing
+            </td>
+            <td
+              class="activity-cell"
+              data-activity="GENERAL CLEANING"
+              contenteditable="false"
+            >
+              GENERAL CLEANING
+            </td>
+          </tr>
+
+          <!-- 10:00 AM - 10:30 AM -->
+          <tr>
+            <td class="time-cell" rowspan="1">10:00AM-10:30AM</td>
+            <td class="day-cell">DAY</td>
+            <td
+              class="activity-cell"
+              data-activity="GARDENING"
+              contenteditable="false"
+            >
+              GARDENING
+            </td>
+            <td
+              colspan="6"
+              class="activity-cell same-activity"
+              data-activity="LUNCH PREPARATION"
+              contenteditable="false"
+            >
+              LUNCH PREPARATION
+            </td>
+          </tr>
+
+          <!-- 10:30 AM - 11:00 AM -->
+          <tr>
+            <td class="time-cell" rowspan="1">10:30AM-11:00AM</td>
+            <td class="day-cell">DAY</td>
+            <td
+              colspan="7"
+              class="activity-cell same-activity"
+              data-activity="LUNCH PREPARATION"
+              contenteditable="false"
+            >
+              LUNCH PREPARATION
+            </td>
+          </tr>
+
+          <!-- 11:00 AM - 11:30 AM -->
+          <tr>
+            <td class="time-cell" rowspan="1">11:00AM-11:30AM</td>
+            <td class="day-cell">DAY</td>
+            <td
+              colspan="7"
+              class="activity-cell same-activity"
+              data-activity="LUNCH PREPARATION"
+              contenteditable="false"
+            >
+              LUNCH PREPARATION
+            </td>
+          </tr>
+
+          <!-- 11:30 AM - 12:00 NN -->
+          <tr>
+            <td class="time-cell" rowspan="1">11:30AM-12:00NN</td>
+            <td class="day-cell">DAY</td>
+            <td
+              colspan="7"
+              class="activity-cell same-activity"
+              data-activity="LUNCH PREPARATION"
+              contenteditable="false"
+            >
+              LUNCH PREPARATION
+            </td>
+          </tr>
+
+          <!-- 12:00 NN - 12:30 PM -->
+          <tr>
+            <td class="time-cell" rowspan="1">12:00NN-12:30PM</td>
+            <td class="day-cell">DAY</td>
+            <td
+              colspan="7"
+              class="activity-cell same-activity"
+              data-activity="LUNCH TIME"
+              contenteditable="false"
+            >
+              LUNCH TIME
+            </td>
+          </tr>
+
+          <!-- 12:30 PM - 1:00 PM -->
+          <tr>
+            <td class="time-cell" rowspan="1">12:30PM-1:00PM</td>
+            <td class="day-cell">DAY</td>
+            <td
+              colspan="7"
+              class="activity-cell same-activity"
+              data-activity="LUNCH TIME"
+              contenteditable="false"
+            >
+              LUNCH TIME
+            </td>
+          </tr>
+
+          <!-- 1:00 PM - 1:30 PM -->
+          <tr>
+            <td class="time-cell" rowspan="1">1:00PM-1:30PM</td>
+            <td class="day-cell">DAY</td>
+            <td
+              colspan="7"
+              class="activity-cell same-activity"
+              data-activity="TV VIEWING/USE OF PRAYER ROOM/NAP TIME"
+              contenteditable="false"
+            >
+              TV VIEWING/USE OF PRAYER ROOM/NAP TIME
+            </td>
+          </tr>
+
+          <!-- 1:30 PM - 2:00 PM -->
+          <tr>
+            <td class="time-cell" rowspan="1">1:30PM-2:00PM</td>
+            <td class="day-cell">DAY</td>
+            <td
+              class="activity-cell"
+              data-activity="PROJECT MAKING"
+              contenteditable="false"
+            >
+              PROJECT MAKING
+            </td>
+            <td
+              colspan="6"
+              class="activity-cell same-activity"
+              data-activity="TV VIEWING/NAP TIME"
+              contenteditable="false"
+            >
+              TV VIEWING/NAP TIME
+            </td>
+          </tr>
+
+          <!-- 2:00 PM - 2:30 PM -->
+          <tr>
+            <td class="time-cell" rowspan="1">2:00PM-2:30PM</td>
+            <td class="day-cell">DAY</td>
+            <td
+              class="activity-cell"
+              data-activity="PROJECT MAKING"
+              contenteditable="false"
+            >
+              PROJECT MAKING
+            </td>
+            <td
+              class="activity-cell"
+              data-activity="PROJECT MAKING"
+              contenteditable="false"
+            >
+              PROJECT MAKING
+            </td>
+            <td
+              class="activity-cell"
+              data-activity="ALS SESSION / PROJECT MAKING"
+              contenteditable="false"
+            >
+              ALS SESSION / PROJECT MAKING
+            </td>
+            <td
+              class="activity-cell"
+              data-activity="GROUP DYNAMICS/MUSIC THERAPY"
+              contenteditable="false"
+            >
+              GROUP DYNAMICS/MUSIC THERAPY
+            </td>
+            <td
+              class="activity-cell"
+              data-activity="PROJECT MAKING"
+              contenteditable="false"
+            >
+              PROJECT MAKING
+            </td>
+            <td
+              class="activity-cell"
+              data-activity="PROJECT MAKING"
+              contenteditable="false"
+            >
+              PROJECT MAKING
+            </td>
+            <td
+              class="activity-cell"
+              data-activity="PROJECT MAKING"
+              contenteditable="false"
+            >
+              PROJECT MAKING
+            </td>
+          </tr>
+
+          <!-- 2:30 PM - 3:00 PM -->
+          <tr>
+            <td class="time-cell" rowspan="1">2:30PM-3:00PM</td>
+            <td class="day-cell">DAY</td>
+            <td
+              colspan="7"
+              class="activity-cell same-activity"
+              data-activity="SNACK TIME"
+              contenteditable="false"
+            >
+              SNACK TIME
+            </td>
+          </tr>
+
+          <!-- 3:00 PM - 3:30 PM -->
+          <tr>
+            <td class="time-cell" rowspan="1">3:00PM-3:30PM</td>
+            <td class="day-cell">DAY</td>
+            <td
+              class="activity-cell"
+              data-activity="SPORTS ACTIVITIES"
+              contenteditable="false"
+            >
+              SPORTS ACTIVITIES
+            </td>
+            <td
+              colspan="6"
+              class="activity-cell same-activity"
+              data-activity="SNACK TIME"
+              contenteditable="false"
+            >
+              SNACK TIME
+            </td>
+          </tr>
+
+          <!-- 3:30 PM - 4:00 PM -->
+          <tr>
+            <td class="time-cell" rowspan="1">3:30PM-4:00PM</td>
+            <td class="day-cell">DAY</td>
+            <td
+              class="activity-cell"
+              data-activity="SPORTS ACTIVITIES"
+              contenteditable="false"
+            >
+              SPORTS ACTIVITIES
+            </td>
+            <td
+              class="activity-cell"
+              data-activity="FITNESS TIME"
+              contenteditable="false"
+            >
+              FITNESS TIME
+            </td>
+            <td
+              class="activity-cell"
+              data-activity="SPORTS ACTIVITIES"
+              contenteditable="false"
+            >
+              SPORTS ACTIVITIES
+            </td>
+            <td
+              class="activity-cell"
+              data-activity="SPORTS ACTIVITIES"
+              contenteditable="false"
+            >
+              SPORTS ACTIVITIES
+            </td>
+            <td
+              colspan="3"
+              class="activity-cell same-activity"
+              data-activity="GARDENING"
+              contenteditable="false"
+            >
+              GARDENING
+            </td>
+          </tr>
+
+          <!-- 4:00 PM - 4:30 PM -->
+          <tr>
+            <td class="time-cell" rowspan="1">4:00PM-4:30PM</td>
+            <td class="day-cell">DAY</td>
+            <td
+              colspan="7"
+              class="activity-cell same-activity"
+              data-activity="READING TIME / JOURNAL WRITING"
+              contenteditable="false"
+            >
+              READING TIME / JOURNAL WRITING
+            </td>
+          </tr>
+
+          <!-- 4:30 PM - 5:00 PM -->
+          <tr>
+            <td class="time-cell" rowspan="1">4:30PM-5:00PM</td>
+            <td class="day-cell">DAY</td>
+            <td
+              colspan="7"
+              class="activity-cell same-activity"
+              data-activity="READING TIME / JOURNAL WRITING"
+              contenteditable="false"
+            >
+              READING TIME / JOURNAL WRITING
+            </td>
+          </tr>
+
+          <!-- 5:00 PM - 5:30 PM -->
+          <tr>
+            <td class="time-cell" rowspan="1">5:00PM-5:30PM</td>
+            <td class="day-cell">DAY</td>
+            <td
+              colspan="7"
+              class="activity-cell same-activity"
+              data-activity="FOOD PREPARATION"
+              contenteditable="false"
+            >
+              FOOD PREPARATION
+            </td>
+          </tr>
+
+          <!-- 5:30 PM - 6:00 PM -->
+          <tr>
+            <td class="time-cell" rowspan="1">5:30PM-6:00PM</td>
+            <td class="day-cell">DAY</td>
+            <td
+              colspan="7"
+              class="activity-cell same-activity"
+              data-activity="FOOD PREPARATION"
+              contenteditable="false"
+            >
+              FOOD PREPARATION
+            </td>
+          </tr>
+
+          <!-- 6:00 PM - 6:30 PM -->
+          <tr>
+            <td class="time-cell" rowspan="1">6:00PM-6:30PM</td>
+            <td class="day-cell">DAY</td>
+            <td
+              colspan="7"
+              class="activity-cell same-activity"
+              data-activity="HYGIENE TIME"
+              contenteditable="false"
+            >
+              HYGIENE TIME
+            </td>
+          </tr>
+
+          <!-- 6:30 PM - 7:00 PM -->
+          <tr>
+            <td class="time-cell" rowspan="1">6:30PM-7:00PM</td>
+            <td class="day-cell">DAY</td>
+            <td
+              colspan="7"
+              class="activity-cell same-activity"
+              data-activity="ANGELUS"
+              contenteditable="false"
+            >
+              ANGELUS
+            </td>
+          </tr>
+
+          <!-- 7:00 PM - 7:30 PM -->
+          <tr>
+            <td class="time-cell" rowspan="1">7:00PM-7:30PM</td>
+            <td class="day-cell">DAY</td>
+            <td
+              colspan="7"
+              class="activity-cell same-activity"
+              data-activity="DINNER"
+              contenteditable="false"
+            >
+              DINNER
+            </td>
+          </tr>
+
+          <!-- 7:30 PM - 8:00 PM -->
+          <tr>
+            <td class="time-cell" rowspan="1">7:30PM-8:00PM</td>
+            <td class="day-cell">DAY</td>
+            <td
+              colspan="7"
+              class="activity-cell empty-cell"
+              contenteditable="false"
+            ></td>
+          </tr>
+
+          <!-- 8:00 PM - 8:30 PM -->
+          <tr>
+            <td class="time-cell" rowspan="1">8:00PM-8:30PM</td>
+            <td class="day-cell">DAY</td>
+            <td
+              colspan="7"
+              class="activity-cell empty-cell"
+              contenteditable="false"
+            ></td>
+          </tr>
+
+          <!-- 8:30 PM - 9:00 PM -->
+          <tr>
+            <td class="time-cell" rowspan="1">8:30PM-9:00PM</td>
+            <td class="day-cell">DAY</td>
+            <td
+              colspan="7"
+              class="activity-cell same-activity"
+              data-activity="CLEANING OF DINING AREA / TV VIEWING"
+              contenteditable="false"
+            >
+              CLEANING OF DINING AREA / TV VIEWING
+            </td>
+          </tr>
+
+          <!-- 9:00 PM -->
+          <tr>
+            <td class="time-cell" rowspan="1">9:00PM</td>
+            <td class="day-cell">DAY</td>
+            <td
+              colspan="7"
+              class="activity-cell same-activity"
+              data-activity="LIGHTS OFF"
+              contenteditable="false"
+            >
+              LIGHTS OFF
+            </td>
+          </tr>
+        </tbody>
+      </table>
     </div>
+  </div>
 
-    <div class="schedule-container">
-        <div class="schedule-table-wrapper">
-            <table class="daily-schedule-table" id="scheduleTable">
-                <thead>
-                    <tr>
-                        <th class="time-header">TIME</th>
-                        <th class="day-header">DAY</th>
-                        <th>MONDAY</th>
-                        <th>TUESDAY</th>
-                        <th>WEDNESDAY</th>
-                        <th>THURSDAY</th>
-                        <th>FRIDAY</th>
-                        <th>SATURDAY</th>
-                        <th>SUNDAY</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <!-- 5:00 AM - 5:15 AM -->
-                    <tr>
-                        <td class="time-cell" rowspan="1">5:00AM-5:15AM</td>
-                        <td class="day-cell">DAY</td>
-                        <td colspan="7" class="activity-cell same-activity" data-activity="WAKING-UP" contenteditable="false">WAKING-UP</td>
-                    </tr>
-
-                    <!-- 5:15 AM - 5:30 AM -->
-                    <tr>
-                        <td class="time-cell" rowspan="1">5:15AM-5:30AM</td>
-                        <td class="day-cell">DAY</td>
-                        <td colspan="7" class="activity-cell same-activity" data-activity="BREAKFAST PREPARATION/EXERCISE" contenteditable="false">BREAKFAST PREPARATION/EXERCISE</td>
-                    </tr>
-
-                    <!-- 5:30 AM - 6:00 AM -->
-                    <tr>
-                        <td class="time-cell" rowspan="1">5:30AM-6:00AM</td>
-                        <td class="day-cell">DAY</td>
-                        <td colspan="7" class="activity-cell same-activity" data-activity="BREAKFAST" contenteditable="false">BREAKFAST</td>
-                    </tr>
-
-                    <!-- 6:00 AM - 6:30 AM -->
-                    <tr>
-                        <td class="time-cell" rowspan="1">6:00AM-6:30AM</td>
-                        <td class="day-cell">DAY</td>
-                        <td colspan="7" class="activity-cell same-activity" data-activity="WASHING DISHES & CLEANING OF DINING AREA" contenteditable="false">WASHING DISHES & CLEANING OF DINING AREA</td>
-                    </tr>
-
-                    <!-- 6:30 AM - 7:00 AM -->
-                    <tr>
-                        <td class="time-cell" rowspan="1">6:30AM-7:00AM</td>
-                        <td class="day-cell">DAY</td>
-                        <td colspan="7" class="activity-cell same-activity" data-activity="BATHING AND LAUNDRY TIME / CLEANING OF SURROUNDINGS" contenteditable="false">BATHING AND LAUNDRY TIME / CLEANING OF SURROUNDINGS</td>
-                    </tr>
-
-                    <!-- 7:00 AM - 7:30 AM -->
-                    <tr>
-                        <td class="time-cell" rowspan="1">7:00AM-7:30AM</td>
-                        <td class="day-cell">DAY</td>
-                        <td class="activity-cell" data-activity="FLAG CEREMONY" contenteditable="false">FLAG CEREMONY</td>
-                        <td colspan="6" class="activity-cell same-activity" data-activity="MORNING PRAYER, RECITAL OF THE HOLY ROSARY" contenteditable="false">MORNING PRAYER, RECITAL OF THE HOLY ROSARY</td>
-                    </tr>
-
-                    <!-- 7:30 AM - 8:00 AM -->
-                    <tr>
-                        <td class="time-cell" rowspan="1">7:30AM-8:00AM</td>
-                        <td class="day-cell">DAY</td>
-                        <td colspan="7" class="activity-cell empty-cell" contenteditable="false"></td>
-                    </tr>
-
-                    <!-- 8:00 AM - 8:30 AM -->
-                    <tr>
-                        <td class="time-cell" rowspan="1">8:00AM-8:30AM</td>
-                        <td class="day-cell">DAY</td>
-                        <td colspan="7" class="activity-cell empty-cell" contenteditable="false"></td>
-                    </tr>
-
-                    <!-- 8:30 AM - 9:00 AM -->
-                    <tr>
-                        <td class="time-cell" rowspan="1">8:30AM-9:00AM</td>
-                        <td class="day-cell">DAY</td>
-                        <td colspan="7" class="activity-cell same-activity" data-activity="MORNING SESSION" contenteditable="false">MORNING SESSION</td>
-                    </tr>
-
-                    <!-- 9:00 AM - 9:30 AM -->
-                    <tr>
-                        <td class="time-cell" rowspan="1">9:00AM-9:30AM</td>
-                        <td class="day-cell">DAY</td>
-                        <td class="activity-cell" data-activity="HEALTH & NUTRITION EDUCATION" contenteditable="false">HEALTH & NUTRITION EDUCATION</td>
-                        <td class="activity-cell" data-activity="CASECON/GARDENING" contenteditable="false">CASECON/GARDENING</td>
-                        <td class="activity-cell" data-activity="VISITING DAY (STARTS AT 9AM TO 3PM) / PREPARATION FOR THE HOLY MASS" contenteditable="false">VISITING DAY (STARTS AT 9AM TO 3PM) / PREPARATION FOR THE HOLY MASS</td>
-                        <td class="activity-cell" data-activity="SKILLS TRAINING/LECTURES/GARDENING" contenteditable="false">SKILLS TRAINING/LECTURES/GARDENING</td>
-                        <td class="activity-cell" data-activity="PROJECT MAKING" contenteditable="false">PROJECT MAKING</td>
-                        <td class="activity-cell" data-activity="VISITING DAYS (9:00AM TO 3:00PM) / RECREATIONAL ACTIVITY (INDOOR) Guitar Playing, Board Games, Movie Viewing" contenteditable="false">VISITING DAYS (9:00AM TO 3:00PM) / RECREATIONAL ACTIVITY (INDOOR) Guitar Playing, Board Games, Movie Viewing</td>
-                        <td class="activity-cell" data-activity="GENERAL CLEANING" contenteditable="false">GENERAL CLEANING</td>
-                    </tr>
-
-                    <!-- 9:30 AM - 10:00 AM -->
-                    <tr>
-                        <td class="time-cell" rowspan="1">9:30AM-10:00AM</td>
-                        <td class="day-cell">DAY</td>
-                        <td class="activity-cell" data-activity="HEALTH & NUTRITION EDUCATION" contenteditable="false">HEALTH & NUTRITION EDUCATION</td>
-                        <td class="activity-cell" data-activity="CASECON/GARDENING" contenteditable="false">CASECON/GARDENING</td>
-                        <td class="activity-cell" data-activity="HOLY MASS" contenteditable="false">HOLY MASS</td>
-                        <td class="activity-cell" data-activity="SKILLS TRAINING/LECTURES/GARDENING" contenteditable="false">SKILLS TRAINING/LECTURES/GARDENING</td>
-                        <td class="activity-cell" data-activity="PROJECT MAKING" contenteditable="false">PROJECT MAKING</td>
-                        <td class="activity-cell" data-activity="RECREATIONAL ACTIVITY (INDOOR) Guitar Playing, Board Games, Movie Viewing" contenteditable="false">RECREATIONAL ACTIVITY (INDOOR) Guitar Playing, Board Games, Movie Viewing</td>
-                        <td class="activity-cell" data-activity="GENERAL CLEANING" contenteditable="false">GENERAL CLEANING</td>
-                    </tr>
-
-                    <!-- 10:00 AM - 10:30 AM -->
-                    <tr>
-                        <td class="time-cell" rowspan="1">10:00AM-10:30AM</td>
-                        <td class="day-cell">DAY</td>
-                        <td class="activity-cell" data-activity="GARDENING" contenteditable="false">GARDENING</td>
-                        <td colspan="6" class="activity-cell same-activity" data-activity="LUNCH PREPARATION" contenteditable="false">LUNCH PREPARATION</td>
-                    </tr>
-
-                    <!-- 10:30 AM - 11:00 AM -->
-                    <tr>
-                        <td class="time-cell" rowspan="1">10:30AM-11:00AM</td>
-                        <td class="day-cell">DAY</td>
-                        <td colspan="7" class="activity-cell same-activity" data-activity="LUNCH PREPARATION" contenteditable="false">LUNCH PREPARATION</td>
-                    </tr>
-
-                    <!-- 11:00 AM - 11:30 AM -->
-                    <tr>
-                        <td class="time-cell" rowspan="1">11:00AM-11:30AM</td>
-                        <td class="day-cell">DAY</td>
-                        <td colspan="7" class="activity-cell same-activity" data-activity="LUNCH PREPARATION" contenteditable="false">LUNCH PREPARATION</td>
-                    </tr>
-
-                    <!-- 11:30 AM - 12:00 NN -->
-                    <tr>
-                        <td class="time-cell" rowspan="1">11:30AM-12:00NN</td>
-                        <td class="day-cell">DAY</td>
-                        <td colspan="7" class="activity-cell same-activity" data-activity="LUNCH PREPARATION" contenteditable="false">LUNCH PREPARATION</td>
-                    </tr>
-
-                    <!-- 12:00 NN - 12:30 PM -->
-                    <tr>
-                        <td class="time-cell" rowspan="1">12:00NN-12:30PM</td>
-                        <td class="day-cell">DAY</td>
-                        <td colspan="7" class="activity-cell same-activity" data-activity="LUNCH TIME" contenteditable="false">LUNCH TIME</td>
-                    </tr>
-
-                    <!-- 12:30 PM - 1:00 PM -->
-                    <tr>
-                        <td class="time-cell" rowspan="1">12:30PM-1:00PM</td>
-                        <td class="day-cell">DAY</td>
-                        <td colspan="7" class="activity-cell same-activity" data-activity="LUNCH TIME" contenteditable="false">LUNCH TIME</td>
-                    </tr>
-
-                    <!-- 1:00 PM - 1:30 PM -->
-                    <tr>
-                        <td class="time-cell" rowspan="1">1:00PM-1:30PM</td>
-                        <td class="day-cell">DAY</td>
-                        <td colspan="7" class="activity-cell same-activity" data-activity="TV VIEWING/USE OF PRAYER ROOM/NAP TIME" contenteditable="false">TV VIEWING/USE OF PRAYER ROOM/NAP TIME</td>
-                    </tr>
-
-                    <!-- 1:30 PM - 2:00 PM -->
-                    <tr>
-                        <td class="time-cell" rowspan="1">1:30PM-2:00PM</td>
-                        <td class="day-cell">DAY</td>
-                        <td class="activity-cell" data-activity="PROJECT MAKING" contenteditable="false">PROJECT MAKING</td>
-                        <td colspan="6" class="activity-cell same-activity" data-activity="TV VIEWING/NAP TIME" contenteditable="false">TV VIEWING/NAP TIME</td>
-                    </tr>
-
-                    <!-- 2:00 PM - 2:30 PM -->
-                    <tr>
-                        <td class="time-cell" rowspan="1">2:00PM-2:30PM</td>
-                        <td class="day-cell">DAY</td>
-                        <td class="activity-cell" data-activity="PROJECT MAKING" contenteditable="false">PROJECT MAKING</td>
-                        <td class="activity-cell" data-activity="PROJECT MAKING" contenteditable="false">PROJECT MAKING</td>
-                        <td class="activity-cell" data-activity="ALS SESSION / PROJECT MAKING" contenteditable="false">ALS SESSION / PROJECT MAKING</td>
-                        <td class="activity-cell" data-activity="GROUP DYNAMICS/MUSIC THERAPY" contenteditable="false">GROUP DYNAMICS/MUSIC THERAPY</td>
-                        <td class="activity-cell" data-activity="PROJECT MAKING" contenteditable="false">PROJECT MAKING</td>
-                        <td class="activity-cell" data-activity="PROJECT MAKING" contenteditable="false">PROJECT MAKING</td>
-                        <td class="activity-cell" data-activity="PROJECT MAKING" contenteditable="false">PROJECT MAKING</td>
-                    </tr>
-
-                    <!-- 2:30 PM - 3:00 PM -->
-                    <tr>
-                        <td class="time-cell" rowspan="1">2:30PM-3:00PM</td>
-                        <td class="day-cell">DAY</td>
-                        <td colspan="7" class="activity-cell same-activity" data-activity="SNACK TIME" contenteditable="false">SNACK TIME</td>
-                    </tr>
-
-                    <!-- 3:00 PM - 3:30 PM -->
-                    <tr>
-                        <td class="time-cell" rowspan="1">3:00PM-3:30PM</td>
-                        <td class="day-cell">DAY</td>
-                        <td class="activity-cell" data-activity="SPORTS ACTIVITIES" contenteditable="false">SPORTS ACTIVITIES</td>
-                        <td colspan="6" class="activity-cell same-activity" data-activity="SNACK TIME" contenteditable="false">SNACK TIME</td>
-                    </tr>
-
-                    <!-- 3:30 PM - 4:00 PM -->
-                    <tr>
-                        <td class="time-cell" rowspan="1">3:30PM-4:00PM</td>
-                        <td class="day-cell">DAY</td>
-                        <td class="activity-cell" data-activity="SPORTS ACTIVITIES" contenteditable="false">SPORTS ACTIVITIES</td>
-                        <td class="activity-cell" data-activity="FITNESS TIME" contenteditable="false">FITNESS TIME</td>
-                        <td class="activity-cell" data-activity="SPORTS ACTIVITIES" contenteditable="false">SPORTS ACTIVITIES</td>
-                        <td class="activity-cell" data-activity="SPORTS ACTIVITIES" contenteditable="false">SPORTS ACTIVITIES</td>
-                        <td colspan="3" class="activity-cell same-activity" data-activity="GARDENING" contenteditable="false">GARDENING</td>
-                    </tr>
-
-                    <!-- 4:00 PM - 4:30 PM -->
-                    <tr>
-                        <td class="time-cell" rowspan="1">4:00PM-4:30PM</td>
-                        <td class="day-cell">DAY</td>
-                        <td colspan="7" class="activity-cell same-activity" data-activity="READING TIME / JOURNAL WRITING" contenteditable="false">READING TIME / JOURNAL WRITING</td>
-                    </tr>
-
-                    <!-- 4:30 PM - 5:00 PM -->
-                    <tr>
-                        <td class="time-cell" rowspan="1">4:30PM-5:00PM</td>
-                        <td class="day-cell">DAY</td>
-                        <td colspan="7" class="activity-cell same-activity" data-activity="READING TIME / JOURNAL WRITING" contenteditable="false">READING TIME / JOURNAL WRITING</td>
-                    </tr>
-
-                    <!-- 5:00 PM - 5:30 PM -->
-                    <tr>
-                        <td class="time-cell" rowspan="1">5:00PM-5:30PM</td>
-                        <td class="day-cell">DAY</td>
-                        <td colspan="7" class="activity-cell same-activity" data-activity="FOOD PREPARATION" contenteditable="false">FOOD PREPARATION</td>
-                    </tr>
-
-                    <!-- 5:30 PM - 6:00 PM -->
-                    <tr>
-                        <td class="time-cell" rowspan="1">5:30PM-6:00PM</td>
-                        <td class="day-cell">DAY</td>
-                        <td colspan="7" class="activity-cell same-activity" data-activity="FOOD PREPARATION" contenteditable="false">FOOD PREPARATION</td>
-                    </tr>
-
-                    <!-- 6:00 PM - 6:30 PM -->
-                    <tr>
-                        <td class="time-cell" rowspan="1">6:00PM-6:30PM</td>
-                        <td class="day-cell">DAY</td>
-                        <td colspan="7" class="activity-cell same-activity" data-activity="HYGIENE TIME" contenteditable="false">HYGIENE TIME</td>
-                    </tr>
-
-                    <!-- 6:30 PM - 7:00 PM -->
-                    <tr>
-                        <td class="time-cell" rowspan="1">6:30PM-7:00PM</td>
-                        <td class="day-cell">DAY</td>
-                        <td colspan="7" class="activity-cell same-activity" data-activity="ANGELUS" contenteditable="false">ANGELUS</td>
-                    </tr>
-
-                    <!-- 7:00 PM - 7:30 PM -->
-                    <tr>
-                        <td class="time-cell" rowspan="1">7:00PM-7:30PM</td>
-                        <td class="day-cell">DAY</td>
-                        <td colspan="7" class="activity-cell same-activity" data-activity="DINNER" contenteditable="false">DINNER</td>
-                    </tr>
-
-                    <!-- 7:30 PM - 8:00 PM -->
-                    <tr>
-                        <td class="time-cell" rowspan="1">7:30PM-8:00PM</td>
-                        <td class="day-cell">DAY</td>
-                        <td colspan="7" class="activity-cell empty-cell" contenteditable="false"></td>
-                    </tr>
-
-                    <!-- 8:00 PM - 8:30 PM -->
-                    <tr>
-                        <td class="time-cell" rowspan="1">8:00PM-8:30PM</td>
-                        <td class="day-cell">DAY</td>
-                        <td colspan="7" class="activity-cell empty-cell" contenteditable="false"></td>
-                    </tr>
-
-                    <!-- 8:30 PM - 9:00 PM -->
-                    <tr>
-                        <td class="time-cell" rowspan="1">8:30PM-9:00PM</td>
-                        <td class="day-cell">DAY</td>
-                        <td colspan="7" class="activity-cell same-activity" data-activity="CLEANING OF DINING AREA / TV VIEWING" contenteditable="false">CLEANING OF DINING AREA / TV VIEWING</td>
-                    </tr>
-
-                    <!-- 9:00 PM -->
-                    <tr>
-                        <td class="time-cell" rowspan="1">9:00PM</td>
-                        <td class="day-cell">DAY</td>
-                        <td colspan="7" class="activity-cell same-activity" data-activity="LIGHTS OFF" contenteditable="false">LIGHTS OFF</td>
-                    </tr>
-                </tbody>
-            </table>
+  <!-- Edit Activity Modal -->
+  <div id="editModal" class="modal" style="display: none">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>Edit Activity</h3>
+        <span class="close">&times;</span>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label for="editActivityText">Activity:</label>
+          <input type="text" id="editActivityText" class="form-control" />
         </div>
-    </div>
-
-    <!-- Edit Activity Modal -->
-    <div id="editModal" class="modal" style="display: none;">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h3>Edit Activity</h3>
-                <span class="close">&times;</span>
-            </div>
-            <div class="modal-body">
-                <div class="form-group">
-                    <label for="editActivityText">Activity:</label>
-                    <input type="text" id="editActivityText" class="form-control">
-                </div>
-                <div class="form-group">
-                    <label for="editActivityTime">Time:</label>
-                    <input type="text" id="editActivityTime" class="form-control" readonly>
-                </div>
-                <div class="form-group">
-                    <label for="editActivityDay">Day:</label>
-                    <input type="text" id="editActivityDay" class="form-control" readonly>
-                </div>
-            </div>
-            <div class="modal-footer">
-                <button id="saveActivityBtn" class="btn btn-primary">Save</button>
-                <button id="cancelEditBtn" class="btn btn-secondary">Cancel</button>
-            </div>
+        <div class="form-group">
+          <label>Days:</label>
+          <div id="editDaysGroup" class="days-group">
+            <label><input type="checkbox" value="MONDAY" /> Monday</label>
+            <label><input type="checkbox" value="TUESDAY" /> Tuesday</label>
+            <label><input type="checkbox" value="WEDNESDAY" /> Wednesday</label>
+            <label><input type="checkbox" value="THURSDAY" /> Thursday</label>
+            <label><input type="checkbox" value="FRIDAY" /> Friday</label>
+            <label><input type="checkbox" value="SATURDAY" /> Saturday</label>
+            <label><input type="checkbox" value="SUNDAY" /> Sunday</label>
+          </div>
         </div>
+        <div class="form-group">
+          <label>Time range:</label>
+          <div class="time-range-group">
+            <select id="editStartTime" class="form-control"></select>
+            <span style="padding: 0 6px">to</span>
+            <select id="editEndTime" class="form-control"></select>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="saveActivityBtn" class="btn btn-primary">Save</button>
+        <button id="cancelEditBtn" class="btn btn-secondary">Cancel</button>
+      </div>
     </div>
+  </div>
 </div>
-{% endblock %}
-
-{% block scripts %}
-<script type="module" src="{{ url_for('static', filename='js/check_in.js') }}"></script>
+{% endblock %} {% block scripts %}
+<script
+  type="module"
+  src="{{ url_for('static', filename='js/check_in.js') }}"
+></script>
 {% endblock %}
