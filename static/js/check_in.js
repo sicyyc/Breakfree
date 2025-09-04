@@ -271,20 +271,25 @@ function toggleEditMode(enabled) {
 function openEditModal(cell) {
     const modal = document.getElementById('editModal');
     const editActivityText = document.getElementById('editActivityText');
-    const editActivityTime = document.getElementById('editActivityTime');
-    const editActivityDay = document.getElementById('editActivityDay');
+    const daysGroup = document.getElementById('editDaysGroup');
+    const startSelect = document.getElementById('editStartTime');
+    const endSelect = document.getElementById('editEndTime');
     
-    if (!modal || !editActivityText || !editActivityText || !editActivityDay) return;
+    if (!modal || !editActivityText || !daysGroup || !startSelect || !endSelect) return;
     
     // Get cell information
     const row = cell.closest('tr');
     const timeCell = row.querySelector('.time-cell');
-    const dayCell = row.querySelector('.day-cell');
     
     // Fill modal with current values
     editActivityText.value = cell.textContent;
-    editActivityTime.value = timeCell.textContent;
-    editActivityDay.value = getDayFromCell(cell);
+    // preselect clicked day
+    const clickedDay = getDayFromCell(cell);
+    Array.from(daysGroup.querySelectorAll('input[type="checkbox"]')).forEach(cb => {
+        cb.checked = (cb.value.toUpperCase() === clickedDay.toUpperCase());
+    });
+    // populate time options from all available time slots
+    populateTimeSelects(startSelect, endSelect, timeCell.textContent);
     
     // Store reference to the cell being edited
     modal.dataset.editingCell = cell.dataset.activity;
@@ -310,11 +315,60 @@ function getDayFromCell(cell) {
     return 'All Days';
 }
 
+function populateTimeSelects(startSelect, endSelect, currentTimeText) {
+    const timeCells = Array.from(document.querySelectorAll('.time-cell')).map(tc => tc.textContent.trim());
+    startSelect.innerHTML = '';
+    endSelect.innerHTML = '';
+    timeCells.forEach(t => {
+        const opt1 = document.createElement('option'); opt1.value = t; opt1.textContent = t; startSelect.appendChild(opt1);
+        const opt2 = document.createElement('option'); opt2.value = t; opt2.textContent = t; endSelect.appendChild(opt2);
+    });
+    // preselect current time as start, next slot as end if exists
+    startSelect.value = currentTimeText.trim();
+    const idx = timeCells.indexOf(currentTimeText.trim());
+    endSelect.value = timeCells[Math.min(idx + 1, timeCells.length - 1)];
+}
+
+function applyEditsToSelection(clickedCell, selectedDays, startTime, endTime, newText) {
+    const table = document.getElementById('scheduleTable');
+    if (!table) return;
+    const headers = Array.from(table.querySelectorAll('thead th'));
+    const dayToColIndex = new Map();
+    headers.forEach((th, idx) => {
+        if (idx >= 1) { // index 0 is TIME
+            dayToColIndex.set(th.textContent.trim().toUpperCase(), idx);
+        }
+    });
+    // compute time index range inclusive
+    const times = Array.from(document.querySelectorAll('.time-cell')).map(tc => tc.textContent.trim());
+    const startIdx = times.indexOf(startTime.trim());
+    const endIdx = times.indexOf(endTime.trim());
+    if (startIdx === -1 || endIdx === -1) return;
+    const [lo, hi] = startIdx <= endIdx ? [startIdx, endIdx] : [endIdx, startIdx];
+    const bodyRows = table.querySelectorAll('tbody tr');
+    for (let r = lo; r <= hi; r++) {
+        const row = bodyRows[r];
+        selectedDays.forEach(day => {
+            const colIndex = dayToColIndex.get(day);
+            if (typeof colIndex === 'number') {
+                const targetCell = row.querySelector(`.activity-cell:nth-child(${colIndex + 1})`);
+                if (targetCell && !targetCell.classList.contains('empty-cell')) {
+                    targetCell.textContent = newText;
+                    targetCell.dataset.activity = newText;
+                }
+            }
+        });
+    }
+}
+
 function addModalEventListeners(modal, cell) {
     const closeBtn = modal.querySelector('.close');
     const saveBtn = document.getElementById('saveActivityBtn');
     const cancelBtn = document.getElementById('cancelEditBtn');
     const editActivityText = document.getElementById('editActivityText');
+    const daysGroup = document.getElementById('editDaysGroup');
+    const startSelect = document.getElementById('editStartTime');
+    const endSelect = document.getElementById('editEndTime');
     
     // Close modal
     closeBtn.onclick = function() {
@@ -324,18 +378,13 @@ function addModalEventListeners(modal, cell) {
     // Save changes
     saveBtn.onclick = async function() {
         const newText = editActivityText.value.trim();
-        if (newText) {
-            cell.textContent = newText;
-            cell.dataset.activity = newText;
-            
-            // Update same-activity cells if this is a merged cell
-            if (cell.colSpan > 1) {
-                updateMergedCells(cell, newText);
-            }
-            
-            modal.style.display = 'none';
-            showNotification('Activity updated successfully!', 'success');
-        }
+        if (!newText) return;
+        const selectedDays = Array.from(daysGroup.querySelectorAll('input[type="checkbox"]:checked')).map(cb => cb.value.toUpperCase());
+        const startTime = startSelect.value;
+        const endTime = endSelect.value;
+        applyEditsToSelection(cell, selectedDays, startTime, endTime, newText);
+        modal.style.display = 'none';
+        showNotification('Activity updated successfully!', 'success');
     };
     
     // Cancel edit
