@@ -260,10 +260,10 @@ function applyMergedCellStyling() {
         
         // Style all spanned rows
         spannedRows.forEach(row => {
-            // Mark the row as merged
-            row.classList.add('merged-row');
-            row.style.width = '100%';
-            row.style.display = 'table-row';
+                    // Mark the row as merged
+        row.classList.add('merged-row');
+        row.style.width = '100%';
+        row.style.display = 'table-row';
             
             // Get all cells in the row
             const allRowCells = Array.from(row.querySelectorAll('td'));
@@ -489,15 +489,15 @@ function mergeActivityAcrossTimeSlots(activityText, activities) {
             const allCells = Array.from(row.querySelectorAll('.activity-cell'));
             
             // Style all cells in the row for consistency
-            allCells.forEach((cell) => {
-                if (cell !== firstCell) {
-                    if (cell.classList.contains('hidden-by-merge')) {
+            allCells.forEach((rowCell) => {
+                if (rowCell !== firstCell) {
+                    if (rowCell.classList.contains('hidden-by-merge')) {
                         // Hidden cells should remain hidden
-                        cell.style.display = 'none';
+                        rowCell.style.display = 'none';
                     } else {
                         // Visible cells that aren't the merged cell should be styled
-                        cell.classList.add('adjacent-to-merge');
-                        cell.style.display = 'table-cell';
+                        rowCell.classList.add('adjacent-to-merge');
+                        rowCell.style.display = 'table-cell';
                     }
                 }
             });
@@ -838,15 +838,15 @@ function toggleEditMode(enabled) {
         
         activityCells.forEach(cell => {
             if (!cell.classList.contains('hidden-by-merge')) {
-                cell.contentEditable = 'false';
-                cell.style.cursor = 'default';
-                cell.title = '';
-                cell.removeAttribute('tabindex');
-                
-                // Remove edit event listeners
-                cell.removeEventListener('focus', onCellFocus);
-                cell.removeEventListener('blur', onCellBlur);
-                cell.removeEventListener('keydown', onCellKeydown);
+            cell.contentEditable = 'false';
+            cell.style.cursor = 'default';
+            cell.title = '';
+            cell.removeAttribute('tabindex');
+            
+            // Remove edit event listeners
+            cell.removeEventListener('focus', onCellFocus);
+            cell.removeEventListener('blur', onCellBlur);
+            cell.removeEventListener('keydown', onCellKeydown);
             }
         });
         
@@ -1060,6 +1060,7 @@ function mergeConsecutiveCells(cells, activityText) {
                     } else {
                         // Visible cells that aren't the merged cell should be styled
                         rowCell.classList.add('adjacent-to-merge');
+                        rowCell.style.display = 'table-cell';
                     }
                 }
             });
