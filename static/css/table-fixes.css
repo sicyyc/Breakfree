@@ -1,0 +1,151 @@
+/* Table Layout Fixes for Daily Activities Schedule */
+
+/* Fix for the half-table appearance with merged cells */
+.daily-schedule-table {
+    width: 100% !important;
+    table-layout: fixed !important;
+    border-collapse: collapse !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    display: table !important;
+    max-width: none !important;
+}
+
+/* Ensure the table takes full width */
+.daily-schedule-table thead,
+.daily-schedule-table tbody,
+.daily-schedule-table tr {
+    width: 100% !important;
+    max-width: 100% !important;
+}
+
+/* Fix table width calculation */
+.schedule-table-wrapper {
+    max-width: 100% !important;
+    overflow-x: auto !important;
+}
+
+/* Ensure rows take full width */
+.daily-schedule-table tr {
+    width: 100% !important;
+    display: table-row !important;
+}
+
+/* Fix cell width distribution */
+.daily-schedule-table td:not(.time-cell) {
+    width: calc((100% - 120px) / 7) !important;
+    box-sizing: border-box !important;
+}
+
+/* Fix day columns width */
+.daily-schedule-table thead th:not(.time-header) {
+    width: calc((100% - 120px) / 7) !important;
+    min-width: calc((100% - 120px) / 7) !important;
+    box-sizing: border-box !important;
+}
+
+/* Ensure consistent width for all day columns */
+.daily-schedule-table tbody td:nth-child(2),
+.daily-schedule-table tbody td:nth-child(3),
+.daily-schedule-table tbody td:nth-child(4),
+.daily-schedule-table tbody td:nth-child(5),
+.daily-schedule-table tbody td:nth-child(6),
+.daily-schedule-table tbody td:nth-child(7),
+.daily-schedule-table tbody td:nth-child(8) {
+    width: calc((100% - 120px) / 7) !important;
+    min-width: calc((100% - 120px) / 7) !important;
+}
+
+/* Center align all activities */
+.daily-schedule-table .activity-cell {
+    text-align: center !important;
+}
+
+/* Fix for non-merged cells to take full column width */
+.daily-schedule-table td[colspan="1"] {
+    width: 100% !important;
+    display: table-cell !important;
+}
+
+/* Time column width */
+.daily-schedule-table .time-cell {
+    width: 120px !important;
+    box-sizing: border-box !important;
+}
+
+/* Merged cell fixes */
+.merged-activity {
+    display: table-cell !important;
+    vertical-align: middle !important;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+/* Fix for merged cells spanning multiple days */
+.merged-activity[colspan] {
+    width: 100% !important;
+    min-width: calc((100% - 120px) * var(--colspan, 1) / 7) !important;
+}
+
+/* Fix for merged cells spanning all days (Monday-Sunday) */
+.merged-activity[colspan="7"] {
+    width: calc(100% - 120px) !important;
+    min-width: calc(100% - 120px) !important;
+}
+
+/* Merged row fixes */
+.merged-row {
+    display: table-row !important;
+    width: 100% !important;
+}
+
+/* Fix for cells in merged rows */
+.merged-row td {
+    display: table-cell !important;
+}
+
+/* Hidden cells */
+.hidden-by-merge {
+    display: none !important;
+    position: absolute !important;
+}
+
+/* Table container */
+.schedule-container, 
+.schedule-table-wrapper {
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: auto !important;
+}
+
+/* Fix for the schedule table wrapper */
+.schedule-table-wrapper {
+    overflow-x: auto !important;
+    width: 100% !important;
+}
+
+/* Fix for the table header */
+.daily-schedule-table thead {
+    width: 100% !important;
+}
+
+/* Fix for the table body */
+.daily-schedule-table tbody {
+    width: 100% !important;
+}
+
+/* Fix for the table header cells */
+.daily-schedule-table th {
+    box-sizing: border-box !important;
+}
+
+/* Fix for adjacent cells */
+.adjacent-to-merge {
+    display: table-cell !important;
+}
+
+/* Force layout recalculation on load */
+.daily-schedule-table.has-merged-cells {
+    display: table !important;
+    width: 100% !important;
+}

@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>{% block title %}BreakFree{% endblock %}</title>
+    <!-- Core CSS (Required for all pages) -->
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/core.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/sidebar.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='css/main-content.css') }}"
+    />
+
+    <!-- Component-specific CSS (Loaded conditionally based on page needs) -->
+    {% block page_css %}{% endblock %}
+
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css"
+    />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,100;0,200;0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,100;1,200;1,300;1,400;1,500;1,600;1,700;1,800;1,900&display=swap"
+      rel="stylesheet"
+    />
+    {% block extra_css %}{% endblock %}
+  </head>
+  <body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+      <div class="sidebar-header">
+        <div class="logo">❤️</div>
+        <div class="branding">
+          <h1>BreakFree</h1>
+          <p>Dashboard</p>
+        </div>
+      </div>
+      <nav class="sidebar-nav">
+        <a
+          href="{{ url_for('dashboard') }}"
+          class="nav-item {% if active_tab == 'dashboard' %}active{% endif %}"
+        >
+          <i class="fa-regular fa-compass"></i>
+          Dashboard
+        </a>
+        <a
+          href="{{ url_for('clients') }}"
+          class="nav-item {% if active_tab == 'clients' %}active{% endif %}"
+        >
+          <i class="fa-regular fa-user"></i>
+          {% if session.role == 'house_worker' %}House Clients{% else
+          %}Clients{% endif %}
+        </a>
+        <a
+          href="{{ url_for('check_in') }}"
+          class="nav-item {% if active_tab == 'check-in' %}active{% endif %}"
+        >
+          <i class="fa-regular fa-calendar-check"></i>
+          Daily Activities
+        </a>
+        {% if session['role'] in ['admin', 'psychometrician'] %}
+        <a
+          href="{{ url_for('interventions') }}"
+          class="nav-item {% if active_tab == 'interventions' %}active{% endif %}"
+        >
+          <i class="fa-regular fa-clipboard"></i>
+          Interventions
+        </a>
+        {% endif %}
+        <a
+          href="{{ url_for('map') }}"
+          class="nav-item {% if active_tab == 'map' %}active{% endif %}"
+        >
+          <i class="fa-regular fa-map"></i>
+          Map
+        </a>
+        {% if session['role'] in ['admin', 'psychometrician', 'house_worker'] %}
+        <a
+          href="{{ url_for('reports') }}"
+          class="nav-item {% if active_tab == 'reports' %}active{% endif %}"
+        >
+          <i class="fa-regular fa-rectangle-list"></i>
+          {% if session.role == 'house_worker' %}House Reports{% else
+          %}Reports{% endif %}
+        </a>
+        {% endif %} {% if session['role'] in ['admin', 'psychometrician',
+        'house_worker'] %}
+        <a
+          href="{{ url_for('settings') }}"
+          class="nav-item {% if active_tab == 'settings' %}active{% endif %}"
+        >
+          <i class="fa-regular fa-sun"></i>
+          Settings
+        </a>
+        {% endif %}
+        {% if session['role'] == 'admin' %}
+        <a
+          href="{{ url_for('activity_log') }}"
+          class="nav-item {% if active_tab == 'activity-log' %}active{% endif %}"
+        >
+          <i class="fa-regular fa-clock"></i>
+          Activity Log
+        </a>
+        {% endif %}
+      </nav>
+      <div class="sidebar-footer">
+        <a href="/logout" class="nav-item">
+          <i class="fa-regular fa-share-from-square"></i>
+          Logout
+        </a>
+      </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main">{% block content %}{% endblock %}</div>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- Firebase SDK -->
+    <script
+      type="module"
+      src="{{ url_for('static', filename='js/firebase-config.js') }}"
+    ></script>
+    <script
+      type="module"
+      src="{{ url_for('static', filename='js/script.js') }}"
+    ></script>
+    {% block scripts %}{% endblock %}
+  </body>
+</html>

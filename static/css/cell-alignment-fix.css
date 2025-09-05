@@ -1,0 +1,83 @@
+/* Cell Alignment Fixes for Daily Activities Schedule */
+
+/* Fix for non-merged cells */
+.activity-cell:not([rowspan]):not([colspan]) {
+    width: calc((100% - 120px) / 7) !important;
+    min-width: calc((100% - 120px) / 7) !important;
+    display: table-cell !important;
+    text-align: center !important;
+}
+
+/* Fix for cells spanning all days */
+.activity-cell[colspan="7"] {
+    width: calc(100% - 120px) !important;
+    min-width: calc(100% - 120px) !important;
+    text-align: center !important;
+}
+
+/* Fix for partial colspan cells */
+.activity-cell[colspan]:not([colspan="7"]) {
+    width: calc((100% - 120px) * var(--colspan, 1) / 7) !important;
+    min-width: calc((100% - 120px) * var(--colspan, 1) / 7) !important;
+    text-align: center !important;
+}
+
+/* Fix for day header alignment */
+.daily-schedule-table thead th {
+    text-align: center !important;
+    width: calc((100% - 120px) / 7) !important;
+}
+
+/* Fix for time header alignment */
+.daily-schedule-table thead th.time-header {
+    width: 120px !important;
+    text-align: left !important;
+}
+
+/* Fix for time cells */
+.daily-schedule-table .time-cell {
+    width: 120px !important;
+    text-align: center !important;
+}
+
+/* Fix for empty cells */
+.activity-cell:empty {
+    display: table-cell !important;
+    width: calc((100% - 120px) / 7) !important;
+}
+
+/* Fix for activity cells with content */
+.activity-cell {
+    vertical-align: middle !important;
+    padding: 8px !important;
+}
+
+/* Fix for the table layout */
+.daily-schedule-table {
+    table-layout: fixed !important;
+    width: 100% !important;
+}
+
+/* Fix for table rows */
+.daily-schedule-table tr {
+    display: table-row !important;
+    width: 100% !important;
+}
+
+/* Fix for table cells */
+.daily-schedule-table td {
+    display: table-cell !important;
+}
+
+/* Fix for the schedule container */
+.schedule-container {
+    width: 100% !important;
+    overflow-x: hidden !important;
+}
+
+/* Fix for the schedule wrapper */
+.schedule-table-wrapper {
+    width: 100% !important;
+    overflow-x: auto !important;
+}
+

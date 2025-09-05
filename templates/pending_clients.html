@@ -1,0 +1,437 @@
+{% extends "base.html" %} {% block title %}Pending Clients - BreakFree{% endblock %} {%
+block page_css %}
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/clients.css') }}"
+/>
+<link
+  rel="stylesheet"
+  href="{{ url_for('static', filename='css/modals.css') }}"
+/>
+{% endblock %} {% block content %}
+<div class="main-header-clients">
+  <div class="actions actions-left">
+    <div class="search-container">
+      <span class="search-icon"><i class="fas fa-search"></i></span>
+      <input type="text" placeholder="Search by name, ID, or barangay..." />
+    </div>
+  </div>
+  <div class="actions actions-right">
+    <a href="{{ url_for('clients') }}" class="btn-secondary">
+      <i class="fas fa-users"></i> All Clients
+    </a>
+  </div>
+</div>
+
+<div class="card">
+  <div class="table-header-bar">
+    <h2 class="table-title">Pending Clients</h2>
+    <div class="header-controls">
+      <div class="filter-input" data-label="Care Type">
+        <select class="filter-select" data-filter="care_type">
+          <option value="all">All</option>
+          <option value="in_house">In House</option>
+          <option value="after_care">After Care</option>
+        </select>
+      </div>
+      <div class="export-dropdown">
+        <button class="btn-export" id="exportDropdownBtn">
+          <i class="fas fa-download"></i> Export
+          <i class="fas fa-chevron-down"></i>
+        </button>
+        <div class="export-menu" id="exportMenu">
+          <button class="export-item" data-export="filtered">
+            Export Filtered Data
+          </button>
+          <button class="export-item" data-export="all">
+            Export All to Excel
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Pagination Info -->
+  {% if pagination.total > 0 %}
+  <div class="pagination-info">
+    <p>
+      Showing {{ pagination.start_record }}-{{ pagination.end_record }} of {{
+      pagination.total }} pending clients
+    </p>
+  </div>
+  {% endif %}
+
+  <div class="table-container">
+    <table class="clients-table">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Age</th>
+          <th>Gender</th>
+          <th>Address</th>
+          <th>Care Type</th>
+          <th>Status</th>
+          <th>Requested By</th>
+          <th>Request Date</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% if clients and clients|length > 0 %} {% for client in clients %}
+        <tr data-client-id="{{ client.id }}">
+          <td>{{ client.clientId or '—' }}</td>
+          <td>{{ client.name }}</td>
+          <td>{{ client.age }}</td>
+          <td>{{ client.gender|title }}</td>
+          <td>{{ client.address }}</td>
+          <td>
+            <span
+              class="care-type-badge care-type-{{ client.care_type }}"
+              data-care-type="{{ client.care_type }}"
+            >
+              {{ client.care_type|replace('_', ' ')|title }}
+            </span>
+          </td>
+          <td>
+            <span class="status-badge status-{{ client.status|lower }}">
+              {% if client.status == 'pending' %}
+                <i class="fas fa-clock"></i> Pending Approval
+              {% elif client.status == 'pending_aftercare' %}
+                <i class="fas fa-arrow-right"></i> Pending Aftercare
+              {% else %}
+                {{ client.status|title }}
+              {% endif %}
+            </span>
+          </td>
+          <td>{{ client.created_by_role|title if client.created_by_role else 'Unknown' }}</td>
+          <td>
+            {% if client.status == 'pending_aftercare' %}
+              {{ client.aftercare_request_date.strftime('%m/%d/%Y') if client.aftercare_request_date else 'N/A' }}
+            {% else %}
+              {{ client.created_at.strftime('%m/%d/%Y') if client.created_at else 'N/A' }}
+            {% endif %}
+          </td>
+          <td class="actions-cell">
+            <a
+              href="{{ url_for('client_profile', client_id=client.id) }}"
+              class="action-btn"
+              title="View Profile"
+            >
+              <i class="fas fa-user"></i>
+            </a>
+            
+            <!-- Different actions based on client status -->
+            {% if client.status == 'pending' %}
+            <!-- Regular pending client approval -->
+            <button
+              class="action-btn approve-btn"
+              title="Approve"
+              onclick="approveClient('{{ client.id }}', '{{ client.name|e }}')"
+            >
+              <i class="fas fa-check"></i>
+            </button>
+            <button
+              class="action-btn reject-btn"
+              title="Reject"
+              onclick="openRejectModal('{{ client.id }}', '{{ client.name|e }}')"
+            >
+              <i class="fas fa-times"></i>
+            </button>
+            {% elif client.status == 'pending_aftercare' %}
+            <!-- Aftercare request approval -->
+            <button
+              class="action-btn approve-btn"
+              title="Approve Aftercare"
+              onclick="approveAftercare('{{ client.id }}', '{{ client.name|e }}')"
+            >
+              <i class="fas fa-check"></i>
+            </button>
+            <button
+              class="action-btn reject-btn"
+              title="Reject Aftercare"
+              onclick="openAftercareRejectModal('{{ client.id }}', '{{ client.name|e }}')"
+            >
+              <i class="fas fa-times"></i>
+            </button>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %} {% else %}
+        <tr>
+          <td colspan="10" class="no-data">
+            <div class="no-data-message">
+              <i class="fas fa-clock"></i>
+              <p>No pending clients found</p>
+              <p class="text-muted">All clients have been reviewed or there are no new submissions.</p>
+            </div>
+          </td>
+        </tr>
+        {% endif %}
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Pagination Controls -->
+  {% if pagination.total_pages > 1 %}
+  <div class="pagination-container">
+    <div class="pagination">
+      <!-- Previous Button -->
+      {% if pagination.has_prev %}
+      <a
+        href="{{ url_for('pending_clients', page=pagination.prev_num) }}"
+        class="pagination-btn"
+      >
+        <i class="fas fa-chevron-left"></i> Previous
+      </a>
+      {% else %}
+      <span class="pagination-btn disabled">
+        <i class="fas fa-chevron-left"></i> Previous
+      </span>
+      {% endif %}
+
+      <!-- Page Numbers -->
+      <div class="pagination-numbers">
+        {% for page_num in range(1, pagination.total_pages + 1) %} {% if
+        page_num == pagination.page %}
+        <span class="pagination-number active">{{ page_num }}</span>
+        {% elif page_num <= 2 or page_num >= pagination.total_pages - 1 or
+        (page_num >= pagination.page - 1 and page_num <= pagination.page + 1) %}
+        <a
+          href="{{ url_for('pending_clients', page=page_num) }}"
+          class="pagination-number"
+          >{{ page_num }}</a
+        >
+        {% elif page_num == 3 and pagination.page > 4 %}
+        <span class="pagination-ellipsis">...</span>
+        {% elif page_num == pagination.total_pages - 2 and pagination.page <
+        pagination.total_pages - 3 %}
+        <span class="pagination-ellipsis">...</span>
+        {% endif %} {% endfor %}
+      </div>
+
+      <!-- Next Button -->
+      {% if pagination.has_next %}
+      <a
+        href="{{ url_for('pending_clients', page=pagination.next_num) }}"
+        class="pagination-btn"
+      >
+        Next <i class="fas fa-chevron-right"></i>
+      </a>
+      {% else %}
+      <span class="pagination-btn disabled">
+        Next <i class="fas fa-chevron-right"></i>
+      </span>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+
+<!-- Reject Confirmation Modal -->
+<div id="rejectModal" class="modal">
+  <div class="modal-content" style="max-width: 480px">
+    <div class="modal-header">
+      <div class="modal-title">
+        <h3>Reject Client</h3>
+        <span class="modal-date">This action cannot be undone.</span>
+      </div>
+      <button class="modal-close" onclick="closeRejectModal()">
+        <i class="fas fa-times"></i>
+      </button>
+    </div>
+    <div class="modal-body">
+      <p id="rejectText">Are you sure you want to reject this client?</p>
+      <div class="form-group">
+        <label for="rejectionReason">Reason for rejection (optional):</label>
+        <textarea 
+          id="rejectionReason" 
+          class="form-control" 
+          rows="3" 
+          placeholder="Please provide a reason for rejection..."
+        ></textarea>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <div class="action-buttons">
+        <button class="btn-secondary" onclick="closeRejectModal()">
+          Cancel
+        </button>
+        <button class="btn-danger" id="confirmRejectBtn">Reject</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+{% endblock %} {% block scripts %}
+<script src="{{ url_for('static', filename='js/clients.js') }}"></script>
+<script>
+  // Export dropdown toggle (UI only)
+  (function () {
+    const btn = document.getElementById("exportDropdownBtn");
+    const menu = document.getElementById("exportMenu");
+    if (btn && menu) {
+      btn.addEventListener("click", function (e) {
+        e.stopPropagation();
+        menu.classList.toggle("active");
+      });
+      document.addEventListener("click", function () {
+        menu.classList.remove("active");
+      });
+    }
+  })();
+
+  let rejectClientId = null;
+  let rejectAftercareClientId = null;
+  
+  function approveClient(id, name) {
+    if (confirm(`Are you sure you want to approve "${name}"?`)) {
+      fetch(`/clients/${id}/approve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      })
+      .then(response => response.json())
+      .then(result => {
+        if (result.success) {
+          const row = document.querySelector(`[data-client-id="${id}"]`);
+          if (row) {
+            row.classList.add("fade-out");
+            setTimeout(() => row.remove(), 300);
+          }
+          alert("Client approved successfully!");
+        } else {
+          alert(result.error || "Failed to approve client");
+        }
+      })
+      .catch(e => {
+        console.error(e);
+        alert("Failed to approve client");
+      });
+    }
+  }
+  
+  function openRejectModal(id, name) {
+    rejectClientId = id;
+    const modal = document.getElementById("rejectModal");
+    const text = document.getElementById("rejectText");
+    if (text) {
+      text.textContent = `Are you sure you want to reject "${name}"?`;
+    }
+    if (modal) {
+      modal.classList.add("active");
+    }
+  }
+  
+  function closeRejectModal() {
+    const modal = document.getElementById("rejectModal");
+    if (modal) {
+      modal.classList.remove("active");
+    }
+    rejectClientId = null;
+    document.getElementById("rejectionReason").value = "";
+  }
+  
+  document
+    .getElementById("confirmRejectBtn")
+    ?.addEventListener("click", async function () {
+      if (!rejectClientId) return;
+      
+      const reason = document.getElementById("rejectionReason").value;
+      
+      try {
+        const response = await fetch(`/clients/${rejectClientId}/reject`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reason: reason })
+        });
+        const result = await response.json();
+        if (result.success) {
+          const row = document.querySelector(`[data-client-id="${rejectClientId}"]`);
+          if (row) {
+            row.classList.add("fade-out");
+            setTimeout(() => row.remove(), 300);
+          }
+          alert("Client rejected successfully!");
+        } else {
+          alert(result.error || "Failed to reject client");
+        }
+      } catch (e) {
+        console.error(e);
+        alert("Failed to reject client");
+             } finally {
+         closeRejectModal();
+       }
+     });
+  
+  // Aftercare approval and rejection functions
+  function approveAftercare(id, name) {
+    if (confirm(`Are you sure you want to approve aftercare for "${name}"?`)) {
+      fetch(`/clients/${id}/approve-aftercare`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+      })
+      .then(response => response.json())
+      .then(result => {
+        if (result.success) {
+          const row = document.querySelector(`[data-client-id="${id}"]`);
+          if (row) {
+            row.classList.add("fade-out");
+            setTimeout(() => row.remove(), 300);
+          }
+          alert("Aftercare approved successfully!");
+        } else {
+          alert(result.error || "Failed to approve aftercare");
+        }
+      })
+      .catch(e => {
+        console.error(e);
+        alert("Failed to approve aftercare");
+      });
+    }
+  }
+  
+  function openAftercareRejectModal(id, name) {
+    rejectAftercareClientId = id;
+    const modal = document.getElementById("rejectModal");
+    const text = document.getElementById("rejectText");
+    if (text) {
+      text.textContent = `Are you sure you want to reject aftercare for "${name}"?`;
+    }
+    if (modal) {
+      modal.classList.add("active");
+    }
+  }
+  
+  document
+    .getElementById("confirmRejectBtn")
+    ?.addEventListener("click", async function () {
+      if (!rejectAftercareClientId) return;
+      
+      const reason = document.getElementById("rejectionReason").value;
+      
+      try {
+        const response = await fetch(`/clients/${rejectAftercareClientId}/reject-aftercare`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ reason: reason })
+        });
+        const result = await response.json();
+        if (result.success) {
+          const row = document.querySelector(`[data-client-id="${rejectAftercareClientId}"]`);
+          if (row) {
+            row.classList.add("fade-out");
+            setTimeout(() => row.remove(), 300);
+          }
+          alert("Aftercare rejected successfully!");
+        } else {
+          alert(result.error || "Failed to reject aftercare");
+        }
+      } catch (e) {
+        console.error(e);
+        alert("Failed to reject aftercare");
+      } finally {
+        closeRejectModal();
+      }
+    });
+</script>
+{% endblock %}

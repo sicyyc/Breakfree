@@ -1,0 +1,544 @@
+/* Add Client Page Styles */
+.add-client-container {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.add-client-form {
+    background: white;
+    border-radius: 16px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    padding: 2rem;
+}
+
+/* Top Section Layout */
+.top-section {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+/* Profile Section */
+.profile-section {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.profile-section h3 {
+    margin-bottom: 1.5rem !important;
+}
+
+.image-upload-container {
+    background: var(--bg-light);
+    border-radius: 12px;
+    padding: 1.5rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.image-upload-area {
+    position: relative;
+    border: 2px dashed var(--border-color);
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    min-height: 280px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: white;
+}
+
+.image-upload-area input[type="file"] {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    opacity: 0;
+    cursor: pointer;
+    z-index: 2;
+}
+
+.image-upload-area:hover {
+    border-color: var(--primary-color);
+    background: var(--primary-color-light);
+}
+
+.upload-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+    z-index: 1;
+}
+
+.upload-placeholder i {
+    font-size: 3.5rem;
+    color: var(--primary-color);
+    margin-bottom: 0.5rem;
+}
+
+.upload-placeholder p {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--text-dark);
+    font-weight: 500;
+}
+
+.upload-placeholder span {
+    font-size: 0.9rem;
+    color: var(--text-muted);
+}
+
+/* Personal Info Section */
+.personal-info-section {
+    height: 100%;
+}
+
+.personal-info-section .form-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+}
+
+/* Main Sections */
+.main-sections {
+    display: flex;
+    flex-direction: column;
+    gap: 1.5rem;
+}
+
+/* Form Sections */
+.form-section {
+    background: var(--bg-light);
+    border-radius: 12px;
+    padding: 1.5rem;
+    transition: all 0.3s ease;
+}
+
+.form-section:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.form-section h3 {
+    margin: 0 0 1.25rem;
+    font-size: 1.1rem;
+    color: var(--text-dark);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding-bottom: 0.75rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.form-section h3 i {
+    color: var(--primary-color);
+    background: var(--primary-color-light);
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+/* Form Grid and Groups */
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.25rem;
+}
+
+.form-group {
+    margin-bottom: 0;
+}
+
+.form-group.full-width {
+    grid-column: 1 / -1;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    color: var(--text-dark);
+    font-weight: 500;
+    font-size: 0.95rem;
+}
+
+/* Form Controls */
+.input-enhanced {
+    width: 100%;
+    padding: 0.875rem 1rem;
+    border: 2px solid var(--border-color);
+    border-radius: 10px;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    background: white;
+}
+
+.input-enhanced:hover {
+    border-color: var(--primary-color-light);
+}
+
+.input-enhanced:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 4px var(--primary-color-light);
+}
+
+/* Image Preview */
+.image-preview {
+    display: none;
+    width: 200px;
+    height: 200px;
+    margin: 1rem auto 0;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 4px solid var(--primary-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+    position: relative;
+    z-index: 3;
+}
+
+.image-preview.has-image {
+    display: block;
+}
+
+.image-preview img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+/* Form Actions */
+.form-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 1rem;
+    margin-top: 1rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--border-color);
+}
+
+.btn-primary,
+.btn-secondary {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.875rem 1.75rem;
+    border-radius: 10px;
+    font-weight: 500;
+    font-size: 0.95rem;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.btn-primary {
+    background: var(--primary-color);
+    color: white;
+    border: none;
+}
+
+.btn-primary:hover {
+    background: var(--primary-color-dark);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.btn-secondary {
+    background: var(--bg-light);
+    color: var(--text-dark);
+    border: 2px solid var(--border-color);
+}
+
+.btn-secondary:hover {
+    background: var(--bg-main);
+    border-color: var(--primary-color);
+    color: var(--primary-color);
+}
+
+/* Helper Classes */
+.input-help {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    margin-top: 0.25rem;
+}
+
+/* Phone Number Inputs */
+input[type="tel"].input-enhanced {
+    letter-spacing: 0.5px;
+    font-family: monospace;
+}
+
+input[type="tel"].input-enhanced::placeholder {
+    letter-spacing: normal;
+    font-family: inherit;
+}
+
+/* Date Inputs */
+input[type="date"].input-enhanced {
+    position: relative;
+    padding-right: 2.5rem;
+}
+
+input[type="date"].input-enhanced::-webkit-calendar-picker-indicator {
+    position: absolute;
+    right: 0.75rem;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    padding: 0.25rem;
+    background-color: transparent;
+    color: var(--primary-color);
+}
+
+input[type="date"].input-enhanced::-webkit-calendar-picker-indicator:hover {
+    opacity: 0.7;
+}
+
+/* Form Validation */
+input:invalid.error {
+    border-color: var(--danger);
+    background-color: var(--danger-light);
+}
+
+.field-error {
+    color: var(--danger);
+    font-size: 0.85rem;
+    margin-top: 0.25rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+/* Date Picker Enhancements */
+.date-picker {
+    position: relative;
+    cursor: pointer;
+}
+
+.date-picker::-webkit-calendar-picker-indicator {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    cursor: pointer;
+    padding: 5px;
+    opacity: 0.7;
+    transition: opacity 0.2s ease;
+}
+
+.date-picker::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+}
+
+.date-picker::-webkit-inner-spin-button {
+    display: none;
+}
+
+/* Middle Initial Input */
+input[name="middleInitial"] {
+    text-transform: uppercase;
+    text-align: center;
+    letter-spacing: 1px;
+}
+
+/* Readonly Age Input */
+input[readonly] {
+    background-color: var(--bg-light);
+    cursor: not-allowed;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+    .add-client-container {
+        padding: 1rem;
+    }
+
+    .add-client-form {
+        padding: 1.5rem;
+    }
+
+    .top-section {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+
+    .profile-section {
+        max-width: 400px;
+        margin: 0 auto;
+    }
+
+    .personal-info-section .form-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .form-section {
+        padding: 1.25rem;
+    }
+
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .btn-primary,
+    .btn-secondary {
+        padding: 0.75rem 1.5rem;
+    }
+
+    .personal-info-section .form-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Animations */
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.form-section {
+    animation: fadeIn 0.3s ease-out;
+}
+
+/* Notification Styles */
+.notification {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 1rem 1.5rem;
+    border-radius: 10px;
+    background: white;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    transform: translateX(120%);
+    transition: transform 0.3s ease;
+    z-index: 1000;
+}
+
+.notification.show {
+    transform: translateX(0);
+}
+
+.notification.success {
+    border-left: 4px solid var(--success);
+}
+
+.notification.error {
+    border-left: 4px solid var(--danger);
+}
+
+.notification i {
+    font-size: 1.25rem;
+}
+
+.notification.success i {
+    color: var(--success);
+}
+
+.notification.error i {
+    color: var(--danger);
+}
+
+/* Form Validation Styles */
+.input-enhanced.error {
+    border-color: var(--danger);
+    background-color: var(--danger-light);
+}
+
+.field-error::before {
+    content: "!";
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    background: var(--danger);
+    color: white;
+    border-radius: 50%;
+    font-size: 0.75rem;
+    font-weight: bold;
+}
+
+/* Loading State Styles */
+.btn-primary:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.fa-spinner {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from {
+        transform: rotate(0deg);
+    }
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Enhanced Hover Effects */
+.form-section:hover h3 i {
+    transform: scale(1.1);
+}
+
+.input-enhanced:hover::placeholder {
+    color: var(--primary-color);
+}
+
+/* Focus States */
+.input-enhanced:focus::placeholder {
+    opacity: 0.7;
+}
+
+.form-section:focus-within {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px var(--primary-color-light);
+}
+
+/* Address Information Section */
+.form-section:has(> h3 > i.fa-map-marker-alt) .form-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.25rem;
+}
+
+/* Readonly Province Input */
+#province {
+    background-color: var(--bg-light);
+    cursor: not-allowed;
+}
+
+/* Responsive adjustments for address section */
+@media (max-width: 1200px) {
+    .form-section:has(> h3 > i.fa-map-marker-alt) .form-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .form-section:has(> h3 > i.fa-map-marker-alt) .form-grid {
+        grid-template-columns: 1fr;
+    }
+} 

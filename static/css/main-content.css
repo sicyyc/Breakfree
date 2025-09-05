@@ -1,0 +1,190 @@
+/* Main Content Styles */
+.main {
+  flex: 1;
+  padding: 2rem;
+  margin-left: 250px;
+  overflow-y: auto;
+  background-color: #f8f6fe;
+}
+
+.main-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.main-header h1 {
+  font-size: 1.8rem;
+  color: #333;
+}
+
+.main-header p {
+  color: #666;
+}
+
+.actions {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.search-container {
+  position: relative;
+}
+
+.search-icon {
+  position: absolute;
+  left: 1rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #666;
+}
+
+.search-container input {
+  padding: 0.8rem 1rem 0.8rem 2.5rem;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  width: 250px;
+  transition: all 0.3s ease;
+}
+
+.search-container input:focus {
+  outline: none;
+  border-color: #4682A9;
+  box-shadow: 0 0 0 3px rgba(70, 130, 169, 0.1);
+}
+
+.btn-primary {
+  padding: 0.8rem 1.5rem;
+  background: #4682A9;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.btn-primary:hover {
+  background: #91C8E4;
+  transform: translateY(-2px);
+}
+
+/* Actions Activity Container - Dashboard Layout */
+.actions-activity-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.actions-activity-container .card {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+  border: 1px solid #e5e7eb;
+}
+
+.actions-activity-container .card h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #333;
+}
+
+/* Calendar size adjustments */
+.actions-activity-container .calendar {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.actions-activity-container .calendar-days {
+  gap: 0.15rem;
+  padding: 0.25rem;
+}
+
+.actions-activity-container .calendar-day {
+  font-size: 0.75rem;
+  padding: 0.15rem;
+  min-height: 28px;
+}
+
+.actions-activity-container .calendar-weekdays {
+  font-size: 0.7rem;
+  padding: 0.5rem 0;
+}
+
+.actions-activity-container .calendar-header h4 {
+  font-size: 1rem;
+}
+
+/* Activity items styling */
+.activity-item {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 0;
+  border-bottom: 1px solid #f0f2f5;
+}
+
+.activity-item:last-child {
+  border-bottom: none;
+}
+
+.activity-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: #E0D9F7;
+  color: #6A5ACD;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+}
+
+.activity-content {
+  flex: 1;
+}
+
+.activity-content h4 {
+  margin: 0 0 0.25rem 0;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #333;
+}
+
+.activity-content p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.activity-time {
+  font-size: 0.75rem;
+  color: #999;
+  white-space: nowrap;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .main {
+    margin-left: 0;
+    padding: 1rem;
+  }
+
+  .search-container input {
+    width: 200px;
+  }
+  
+  .actions-activity-container {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .actions-activity-container .calendar {
+    max-height: 350px;
+  }
+} 

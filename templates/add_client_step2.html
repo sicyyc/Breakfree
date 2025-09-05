@@ -1,0 +1,601 @@
+{% extends "base.html" %}
+{% block title %}Add New Client - Step 2: Rehabilitation Assessment - BreakFree{% endblock %}
+
+{% block page_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/add_client.css') }}" />
+<style>
+  .wizard-progress {
+    background: #f8f9fa;
+    border-radius: 10px;
+    padding: 20px;
+    margin-bottom: 30px;
+  }
+  
+  .progress-steps {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    position: relative;
+  }
+  
+  .progress-steps::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background: #e9ecef;
+    z-index: 1;
+  }
+  
+  .step {
+    position: relative;
+    z-index: 2;
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    color: #6c757d;
+  }
+  
+  .step.active {
+    border-color: #007bff;
+    background: #007bff;
+    color: white;
+  }
+  
+  .step.completed {
+    border-color: #28a745;
+    background: #28a745;
+    color: white;
+  }
+  
+  .step-label {
+    position: absolute;
+    top: 50px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 12px;
+    color: #6c757d;
+    white-space: nowrap;
+    text-align: center;
+  }
+  
+  .step.active .step-label {
+    color: #007bff;
+    font-weight: bold;
+  }
+  
+  .step.completed .step-label {
+    color: #28a745;
+    font-weight: bold;
+  }
+
+  .assessment-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 20px;
+    margin-bottom: 20px;
+  }
+
+  .assessment-card {
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 20px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  }
+
+  .assessment-card h4 {
+    margin-bottom: 15px;
+    color: #495057;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 8px;
+  }
+
+  .text-area-group {
+    margin-bottom: 15px;
+  }
+
+  .text-area-group label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 500;
+    color: #495057;
+  }
+
+  .text-area-group textarea {
+    width: 100%;
+    min-height: 80px;
+    padding: 10px;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    resize: vertical;
+    font-family: inherit;
+  }
+
+  .text-area-group textarea:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+  }
+
+  .radio-group {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 15px;
+  }
+
+  .radio-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .radio-item input[type="radio"] {
+    width: 18px;
+    height: 18px;
+  }
+
+  .summary-section {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+
+  .summary-section h3 {
+    color: #495057;
+    margin-bottom: 15px;
+  }
+
+  .summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 15px;
+  }
+
+  .summary-item {
+    background: white;
+    padding: 15px;
+    border-radius: 6px;
+    border-left: 4px solid #007bff;
+  }
+
+  .summary-item h5 {
+    margin: 0 0 8px 0;
+    color: #495057;
+    font-size: 14px;
+  }
+
+  .summary-item p {
+    margin: 0;
+    color: #6c757d;
+    font-size: 13px;
+  }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="main-header">
+  <div>
+    <h1>Add New Client</h1>
+    <p>Step 2 of 2: Rehabilitation Assessment</p>
+  </div>
+  <div class="actions">
+    <a href="{{ url_for('clients') }}" class="btn-secondary">
+      <i class="fas fa-arrow-left"></i>
+      Back to Clients
+    </a>
+  </div>
+</div>
+
+<!-- Wizard Progress Bar -->
+<div class="wizard-progress">
+  <div class="progress-steps">
+    <div class="step completed">
+      <span>1</span>
+      <div class="step-label">Personal Info</div>
+    </div>
+    <div class="step active">
+      <span>2</span>
+      <div class="step-label">Rehabilitation Assessment</div>
+    </div>
+  </div>
+</div>
+
+<div class="add-client-container">
+  <form id="rehabilitationAssessmentForm" class="add-client-form">
+    <!-- Drug Use Information -->
+    <div class="form-section">
+      <h3><i class="fas fa-exclamation-triangle"></i> Drug Use Information</h3>
+      
+      <div class="assessment-grid">
+        <!-- Drug Use Details -->
+        <div class="assessment-card">
+          <h4><i class="fas fa-pills"></i> Drug Use Details</h4>
+          <div class="text-area-group">
+            <label for="drugUsageAmount">Nakaka ilang gramo at gamit ng ipinagbabawal na gamot:</label>
+            <textarea
+              id="drugUsageAmount"
+              name="drug_usage_amount"
+              placeholder="How many grams and how often do you use illegal drugs"
+              class="input-enhanced"
+              rows="3"
+            ></textarea>
+          </div>
+          <div class="text-area-group">
+            <label for="drugEffects">Mga nararanasan o Epekto tuwing nagamit ng ipinagbabawal na gamot:</label>
+            <textarea
+              id="drugEffects"
+              name="drug_effects"
+              placeholder="Experiences or Effects when using illegal drugs"
+              class="input-enhanced"
+              rows="3"
+            ></textarea>
+          </div>
+          <div class="text-area-group">
+            <label for="drugImpact">Paano nakaapekto ang bawal na gamot sa iyong buhay:</label>
+            <textarea
+              id="drugImpact"
+              name="drug_impact"
+              placeholder="How illegal drugs affected your life"
+              class="input-enhanced"
+              rows="3"
+            ></textarea>
+          </div>
+          <div class="text-area-group">
+            <label for="lastDrugUse">Kailan ang huling pag gamit ng ipinagbabawal na gamot:</label>
+            <textarea
+              id="lastDrugUse"
+              name="last_drug_use"
+              placeholder="When was the last time you used illegal drugs"
+              class="input-enhanced"
+              rows="2"
+            ></textarea>
+          </div>
+        </div>
+
+        <!-- Drug Use History -->
+        <div class="assessment-card">
+          <h4><i class="fas fa-history"></i> Drug Use History</h4>
+          <div class="text-area-group">
+            <label for="firstDrugUse">Kailan at paano unang natuto:</label>
+            <textarea
+              id="firstDrugUse"
+              name="first_drug_use"
+              placeholder="When and how did you first learn/start"
+              class="input-enhanced"
+              rows="3"
+            ></textarea>
+          </div>
+          <div class="text-area-group">
+            <label for="drugTypes">Anu-ano ang mga uri o klase ng ipinagbabawal na gamot na ginagamit:</label>
+            <textarea
+              id="drugTypes"
+              name="drug_types"
+              placeholder="What are the types or classes of prohibited drugs used"
+              class="input-enhanced"
+              rows="3"
+            ></textarea>
+          </div>
+          <div class="text-area-group">
+            <label for="drugReasons">Dahilan ng pag-gamit ng ipinagbabawal na gamot:</label>
+            <textarea
+              id="drugReasons"
+              name="drug_reasons"
+              placeholder="Reason for using prohibited drugs"
+              class="input-enhanced"
+              rows="3"
+            ></textarea>
+          </div>
+          <div class="text-area-group">
+            <label for="drugDuration">Kaano katagal na gumagamit ng ipinagbabawal na gamot:</label>
+            <textarea
+              id="drugDuration"
+              name="drug_duration"
+              placeholder="How long have you been using prohibited drugs"
+              class="input-enhanced"
+              rows="2"
+            ></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Rehabilitation Information -->
+    <div class="form-section">
+      <h3><i class="fas fa-heartbeat"></i> Rehabilitation Information</h3>
+      
+      <div class="assessment-grid">
+        <!-- Rehabilitation Details -->
+        <div class="assessment-card">
+          <h4><i class="fas fa-clipboard-list"></i> Rehabilitation Details</h4>
+          <div class="text-area-group">
+            <label for="whyRehabilitation">Bakit nandito ka ngayon?</label>
+            <textarea
+              id="whyRehabilitation"
+              name="why_rehabilitation"
+              placeholder="Why are you here now?"
+              class="input-enhanced"
+              rows="3"
+            ></textarea>
+          </div>
+          <div class="text-area-group">
+            <label>Ikaw ba ang may kagustuhang magparehab?</label>
+            <div class="radio-group">
+              <div class="radio-item">
+                <input type="radio" id="wantsRehabYes" name="wants_rehabilitation" value="yes">
+                <label for="wantsRehabYes">OO (YES)</label>
+              </div>
+              <div class="radio-item">
+                <input type="radio" id="wantsRehabNo" name="wants_rehabilitation" value="no">
+                <label for="wantsRehabNo">HINDI (NO)</label>
+              </div>
+            </div>
+            <div class="text-area-group">
+              <label for="whoWantsRehab">Kung hindi, Sino?</label>
+              <textarea
+                id="whoWantsRehab"
+                name="who_wants_rehabilitation"
+                placeholder="If not, Who?"
+                class="input-enhanced"
+                rows="2"
+              ></textarea>
+            </div>
+          </div>
+          <div class="text-area-group">
+            <label>Naranasan mo na ba magparehab?</label>
+            <div class="radio-group">
+              <div class="radio-item">
+                <input type="radio" id="previousRehabYes" name="previous_rehabilitation" value="yes">
+                <label for="previousRehabYes">OO (YES)</label>
+              </div>
+              <div class="radio-item">
+                <input type="radio" id="previousRehabNo" name="previous_rehabilitation" value="no">
+                <label for="previousRehabNo">HINDI (NO)</label>
+              </div>
+            </div>
+            <div class="text-area-group">
+              <label for="previousRehabLocation">Kung Oo, Saan:</label>
+              <textarea
+                id="previousRehabLocation"
+                name="previous_rehabilitation_location"
+                placeholder="If Yes, Where:"
+                class="input-enhanced"
+                rows="2"
+              ></textarea>
+            </div>
+          </div>
+        </div>
+
+        <!-- Rehabilitation Goals -->
+        <div class="assessment-card">
+          <h4><i class="fas fa-bullseye"></i> Rehabilitation Goals</h4>
+          <div class="text-area-group">
+            <label for="rehabilitationGoals">Ano ang gusto mong matamo sa planong rehabilitasyon?</label>
+            <textarea
+              id="rehabilitationGoals"
+              name="rehabilitation_goals"
+              placeholder="What do you want to achieve from the rehabilitation plan?"
+              class="input-enhanced"
+              rows="4"
+            ></textarea>
+          </div>
+          <div class="text-area-group">
+            <label for="rehabilitationQuestions">Kung ikaw ay mag gustong itanong, ilahad ang mga gusto mo itanong</label>
+            <textarea
+              id="rehabilitationQuestions"
+              name="rehabilitation_questions"
+              placeholder="If you have questions, state what you want to ask"
+              class="input-enhanced"
+              rows="4"
+            ></textarea>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Summary Section -->
+    <div class="summary-section">
+      <h3><i class="fas fa-info-circle"></i> Client Summary</h3>
+      <div class="summary-grid" id="clientSummary">
+        <!-- Summary will be populated by JavaScript -->
+      </div>
+    </div>
+
+    <!-- Form Actions -->
+    <div class="form-actions">
+      <button type="button" id="prevStep" class="btn-secondary">
+        <i class="fas fa-arrow-left"></i>
+        Previous Step
+      </button>
+      <button type="submit" id="submitForm" class="btn-primary">
+        <i class="fas fa-check"></i>
+        Complete Registration
+      </button>
+    </div>
+  </form>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Load previous form data
+    const previousData = sessionStorage.getItem('clientFormData');
+    if (previousData) {
+        const data = JSON.parse(previousData);
+        Object.keys(data).forEach(key => {
+            const element = document.getElementById(key);
+            if (element) {
+                if (element.type === 'radio') {
+                    const radio = document.querySelector(`input[name="${key}"][value="${data[key]}"]`);
+                    if (radio) radio.checked = true;
+                } else {
+                    element.value = data[key];
+                }
+            }
+        });
+    }
+
+    // Navigation buttons
+    const prevStepBtn = document.getElementById('prevStep');
+    const submitFormBtn = document.getElementById('submitForm');
+
+    prevStepBtn.addEventListener('click', function() {
+        saveFormData();
+        window.location.href = "{{ url_for('add_client') }}";
+    });
+
+    submitFormBtn.addEventListener('click', function(e) {
+        e.preventDefault();
+        if (validateForm()) {
+            saveFormData();
+            submitClientData();
+        }
+    });
+
+    // Populate summary
+    populateSummary();
+
+    function saveFormData() {
+        const form = document.getElementById('rehabilitationAssessmentForm');
+        const formData = new FormData(form);
+        const formDataObj = {};
+        const previousData = JSON.parse(sessionStorage.getItem('clientFormData') || '{}');
+        
+        formData.forEach((value, key) => {
+            formDataObj[key] = value;
+        });
+
+        const mergedData = { ...previousData, ...formDataObj };
+        sessionStorage.setItem('clientFormData', JSON.stringify(mergedData));
+    }
+
+    function validateForm() {
+        const form = document.getElementById('rehabilitationAssessmentForm');
+        const requiredFields = form.querySelectorAll('[required]');
+        let isValid = true;
+
+        requiredFields.forEach(field => {
+            if (!field.value.trim()) {
+                field.classList.add('error');
+                isValid = false;
+            } else {
+                field.classList.remove('error');
+            }
+        });
+
+        return isValid;
+    }
+
+    function populateSummary() {
+        const summaryContainer = document.getElementById('clientSummary');
+        const data = JSON.parse(sessionStorage.getItem('clientFormData') || '{}');
+        
+        const summaryItems = [
+            {
+                title: 'Personal Information',
+                content: `${data.firstName || 'N/A'} ${data.surname || 'N/A'}, ${data.age || 'N/A'} years old, ${data.gender || 'N/A'}`
+            },
+            {
+                title: 'Contact',
+                content: `Phone: ${data.phone || 'N/A'}, Emergency: ${data.emergency_name || 'N/A'}`
+            },
+            {
+                title: 'Address',
+                content: data.address || 'N/A'
+            },
+            {
+                title: 'Civil Status',
+                content: data.civil_status || 'N/A'
+            },
+            {
+                title: 'Education',
+                content: data.education_completed || 'N/A'
+            },
+            {
+                title: 'Last Drug Use',
+                content: data.last_drug_use || 'N/A'
+            }
+        ];
+
+        summaryContainer.innerHTML = summaryItems.map(item => `
+            <div class="summary-item">
+                <h5>${item.title}</h5>
+                <p>${item.content}</p>
+            </div>
+        `).join('');
+    }
+
+    function submitClientData() {
+        const formData = JSON.parse(sessionStorage.getItem('clientFormData') || '{}');
+        
+        // Debug: Log the form data
+        console.log('Submitting form data:', formData);
+        
+        // Create FormData object for submission
+        const submitData = new FormData();
+        
+        // Add all form data
+        Object.keys(formData).forEach(key => {
+            if (Array.isArray(formData[key])) {
+                formData[key].forEach(value => {
+                    submitData.append(key, value);
+                });
+            } else {
+                submitData.append(key, formData[key]);
+            }
+        });
+
+        // Handle image file if it exists in sessionStorage
+        const imageFile = sessionStorage.getItem('clientImageFile');
+        if (imageFile) {
+            // Convert base64 back to file
+            const byteCharacters = atob(imageFile.split(',')[1]);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+                byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            const blob = new Blob([byteArray], { type: 'image/jpeg' });
+            const file = new File([blob], 'client_image.jpg', { type: 'image/jpeg' });
+            submitData.append('image', file);
+        }
+
+        // Submit to the original add_client endpoint
+        fetch("{{ url_for('add_client') }}", {
+            method: 'POST',
+            body: submitData
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            return response.json();
+        })
+        .then(data => {
+            if (data.success) {
+                alert('Client registered successfully!');
+                sessionStorage.removeItem('clientFormData');
+                sessionStorage.removeItem('clientImageFile');
+                window.location.href = "{{ url_for('clients') }}";
+            } else {
+                alert('Error: ' + (data.error || 'Failed to register client'));
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while registering the client. Please try again.');
+        });
+    }
+});
+</script>
+{% endblock %}

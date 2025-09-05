@@ -1,0 +1,51 @@
+:root {
+  /* Primary Colors */
+  --primary-color: #4A90E2;
+  --primary-color-light: #EBF3FC;
+  --primary-color-dark: #2171C7;
+  
+  /* Background Colors */
+  --bg-main: #F5F7FA;
+  --bg-light: #FFFFFF;
+  --bg-dark: #1E2A3B;
+  
+  /* Text Colors */
+  --text-dark: #2C3E50;
+  --text-muted: #7F8C9B;
+  --text-light: #FFFFFF;
+  
+  /* Border Colors */
+  --border-color: #E1E8ED;
+  --border-light: #F0F3F7;
+  
+  /* Status Colors */
+  --success: #2ECC71;
+  --success-light: #E8F8F0;
+  --warning: #F1C40F;
+  --warning-light: #FEF9E7;
+  --danger: #E74C3C;
+  --danger-light: #FDEDEC;
+  --info: #3498DB;
+  --info-light: #EBF5FB;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: 'Poppins', sans-serif;
+}
+
+body {
+  font-family: 'Poppins', sans-serif;
+  background: #f5f7fa;
+  display: flex;
+  min-height: 100vh;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  body {
+    flex-direction: column;
+  }
+} 

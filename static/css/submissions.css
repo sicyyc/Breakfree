@@ -1,0 +1,239 @@
+/* Submissions Section */
+.checkin-submissions {
+    margin-top: 1.5rem;
+}
+
+.submissions-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding: 0 1rem;
+}
+
+.submissions-header h3 {
+    color: var(--text-dark);
+    font-size: 1.1rem;
+    font-weight: 500;
+}
+
+.submissions-filter .filter-select {
+    padding: 0.5rem 2rem 0.5rem 1rem;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: white;
+    color: var(--text-dark);
+    font-size: 0.9rem;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e");
+    background-repeat: no-repeat;
+    background-position: right 0.7rem center;
+    background-size: 1em;
+}
+
+/* Submission Items */
+.submissions-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 0 1rem 1rem;
+}
+
+.submission-item {
+    background: var(--bg-light);
+    border-radius: 12px;
+    padding: 1.25rem;
+    transition: all 0.3s ease;
+}
+
+.submission-item:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+}
+
+.submission-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+/* Client Info */
+.client-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.client-avatar {
+    width: 48px;
+    height: 48px;
+    background: var(--primary-color);
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.avatar-initials {
+    color: white;
+    font-weight: 500;
+    font-size: 1.1rem;
+}
+
+.client-details h4 {
+    color: var(--text-dark);
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+}
+
+.submission-meta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    color: var(--text-muted);
+    font-size: 0.85rem;
+}
+
+.submission-time i,
+.client-id {
+    opacity: 0.7;
+}
+
+/* Mood Indicator */
+.mood-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    padding: 0.5rem 1rem;
+    border-radius: 10px;
+    background: var(--bg-main);
+}
+
+.mood-emoji {
+    font-size: 1.5rem;
+}
+
+.mood-details {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.mood-score {
+    color: var(--text-dark);
+    font-weight: 500;
+    font-size: 0.9rem;
+}
+
+.mood-label {
+    color: var(--text-muted);
+    font-size: 0.8rem;
+}
+
+.mood-excellent {
+    background: var(--success-light);
+    color: var(--success);
+}
+
+.mood-good {
+    background: var(--primary-color-light);
+    color: var(--primary-color);
+}
+
+.mood-okay {
+    background: var(--warning-light);
+    color: var(--warning);
+}
+
+.mood-low {
+    background: var(--danger-light);
+    color: var(--danger);
+}
+
+.mood-critical {
+    background: var(--danger);
+    color: white;
+}
+
+/* Submission Content */
+.submission-content {
+    margin-top: 1rem;
+}
+
+.reflection-text {
+    color: var(--text-dark);
+    font-size: 0.95rem;
+    line-height: 1.5;
+    margin-bottom: 1rem;
+}
+
+/* Engagement Metrics */
+.engagement-metrics {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.metric-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.4rem 0.75rem;
+    border-radius: 6px;
+    font-size: 0.85rem;
+    background: var(--bg-main);
+    color: var(--text-muted);
+}
+
+.metric-badge i {
+    font-size: 0.9rem;
+}
+
+.metric-badge.viewed {
+    background: var(--primary-color-light);
+    color: var(--primary-color);
+}
+
+.metric-badge.on-time {
+    background: var(--success-light);
+    color: var(--success);
+}
+
+.metric-badge.streak {
+    background: var(--warning-light);
+    color: var(--warning);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .submissions-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: flex-start;
+    }
+
+    .submission-header {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .mood-indicator {
+        width: 100%;
+        justify-content: space-between;
+    }
+
+    .client-info {
+        width: 100%;
+    }
+
+    .engagement-metrics {
+        gap: 0.5rem;
+    }
+
+    .metric-badge {
+        font-size: 0.8rem;
+        padding: 0.35rem 0.6rem;
+    }
+} 

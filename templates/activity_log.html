@@ -1,0 +1,234 @@
+{% extends "base.html" %}
+
+{% block title %}Activity Log - BreakFree{% endblock %}
+
+{% block page_css %}
+<link rel="stylesheet" href="{{ url_for('static', filename='css/activity.css') }}" />
+{% endblock %}
+
+{% block content %}
+<div class="activity-log-container">
+  <!-- Header -->
+  <div class="main-header">
+    <div>
+      <h1>Activity Log</h1>
+      <p>Monitor all user activities across the system</p>
+    </div>
+    <div class="actions">
+      <button class="btn-primary" onclick="exportLogs()">
+        <i class="fa-regular fa-download"></i>
+        Export
+      </button>
+    </div>
+  </div>
+
+  <!-- Filters -->
+  <div class="filters-section">
+    <form method="GET" action="{{ url_for('activity_log') }}" class="filters-form">
+      <div class="filter-group">
+        <label for="user">User:</label>
+        <select name="user" id="user" class="filter-select">
+          <option value="">All Users</option>
+          {% for user in users %}
+          <option value="{{ user }}" {% if current_filters.user == user %}selected{% endif %}>
+            {{ user }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <label for="action">Action:</label>
+        <select name="action" id="action" class="filter-select">
+          <option value="">All Actions</option>
+          {% for action in actions %}
+          <option value="{{ action }}" {% if current_filters.action == action %}selected{% endif %}>
+            {{ action }}
+          </option>
+          {% endfor %}
+        </select>
+      </div>
+      
+      <div class="filter-group">
+        <label for="date">Date:</label>
+        <input type="date" name="date" id="date" class="filter-input" 
+               value="{{ current_filters.date }}" placeholder="Select date">
+      </div>
+      
+      <div class="filter-actions">
+        <button type="submit" class="btn-primary">
+          <i class="fa-regular fa-filter"></i>
+          Apply Filters
+        </button>
+        <a href="{{ url_for('activity_log') }}" class="btn-secondary">
+          <i class="fa-regular fa-times"></i>
+          Clear
+        </a>
+      </div>
+    </form>
+  </div>
+
+  <!-- Stats Cards -->
+  <div class="stats-section">
+    <div class="stat-card">
+      <div class="stat-icon">
+        <i class="fa-regular fa-users"></i>
+      </div>
+      <div class="stat-content">
+        <h3>{{ pagination.total }}</h3>
+        <p>Total Activities</p>
+      </div>
+    </div>
+    
+    <div class="stat-card">
+      <div class="stat-icon">
+        <i class="fa-regular fa-user"></i>
+      </div>
+      <div class="stat-content">
+        <h3>{{ users|length }}</h3>
+        <p>Active Users</p>
+      </div>
+    </div>
+    
+    <div class="stat-card">
+      <div class="stat-icon">
+        <i class="fa-regular fa-clock"></i>
+      </div>
+      <div class="stat-content">
+        <h3>{{ actions|length }}</h3>
+        <p>Action Types</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Activity Log Table -->
+  <div class="table-container">
+    {% if logs %}
+    <table class="activity-table">
+      <thead>
+        <tr>
+          <th>User</th>
+          <th>Action</th>
+          <th>Details</th>
+          <th>Target</th>
+          <th>Timestamp</th>
+          <th>IP Address</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for log in logs %}
+        <tr class="activity-row">
+          <td class="user-cell">
+            <div class="user-info">
+              <div class="user-avatar">
+                <i class="fa-regular fa-user"></i>
+              </div>
+              <div class="user-details">
+                <div class="user-email">{{ log.user_email }}</div>
+                <div class="user-role">{{ log.user_role|title }}</div>
+              </div>
+            </div>
+          </td>
+          <td class="action-cell">
+            <span class="action-badge action-{{ log.action|lower|replace(' ', '-') }}">
+              {{ log.action }}
+            </span>
+          </td>
+          <td class="details-cell">
+            {% if log.details %}
+            <div class="details-text">{{ log.details }}</div>
+            {% else %}
+            <span class="no-details">No details</span>
+            {% endif %}
+          </td>
+          <td class="target-cell">
+            {% if log.target_id and log.target_type %}
+            <div class="target-info">
+              <span class="target-type">{{ log.target_type|title }}</span>
+              <span class="target-id">{{ log.target_id }}</span>
+            </div>
+            {% else %}
+            <span class="no-target">No target</span>
+            {% endif %}
+          </td>
+          <td class="timestamp-cell">
+            <div class="timestamp-info">
+              <div class="timestamp-date">
+                {{ log.timestamp.strftime('%B %d, %Y') if log.timestamp else 'Unknown' }}
+              </div>
+              <div class="timestamp-time">
+                {{ log.timestamp.strftime('%I:%M %p') if log.timestamp else '' }}
+              </div>
+            </div>
+          </td>
+          <td class="ip-cell">
+            {% if log.ip_address %}
+            <span class="ip-address">{{ log.ip_address }}</span>
+            {% else %}
+            <span class="no-ip">Unknown</span>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+      <div class="empty-icon">
+        <i class="fa-regular fa-clock"></i>
+      </div>
+      <h3>No Activity Found</h3>
+      <p>No activity logs match your current filters.</p>
+      <a href="{{ url_for('activity_log') }}" class="btn-primary">Clear Filters</a>
+    </div>
+    {% endif %}
+  </div>
+
+  <!-- Pagination -->
+  {% if pagination.total_pages > 1 %}
+  <div class="pagination-container">
+    <div class="pagination-info">
+      Showing {{ pagination.start_record }} to {{ pagination.end_record }} of {{ pagination.total }} activities
+    </div>
+    
+    <div class="pagination-controls">
+      {% if pagination.has_prev %}
+      <a href="{{ url_for('activity_log', page=pagination.prev_num, user=current_filters.user, action=current_filters.action, date=current_filters.date) }}" 
+         class="pagination-btn">
+        <i class="fa-regular fa-chevron-left"></i>
+        Previous
+      </a>
+      {% endif %}
+      
+      <div class="page-numbers">
+        {% for page_num in range(1, pagination.total_pages + 1) %}
+        {% if page_num == pagination.page %}
+        <span class="page-number active">{{ page_num }}</span>
+        {% elif page_num <= 3 or page_num > pagination.total_pages - 3 or (page_num >= pagination.page - 1 and page_num <= pagination.page + 1) %}
+        <a href="{{ url_for('activity_log', page=page_num, user=current_filters.user, action=current_filters.action, date=current_filters.date) }}" 
+           class="page-number">{{ page_num }}</a>
+        {% elif page_num == 4 and pagination.page > 6 %}
+        <span class="page-ellipsis">...</span>
+        {% elif page_num == pagination.total_pages - 3 and pagination.page < pagination.total_pages - 5 %}
+        <span class="page-ellipsis">...</span>
+        {% endif %}
+        {% endfor %}
+      </div>
+      
+      {% if pagination.has_next %}
+      <a href="{{ url_for('activity_log', page=pagination.next_num, user=current_filters.user, action=current_filters.action, date=current_filters.date) }}" 
+         class="pagination-btn">
+        Next
+        <i class="fa-regular fa-chevron-right"></i>
+      </a>
+      {% endif %}
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/activity.js') }}"></script>
+{% endblock %}
+

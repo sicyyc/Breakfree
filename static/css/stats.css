@@ -1,0 +1,127 @@
+/* Stats Grid */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+}
+
+.card {
+  background: white;
+  padding: 1.5rem;
+  border-radius: 12px;
+}
+
+.card-blue {
+  background: linear-gradient(135deg, #4682A9 0%, #91C8E4 100%);
+  color: white;
+}
+
+.card-indigo {
+  background: linear-gradient(135deg, #4B0082 0%, #9370DB 100%);
+  color: white;
+}
+
+.card h2 {
+  font-size: 2rem;
+  margin-top: 0.5rem;
+}
+
+/* Triangle Layout Stats */
+.triangle-layout {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1.5rem;
+}
+
+.triangle-layout .top-stat {
+  width: 100%;
+  max-width: 300px;
+}
+
+.triangle-layout .stat-row {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  width: 100%;
+}
+
+.triangle-layout .bottom-stat {
+  width: 100%;
+  max-width: 250px;
+}
+
+.triangle-layout .stat-card {
+  background: var(--card-bg-secondary, #f8f9fa);
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.triangle-layout .stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.triangle-layout .top-stat .stat-card {
+  background: var(--primary-gradient, linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%));
+  color: white;
+}
+
+.triangle-layout .top-stat .stat-value {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0.5rem 0;
+}
+
+.triangle-layout .bottom-stat .stat-card {
+  background: var(--card-bg-secondary, #f8f9fa);
+  border: 1px solid var(--border-color, #e9ecef);
+}
+
+.triangle-layout h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.triangle-layout .stat-value {
+  font-size: 1.75rem;
+  font-weight: 600;
+  margin: 0.5rem 0;
+}
+
+.triangle-layout .stat-label {
+  font-size: 0.875rem;
+  color: var(--text-muted, #6c757d);
+}
+
+.triangle-layout .top-stat .stat-label {
+  color: rgba(255, 255, 255, 0.9);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .triangle-layout {
+    gap: 1rem;
+    padding: 1rem;
+  }
+
+  .triangle-layout .stat-row {
+    flex-direction: column;
+    align-items: center;
+    gap: 1rem;
+  }
+
+  .triangle-layout .top-stat,
+  .triangle-layout .bottom-stat {
+    max-width: 100%;
+  }
+} 

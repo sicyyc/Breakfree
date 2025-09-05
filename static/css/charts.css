@@ -1,0 +1,65 @@
+/* Chart Containers */
+.chart-container {
+  display: grid;
+  grid-template-columns: 2fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.weekly-progress {
+  height: 300px;
+}
+
+.task-distribution {
+  height: 300px;
+  position: relative;
+  text-align: center;
+}
+
+.task-distribution canvas {
+  margin: 0 auto;
+}
+
+.chart-center {
+  position: absolute;
+  top: 49%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #4682A9;
+}
+
+/* Chart Legend */
+.chart-legend {
+  display: flex;
+  gap: 1rem;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.legend-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .chart-container {
+    grid-template-columns: 1fr;
+  }
+  
+  .weekly-progress,
+  .task-distribution {
+    height: 250px;
+  }
+} 
