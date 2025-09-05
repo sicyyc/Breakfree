@@ -47,9 +47,8 @@ function initializeSchedule() {
     const emptyCells = document.querySelectorAll('.activity-cell.empty-cell');
     console.log(`Found ${activityCells.length} activity cells (${emptyCells.length} empty)`);
     
-    // Load activities from Firebase
-    console.log('Loading activities from Firebase...');
-    loadActivitiesFromFirebase();
+    // Activities are now static in the HTML template
+    console.log('Using static activities from template...');
     
     // Add search functionality
     addSearchBar();
@@ -86,120 +85,7 @@ function initializeSchedule() {
     console.log('=== Schedule initialization completed ===');
 }
 
-async function loadActivitiesFromFirebase() {
-    try {
-        console.log('Fetching activities from server...');
-        showLoadingIndicator();
-        
-        const response = await fetch('/api/activities/load', {
-            headers: { 
-                'X-Requested-With': 'XMLHttpRequest',
-                'Accept': 'application/json'
-            },
-            credentials: 'include'
-          });
-        
-        console.log('Load response status:', response.status);
-        console.log('Load response headers:', Object.fromEntries(response.headers.entries()));
-        
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('Server error response:', errorText);
-            throw new Error(`HTTP error! status: ${response.status} - ${errorText.slice(0, 200)}...`);
-        }
-        
-        // Attempt to parse JSON; handle redirects or HTML errors
-        const contentType = response.headers.get('content-type') || '';
-        if (response.redirected) {
-            console.error('Response was redirected');
-            throw new Error('You were redirected. Please log in again.');
-        }
-        if (!contentType.includes('application/json')) {
-            const text = await response.text();
-            console.error('Non-JSON response:', text);
-            throw new Error(`Unexpected response while loading: ${text.slice(0, 200)}...`);
-        }
-        const data = await response.json();
-        console.log('Received data from server:', data);
-        
-        if (data.success && data.activities && data.activities.length > 0) {
-            // Load saved activities from Firebase
-            console.log('Loading saved activities:', data.activities);
-            loadSavedActivities(data.activities);
-            showNotification(`Activities loaded from database (${data.activities.length} activities)`, 'success');
-        } else if (data.success && (!data.activities || data.activities.length === 0)) {
-            // No saved activities found
-            console.log('No saved activities found, using defaults');
-            showNotification('No saved activities found, using default schedule', 'info');
-        } else {
-            // Handle specific error types
-            if (data.error_type === 'index_error') {
-                showNotification('Database configuration issue. Please contact administrator.', 'error');
-            } else if (data.error_type === 'permission_error') {
-                showNotification('Access denied. Please check your permissions.', 'error');
-            } else {
-                throw new Error(data.message || 'Failed to load activities');
-            }
-        }
-        
-        hideLoadingIndicator();
-    } catch (error) {
-        console.error('Error loading activities:', error);
-        hideLoadingIndicator();
-        const errorMessage = error.message || 'Unknown error occurred while loading activities';
-        showNotification(`Error loading activities: ${errorMessage}`, 'error');
-    }
-}
 
-function loadSavedActivities(activities) {
-    console.log('Starting to load saved activities:', activities.length);
-    
-    // Store original text for all cells first
-    const allCells = document.querySelectorAll('.activity-cell');
-    allCells.forEach(cell => {
-        if (!cell.dataset.originalText) {
-            cell.dataset.originalText = cell.textContent.trim();
-        }
-    });
-    
-    // Group activities by activity text to detect merges
-    const activityGroups = {};
-    activities.forEach(activity => {
-        const key = activity.activity.trim();
-        if (!activityGroups[key]) {
-            activityGroups[key] = [];
-        }
-        activityGroups[key].push(activity);
-    });
-    
-    console.log('Activity groups for merging:', activityGroups);
-    
-    // Process each activity group
-    Object.keys(activityGroups).forEach(activityText => {
-        const group = activityGroups[activityText];
-        console.log(`Processing group for "${activityText}":`, group);
-        
-        // Check if this activity spans multiple time slots
-        const timeSlots = group.map(a => a.time.trim());
-        const uniqueTimeSlots = [...new Set(timeSlots)];
-        
-        if (uniqueTimeSlots.length > 1) {
-            // This activity spans multiple time slots - merge them
-            console.log(`Merging activity "${activityText}" across time slots:`, uniqueTimeSlots);
-            mergeActivityAcrossTimeSlots(activityText, group);
-        } else {
-            // Single time slot - load normally
-            group.forEach(activity => {
-                loadSingleActivity(activity);
-            });
-        }
-    });
-    
-    console.log('Finished loading saved activities');
-    
-    // Apply styling to existing merged cells and their adjacent cells
-    applyMergedCellStyling();
-}
 
 function applyMergedCellStyling() {
     console.log('Applying styling to existing merged cells');
@@ -234,10 +120,6 @@ function applyMergedCellStyling() {
         const colspan = cell.colSpan || 1;
         cell.setAttribute('colspan', colspan);
         cell.style.setProperty('--colspan', colspan);
-        
-        // Ensure proper display properties
-        cell.style.display = 'table-cell';
-        cell.style.width = '100%';
     });
     
     // Second pass: style all rows and adjacent cells
@@ -260,10 +142,8 @@ function applyMergedCellStyling() {
         
         // Style all spanned rows
         spannedRows.forEach(row => {
-                    // Mark the row as merged
-        row.classList.add('merged-row');
-        row.style.width = '100%';
-        row.style.display = 'table-row';
+            // Mark the row as merged
+            row.classList.add('merged-row');
             
             // Get all cells in the row
             const allRowCells = Array.from(row.querySelectorAll('td'));
@@ -275,7 +155,6 @@ function applyMergedCellStyling() {
                         if (!rowCell.classList.contains('hidden-by-merge')) {
                             // This is a visible activity cell that's not merged
                             rowCell.classList.add('adjacent-to-merge');
-                            rowCell.style.display = 'table-cell';
                         }
                     }
                 }
@@ -290,263 +169,14 @@ function applyMergedCellStyling() {
         emptyCells.forEach(cell => {
             if (!cell.classList.contains('hidden-by-merge')) {
                 cell.classList.add('adjacent-to-merge');
-                cell.style.display = 'table-cell';
             }
         });
-    });
-    
-    // Fix for full-width merged cells (Monday-Sunday)
-    const fullWidthCells = document.querySelectorAll('.activity-cell[colspan="7"]');
-    fullWidthCells.forEach(cell => {
-        cell.style.width = 'calc(100% - 120px)';
-        cell.style.minWidth = 'calc(100% - 120px)';
     });
     
     console.log('Applied styling to existing merged cells');
 }
 
-function loadSingleActivity(activity) {
-    try {
-        console.log(`Loading single activity:`, activity);
-        
-        // Find the row by time
-        const timeCells = document.querySelectorAll('.time-cell');
-        let targetRow = null;
-        
-        for (let timeCell of timeCells) {
-            const timeText = timeCell.textContent.trim();
-            if (timeText === activity.time.trim()) {
-                targetRow = timeCell.closest('tr');
-                break;
-            }
-        }
-        
-        if (!targetRow) {
-            console.warn(`No row found for time: ${activity.time}`);
-            return;
-        }
-        
-        // Find all activity cells in the row
-        const activityCells = Array.from(targetRow.querySelectorAll('.activity-cell'));
-        console.log(`Found ${activityCells.length} activity cells in row for time ${activity.time}`);
-        
-        // For cells that span across all days (colspan=7), use the first activity cell
-        let targetCell;
-        if (activity.colspan >= 7 || activity.day === 'ALL') {
-            targetCell = activityCells[0]; // First activity cell
-            
-            // Set colspan for full width
-            targetCell.setAttribute('colspan', '7');
-            targetCell.style.width = 'calc(100% - 120px)';
-            targetCell.style.minWidth = 'calc(100% - 120px)';
-        } else {
-            // For specific day columns, calculate the correct index
-            const columnIndex = activity.column - 1;
-            targetCell = activityCells[columnIndex];
-            
-            // Set explicit width for this column
-            targetCell.style.width = 'calc((100% - 120px) / 7)';
-            targetCell.style.minWidth = 'calc((100% - 120px) / 7)';
-        }
-        
-        if (!targetCell) {
-            console.warn(`No cell found at column ${activity.column} for time ${activity.time}`);
-            return;
-        }
-        
-        if (targetCell.classList.contains('empty-cell')) {
-            console.warn(`Cannot update empty cell at column ${activity.column} for time ${activity.time}`);
-            return;
-        }
-        
-        console.log('Updating cell:', {
-            time: activity.time,
-            day: activity.day,
-            activity: activity.activity,
-            column: activity.column,
-            element: targetCell
-        });
-        
-        // Update the cell
-        targetCell.textContent = activity.activity;
-        targetCell.dataset.activity = activity.activity;
-        targetCell.dataset.originalText = activity.activity;
-        
-        // Ensure proper display
-        targetCell.style.display = 'table-cell';
-        targetCell.style.textAlign = 'center';
-        
-        // Add appropriate styling class
-        updateActivityStyling(targetCell);
-        
-    } catch (error) {
-        console.error('Error loading single activity:', activity, error);
-    }
-}
 
-function mergeActivityAcrossTimeSlots(activityText, activities) {
-    try {
-        console.log(`Merging "${activityText}" across time slots:`, activities);
-        
-        // Sort activities by time to get proper order
-        const sortedActivities = activities.sort((a, b) => {
-            return parseTimeToMinutes(a.time) - parseTimeToMinutes(b.time);
-        });
-        
-        // Find all rows that contain this activity
-        const timeCells = document.querySelectorAll('.time-cell');
-        const targetRows = [];
-        
-        sortedActivities.forEach(activity => {
-            for (let timeCell of timeCells) {
-                const timeText = timeCell.textContent.trim();
-                if (timeText === activity.time.trim()) {
-                    const row = timeCell.closest('tr');
-                    if (row) {
-                        targetRows.push({
-                            row: row,
-                            time: timeText,
-                            activity: activity
-                        });
-                    }
-                    break;
-                }
-            }
-        });
-        
-        if (targetRows.length < 2) {
-            console.log('Not enough rows to merge, loading as single activity');
-            loadSingleActivity(sortedActivities[0]);
-            return;
-        }
-        
-        console.log(`Found ${targetRows.length} rows to merge`);
-        
-        // Determine the column span and position
-        const firstActivity = sortedActivities[0];
-        const colspan = firstActivity.colspan || 7;
-        const columnIndex = firstActivity.column - 1;
-        
-        // Get the first row and its cells
-        const firstRow = targetRows[0].row;
-        const firstRowCells = Array.from(firstRow.querySelectorAll('.activity-cell'));
-        const firstCell = firstRowCells[columnIndex] || firstRowCells[0];
-        
-        if (!firstCell) {
-            console.error('Could not find first cell for merging');
-            return;
-        }
-        
-        // Update the first cell with the activity text and set rowspan
-        firstCell.textContent = activityText;
-        firstCell.dataset.activity = activityText;
-        firstCell.dataset.originalText = activityText;
-        firstCell.setAttribute('rowspan', targetRows.length);
-        firstCell.classList.add('merged-activity');
-        
-        // Set colspan attribute and CSS variable for width calculation
-        firstCell.setAttribute('colspan', colspan);
-        firstCell.style.setProperty('--colspan', colspan);
-        
-        // Ensure the cell has proper display properties
-        firstCell.style.display = 'table-cell';
-        firstCell.style.verticalAlign = 'middle';
-        
-        // Set width based on colspan
-        if (colspan === 7) {
-            // Full width (Monday-Sunday)
-            firstCell.style.width = 'calc(100% - 120px)';
-            firstCell.style.minWidth = 'calc(100% - 120px)';
-        } else {
-            // Partial width based on colspan
-            firstCell.style.width = `calc((100% - 120px) * ${colspan} / 7)`;
-            firstCell.style.minWidth = `calc((100% - 120px) * ${colspan} / 7)`;
-        }
-        
-        // Hide the corresponding cells in subsequent rows
-        for (let i = 1; i < targetRows.length; i++) {
-            const row = targetRows[i].row;
-            const rowCells = Array.from(row.querySelectorAll('.activity-cell'));
-            const cellToHide = rowCells[columnIndex] || rowCells[0];
-            
-            if (cellToHide) {
-                cellToHide.style.display = 'none';
-                cellToHide.classList.add('hidden-by-merge');
-                
-                // Store reference to the merged cell
-                cellToHide.dataset.mergedWithCell = firstCell.dataset.activity;
-            }
-        }
-        
-        // Style adjacent cells in the same rows to maintain visual consistency
-        targetRows.forEach(({ row }) => {
-            // Mark the entire row as merged
-            row.classList.add('merged-row');
-            row.style.display = 'table-row';
-            row.style.width = '100%';
-            
-            // Get all cells in the row, including hidden ones
-            const allCells = Array.from(row.querySelectorAll('.activity-cell'));
-            
-            // Style all cells in the row for consistency
-            allCells.forEach((rowCell) => {
-                if (rowCell !== firstCell) {
-                    if (rowCell.classList.contains('hidden-by-merge')) {
-                        // Hidden cells should remain hidden
-                        rowCell.style.display = 'none';
-                    } else {
-                        // Visible cells that aren't the merged cell should be styled
-                        rowCell.classList.add('adjacent-to-merge');
-                        rowCell.style.display = 'table-cell';
-                    }
-                }
-            });
-        });
-        
-        // Special handling for cross-day merges (like Monday-Friday)
-        if (firstActivity.colspan >= 5) {
-            console.log('Detected cross-day merge, styling remaining columns');
-            targetRows.forEach(({ row }) => {
-                // Get all visible cells in the row
-                const allCells = Array.from(row.querySelectorAll('.activity-cell:not(.hidden-by-merge)'));
-                
-                // Style Saturday and Sunday cells specifically
-                allCells.forEach((cell, index) => {
-                    if (cell !== firstCell && !cell.classList.contains('merged-activity')) {
-                        // If this is Saturday or Sunday (indices 5, 6) and the merge spans Monday-Friday
-                        if (index >= 5 && firstActivity.colspan >= 5) {
-                            cell.classList.add('adjacent-to-merge');
-                            cell.style.display = 'table-cell';
-                        }
-                    }
-                });
-            });
-        }
-        
-        // Add a special class to the table to ensure proper layout
-        const scheduleTable = document.getElementById('scheduleTable');
-        if (scheduleTable) {
-            scheduleTable.classList.add('has-merged-cells');
-            
-            // Force layout recalculation
-            setTimeout(() => {
-                applyMergedCellStyling();
-            }, 50);
-        }
-        
-        // Add appropriate styling class
-        updateActivityStyling(firstCell);
-        
-        console.log(`Successfully merged "${activityText}" across ${targetRows.length} time slots`);
-        
-    } catch (error) {
-        console.error('Error merging activities across time slots:', error);
-        // Fallback to loading as single activities
-        activities.forEach(activity => {
-            loadSingleActivity(activity);
-        });
-    }
-}
 
 function parseTimeToMinutes(timeString) {
     // Parse time strings like "5:00AM-5:15AM" or "9:00PM"
@@ -763,8 +393,7 @@ function addEditFunctionality() {
         this.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Saving...';
         
         try {
-            console.log('Saving changes to Firebase...');
-            await saveActivitiesToFirebase();
+            console.log('Changes saved locally...');
             
             isEditMode = false;
             editModeBtn.innerHTML = '<i class="fa-regular fa-edit"></i> Edit Mode';
@@ -1039,7 +668,6 @@ function mergeConsecutiveCells(cells, activityText) {
         // Hide the other cells
         for (let i = 1; i < cells.length; i++) {
             const cell = cells[i].cell;
-            cell.style.display = 'none';
             cell.classList.add('hidden-by-merge');
         }
         
@@ -1056,11 +684,9 @@ function mergeConsecutiveCells(cells, activityText) {
                 if (rowCell !== firstCell) {
                     if (rowCell.classList.contains('hidden-by-merge')) {
                         // Hidden cells should remain hidden
-                        rowCell.style.display = 'none';
                     } else {
                         // Visible cells that aren't the merged cell should be styled
                         rowCell.classList.add('adjacent-to-merge');
-                        rowCell.style.display = 'table-cell';
                     }
                 }
             });
@@ -1352,191 +978,6 @@ function performAutoMerge() {
     }
 }
 
-async function saveActivitiesToFirebase() {
-    try {
-        console.log('Starting save process...');
-        showLoadingIndicator();
-        
-        // Collect all activity data
-        const activities = [];
-        const processedRows = new Set(); // Track processed rows to avoid duplicates
-        
-        // Get all table rows with activity cells
-        const tableRows = document.querySelectorAll('tbody tr');
-        
-        tableRows.forEach((row, rowIndex) => {
-            const timeCell = row.querySelector('.time-cell');
-            if (!timeCell) return;
-            
-            const timeText = timeCell.textContent.trim();
-            if (processedRows.has(timeText)) return;
-            processedRows.add(timeText);
-            
-            const activityCells = Array.from(row.querySelectorAll('.activity-cell:not(.hidden-by-merge)'));
-            console.log(`Processing row ${timeText} with ${activityCells.length} visible activity cells`);
-            
-            activityCells.forEach((cell, cellIndex) => {
-                if (cell.classList.contains('empty-cell')) {
-                    console.log(`Skipping empty cell at ${timeText}, column ${cellIndex + 1}`);
-                    return;
-                }
-                
-                const activity = cell.textContent.trim();
-                if (!activity) {
-                    console.log(`Skipping cell with no activity at ${timeText}, column ${cellIndex + 1}`);
-                    return;
-                }
-                
-                // Check if this is a merged cell (has rowspan)
-                const rowspan = parseInt(cell.getAttribute('rowspan')) || 1;
-                const colspan = cell.colSpan || 1;
-                
-                // Determine the day based on colspan and position
-                let day = 'ALL';
-                if (colspan < 7) {
-                    // This is a specific day cell
-                    const dayHeaders = ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY', 'SUNDAY'];
-                    if (cellIndex < dayHeaders.length) {
-                        day = dayHeaders[cellIndex];
-                    }
-                }
-                
-                if (rowspan > 1) {
-                    // This is a merged cell spanning multiple time slots
-                    console.log(`Found merged cell: "${activity}" spanning ${rowspan} rows`);
-                    
-                    // Find all the time slots this activity spans
-                    const timeSlots = getTimeSlotsForMergedCell(cell, rowspan);
-                    console.log(`Time slots for merged activity:`, timeSlots);
-                    
-                    // Create activity entries for each time slot
-                    timeSlots.forEach((timeSlot, index) => {
-                        const activityData = {
-                            time: timeSlot,
-                            day: day,
-                            activity: activity,
-                            column: cellIndex + 1,
-                            colspan: colspan,
-                            rowspan: rowspan,
-                            isMerged: true,
-                            mergeIndex: index
-                        };
-                        
-                        console.log('Adding merged activity:', activityData);
-                        activities.push(activityData);
-                    });
-                } else {
-                    // Regular single-cell activity
-                    const activityData = {
-                        time: timeText,
-                        day: day,
-                        activity: activity,
-                        column: cellIndex + 1,
-                        colspan: colspan,
-                        rowspan: 1,
-                        isMerged: false
-                    };
-                    
-                    console.log('Adding regular activity:', activityData);
-                    activities.push(activityData);
-                }
-            });
-        });
-        
-        if (activities.length === 0) {
-            console.warn('No activities to save');
-            showNotification('No activities to save', 'warning');
-            hideLoadingIndicator();
-            return;
-        }
-        
-        console.log(`Sending ${activities.length} activities to server:`, activities);
-        
-        // Send to backend
-        const response = await fetch('/api/activities/save', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-Requested-With': 'XMLHttpRequest'
-            },
-            credentials: 'include',
-            body: JSON.stringify({ activities: activities })
-        });
-        
-        console.log('Response status:', response.status);
-        console.log('Response headers:', Object.fromEntries(response.headers.entries()));
-        
-        if (!response.ok) {
-            const text = await response.text();
-            console.error('Server error response:', text);
-            throw new Error(`Server error: ${response.status} - ${text.slice(0, 200)}...`);
-        }
-        
-        if (response.redirected) {
-            throw new Error('You were redirected. Please log in again.');
-        }
-        
-        const contentType = response.headers.get('content-type') || '';
-        if (!contentType.includes('application/json')) {
-            const text = await response.text();
-            console.error('Non-JSON response:', text);
-            throw new Error(`Unexpected response from server: ${text.slice(0, 200)}...`);
-        }
-        
-        const data = await response.json();
-        console.log('Server response:', data);
-        
-        if (data.success) {
-            showNotification('All activities saved successfully to database!', 'success');
-            // Update original text after successful save
-            updateOriginalText();
-        } else {
-            throw new Error(data.message || 'Failed to save activities');
-        }
-        
-        hideLoadingIndicator();
-        
-    } catch (error) {
-        console.error('Error saving activities:', error);
-        hideLoadingIndicator();
-        const errorMessage = error.message || 'Unknown error occurred';
-        showNotification(`Error saving activities: ${errorMessage}`, 'error');
-        throw error;
-    }
-}
-
-function getTimeSlotsForMergedCell(mergedCell, rowspan) {
-    const timeSlots = [];
-    const currentRow = mergedCell.closest('tr');
-    const timeCell = currentRow.querySelector('.time-cell');
-    const currentTime = timeCell ? timeCell.textContent.trim() : '';
-    
-    if (!currentTime) return timeSlots;
-    
-    // Get all time cells to find the sequence
-    const allTimeCells = document.querySelectorAll('.time-cell');
-    let currentTimeIndex = -1;
-    
-    // Find the index of the current time
-    allTimeCells.forEach((cell, index) => {
-        if (cell.textContent.trim() === currentTime) {
-            currentTimeIndex = index;
-        }
-    });
-    
-    if (currentTimeIndex === -1) return timeSlots;
-    
-    // Get the next rowspan-1 time slots
-    for (let i = 0; i < rowspan; i++) {
-        const timeCellIndex = currentTimeIndex + i;
-        if (timeCellIndex < allTimeCells.length) {
-            const timeText = allTimeCells[timeCellIndex].textContent.trim();
-            timeSlots.push(timeText);
-        }
-    }
-    
-    return timeSlots;
-}
 
 function addActivityFilter() {
     const filterButtons = document.querySelectorAll('.filter-btn');
@@ -1800,172 +1241,6 @@ style.textContent = `
         border: 2px solid var(--primary-color);
         background-color: white;
         box-shadow: 0 0 10px rgba(0,0,0,0.1);
-    }
-    
-    .merged-activity {
-        background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%);
-        border: 2px solid #2196f3;
-        position: relative;
-        font-weight: 600;
-    }
-    
-    .merged-activity::after {
-        content: "MERGED";
-        position: absolute;
-        top: 2px;
-        right: 4px;
-        font-size: 0.6rem;
-        color: #1976d2;
-        font-weight: bold;
-        opacity: 0.7;
-    }
-    
-    .hidden-by-merge {
-        display: none !important;
-    }
-    
-    .activity-cell.same-activity {
-        background-color: #f5f5f5;
-        border-left: 3px solid #4caf50;
-    }
-    
-    .activity-cell.same-activity.merged-activity {
-        background: linear-gradient(135deg, #e8f5e8 0%, #f1f8e9 100%);
-        border-left: 3px solid #4caf50;
-        border: 2px solid #4caf50;
-    }
-    
-    /* Style for empty cells adjacent to merged cells */
-    .activity-cell.adjacent-to-merge {
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        border: 1px solid #dee2e6;
-        color: #6c757d;
-        font-style: italic;
-        position: relative;
-        min-height: 40px;
-        width: 100%;
-    }
-    
-    .activity-cell.adjacent-to-merge::after {
-        content: "—";
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        font-size: 1.2rem;
-        color: #adb5bd;
-        font-weight: bold;
-    }
-    
-    /* Ensure consistent styling for all cells in merged rows */
-    .merged-row .activity-cell:not(.merged-activity):not(.hidden-by-merge) {
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
-        border: 1px solid #dee2e6;
-        color: #6c757d;
-        font-style: italic;
-    }
-    
-    .merged-row .activity-cell:not(.merged-activity):not(.hidden-by-merge)::after {
-        content: "—";
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        font-size: 1.2rem;
-        color: #adb5bd;
-        font-weight: bold;
-    }
-    
-    /* Fix for half-table appearance */
-    .merged-row {
-        display: table-row !important;
-        width: 100% !important;
-    }
-    
-    /* Force all cells to fill their space */
-    .daily-schedule-table td {
-        display: table-cell !important;
-        width: auto !important;
-    }
-    
-    /* Ensure merged cells expand properly */
-    .merged-activity {
-        width: 100% !important;
-        height: 100% !important;
-        box-sizing: border-box !important;
-    }
-    
-    /* Fix for empty cells in merged rows */
-    .daily-schedule-table .merged-row td.activity-cell:empty {
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%) !important;
-        border: 1px solid #dee2e6 !important;
-        position: relative !important;
-    }
-    
-    /* Ensure table maintains full width */
-    .daily-schedule-table {
-        width: 100% !important;
-        table-layout: fixed !important;
-        border-collapse: collapse !important;
-    }
-    
-    /* Ensure all columns have equal width except time column */
-    .daily-schedule-table th:not(.time-header),
-    .daily-schedule-table td:not(.time-cell) {
-        width: calc((100% - 120px) / 7) !important;
-    }
-    
-    /* Fix for the time column */
-    .daily-schedule-table .time-header,
-    .daily-schedule-table .time-cell {
-        width: 120px !important;
-    }
-    
-    /* Special styling for tables with merged cells */
-    .daily-schedule-table.has-merged-cells {
-        border-spacing: 0 !important;
-        border-collapse: collapse !important;
-    }
-    
-    /* Fix for rows with merged cells */
-    .daily-schedule-table.has-merged-cells tr.merged-row {
-        display: table-row !important;
-        width: 100% !important;
-    }
-    
-    /* Fix for cells in merged rows */
-    .daily-schedule-table.has-merged-cells tr.merged-row td {
-        display: table-cell !important;
-    }
-    
-    /* Fix for merged cells */
-    .daily-schedule-table.has-merged-cells .merged-activity {
-        background: linear-gradient(135deg, #e3f2fd 0%, #f3e5f5 100%) !important;
-        border: 2px solid #2196f3 !important;
-    }
-    
-    /* Fix for adjacent cells in merged rows */
-    .daily-schedule-table.has-merged-cells .adjacent-to-merge {
-        background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%) !important;
-        border: 1px solid #dee2e6 !important;
-    }
-    
-    /* Ensure all columns are visible */
-    .daily-schedule-table th,
-    .daily-schedule-table td {
-        overflow: visible !important;
-    }
-    
-    /* Fix for the entire schedule container */
-    .schedule-container {
-        width: 100% !important;
-        overflow-x: auto !important;
-    }
-    
-    /* Fix for the schedule table wrapper */
-    .schedule-table-wrapper {
-        width: 100% !important;
-        overflow-x: auto !important;
     }
 `;
 document.head.appendChild(style);
