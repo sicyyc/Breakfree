@@ -841,11 +841,11 @@ def clients():
             else:
                 client_dict['status'] = 'active'  # Default if no status
             
-            # Only add non-archived clients that are NOT pending
+            # Only add non-archived clients that are NOT pending (but include rejected clients)
             archived = client_dict.get('archived', False)
             status = client_dict.get('status', 'active')
             print(f"Client {client_dict.get('name', 'Unknown')}: archived = {archived}, status = {status}")
-            if not archived and status != 'pending':
+            if not archived and status not in ['pending', 'pending_aftercare']:
                 all_clients_data.append(client_dict)
                 print(f"Added client {client_dict.get('name', 'Unknown')} to display list")
 

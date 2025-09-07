@@ -312,6 +312,7 @@ block page_css %}
   
   function openRejectModal(id, name) {
     rejectClientId = id;
+    rejectAftercareClientId = null; // Clear aftercare rejection ID
     const modal = document.getElementById("rejectModal");
     const text = document.getElementById("rejectText");
     if (text) {
@@ -328,40 +329,68 @@ block page_css %}
       modal.classList.remove("active");
     }
     rejectClientId = null;
+    rejectAftercareClientId = null;
     document.getElementById("rejectionReason").value = "";
   }
   
   document
     .getElementById("confirmRejectBtn")
     ?.addEventListener("click", async function () {
-      if (!rejectClientId) return;
-      
       const reason = document.getElementById("rejectionReason").value;
       
-      try {
-        const response = await fetch(`/clients/${rejectClientId}/reject`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ reason: reason })
-        });
-        const result = await response.json();
-        if (result.success) {
-          const row = document.querySelector(`[data-client-id="${rejectClientId}"]`);
-          if (row) {
-            row.classList.add("fade-out");
-            setTimeout(() => row.remove(), 300);
+      // Handle regular client rejection
+      if (rejectClientId) {
+        try {
+          const response = await fetch(`/clients/${rejectClientId}/reject`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ reason: reason })
+          });
+          const result = await response.json();
+          if (result.success) {
+            const row = document.querySelector(`[data-client-id="${rejectClientId}"]`);
+            if (row) {
+              row.classList.add("fade-out");
+              setTimeout(() => row.remove(), 300);
+            }
+            alert("Client rejected successfully!");
+          } else {
+            alert(result.error || "Failed to reject client");
           }
-          alert("Client rejected successfully!");
-        } else {
-          alert(result.error || "Failed to reject client");
+        } catch (e) {
+          console.error(e);
+          alert("Failed to reject client");
+        } finally {
+          closeRejectModal();
         }
-      } catch (e) {
-        console.error(e);
-        alert("Failed to reject client");
-             } finally {
-         closeRejectModal();
-       }
-     });
+      }
+      // Handle aftercare rejection
+      else if (rejectAftercareClientId) {
+        try {
+          const response = await fetch(`/clients/${rejectAftercareClientId}/reject-aftercare`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ reason: reason })
+          });
+          const result = await response.json();
+          if (result.success) {
+            const row = document.querySelector(`[data-client-id="${rejectAftercareClientId}"]`);
+            if (row) {
+              row.classList.add("fade-out");
+              setTimeout(() => row.remove(), 300);
+            }
+            alert("Aftercare rejected successfully!");
+          } else {
+            alert(result.error || "Failed to reject aftercare");
+          }
+        } catch (e) {
+          console.error(e);
+          alert("Failed to reject aftercare");
+        } finally {
+          closeRejectModal();
+        }
+      }
+    });
   
   // Aftercare approval and rejection functions
   function approveAftercare(id, name) {
@@ -392,6 +421,7 @@ block page_css %}
   
   function openAftercareRejectModal(id, name) {
     rejectAftercareClientId = id;
+    rejectClientId = null; // Clear regular rejection ID
     const modal = document.getElementById("rejectModal");
     const text = document.getElementById("rejectText");
     if (text) {
@@ -402,36 +432,5 @@ block page_css %}
     }
   }
   
-  document
-    .getElementById("confirmRejectBtn")
-    ?.addEventListener("click", async function () {
-      if (!rejectAftercareClientId) return;
-      
-      const reason = document.getElementById("rejectionReason").value;
-      
-      try {
-        const response = await fetch(`/clients/${rejectAftercareClientId}/reject-aftercare`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ reason: reason })
-        });
-        const result = await response.json();
-        if (result.success) {
-          const row = document.querySelector(`[data-client-id="${rejectAftercareClientId}"]`);
-          if (row) {
-            row.classList.add("fade-out");
-            setTimeout(() => row.remove(), 300);
-          }
-          alert("Aftercare rejected successfully!");
-        } else {
-          alert(result.error || "Failed to reject aftercare");
-        }
-      } catch (e) {
-        console.error(e);
-        alert("Failed to reject aftercare");
-      } finally {
-        closeRejectModal();
-      }
-    });
 </script>
 {% endblock %}

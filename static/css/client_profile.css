@@ -5,6 +5,53 @@
     --hover-transform: translateY(-2px);
 }
 
+/* Rejection Reason Display Styles */
+.rejection-info {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    border-left: 4px solid #ef4444;
+}
+
+.rejection-info.aftercare-rejection {
+    background: #fffbeb;
+    border: 1px solid #fed7aa;
+    border-left: 4px solid #f59e0b;
+}
+
+.rejection-reason {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    color: #dc2626;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.rejection-info.aftercare-rejection .rejection-reason {
+    color: #d97706;
+}
+
+.rejection-reason i {
+    margin-top: 0.1rem;
+    flex-shrink: 0;
+}
+
+.rejection-date {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    color: #6b7280;
+    font-size: 0.85rem;
+}
+
+.rejection-date i {
+    color: #9ca3af;
+}
+
 /* Progress and Aftercare Button Styles */
 .btn-success {
     background: #10b981;

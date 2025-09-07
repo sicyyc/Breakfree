@@ -40,6 +40,38 @@
                             {{ client.care_type|replace('_', ' ')|title }}
                         </span>
                     </div>
+                    
+                    <!-- Rejection Reason Display -->
+                    {% if client.status == 'rejected' and client.rejection_reason %}
+                    <div class="rejection-info">
+                        <div class="rejection-reason">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <strong>Rejection Reason:</strong> {{ client.rejection_reason }}
+                        </div>
+                        {% if client.rejected_at %}
+                        <div class="rejection-date">
+                            <i class="fas fa-calendar"></i>
+                            <strong>Rejected on:</strong> {{ client.rejected_at.strftime('%B %d, %Y at %I:%M %p') }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Aftercare Rejection Reason Display -->
+                    {% if client.aftercare_rejection_reason %}
+                    <div class="rejection-info aftercare-rejection">
+                        <div class="rejection-reason">
+                            <i class="fas fa-exclamation-triangle"></i>
+                            <strong>Aftercare Rejection Reason:</strong> {{ client.aftercare_rejection_reason }}
+                        </div>
+                        {% if client.aftercare_rejected_date %}
+                        <div class="rejection-date">
+                            <i class="fas fa-calendar"></i>
+                            <strong>Aftercare rejected on:</strong> {{ client.aftercare_rejected_date.strftime('%B %d, %Y at %I:%M %p') }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% endif %}
                 </div>
             </div>
         </div>

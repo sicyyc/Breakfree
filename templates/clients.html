@@ -107,6 +107,7 @@ block page_css %}
           <th>Care Type</th>
           <th>Stage</th>
           <th>Last Check-in</th>
+          <th>Rejection Reason</th>
           <th>Actions</th>
         </tr>
       </thead>
@@ -147,6 +148,21 @@ block page_css %}
             </span>
           </td>
           <td>{{ client.checkInDate }}</td>
+          <td>
+            {% if client.status == 'rejected' and client.rejection_reason %}
+              <div class="rejection-reason-cell">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span class="rejection-text">{{ client.rejection_reason }}</span>
+              </div>
+            {% elif client.aftercare_rejection_reason %}
+              <div class="rejection-reason-cell aftercare-rejection">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span class="rejection-text">{{ client.aftercare_rejection_reason }}</span>
+              </div>
+            {% else %}
+              <span class="no-rejection">—</span>
+            {% endif %}
+          </td>
           <td class="actions-cell">
             <a
               href="{{ url_for('client_profile', client_id=client.id) }}"

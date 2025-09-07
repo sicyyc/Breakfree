@@ -70,8 +70,8 @@
                                 <select id="newUserRole" required>
                                     <option value="">Select role</option>
                                     <option value="admin">Administrator</option>
-                                    <option value="facilitator">Facilitator</option>
-                                    <option value="caseworker">Case Worker</option>
+                                    <option value="psychometrician">Psychometrician</option>
+                                    <option value="house_worker">House Worker</option>
                                 </select>
                             </div>
                             <div class="form-actions">
@@ -184,8 +184,8 @@
                                 </thead>
                                 <tbody>
                                     {% set admin_count = users|selectattr('role', 'equalto', 'admin')|list|length %}
-                                    {% set facilitator_count = users|selectattr('role', 'equalto', 'facilitator')|list|length %}
-                                    {% set caseworker_count = users|selectattr('role', 'equalto', 'caseworker')|list|length %}
+                                    {% set psychometrician_count = users|selectattr('role', 'equalto', 'psychometrician')|list|length %}
+                                    {% set house_worker_count = users|selectattr('role', 'equalto', 'house_worker')|list|length %}
                                     
                                     <tr>
                                         <td>
@@ -210,7 +210,7 @@
                                     <tr>
                                         <td>
                                             <div class="role-info">
-                                                <span class="role-badge facilitator">Facilitator</span>
+                                                <span class="role-badge psychometrician">Psychometrician</span>
                                             </div>
                                         </td>
                                         <td>
@@ -218,12 +218,13 @@
                                                 <span class="permission-tag">View Clients</span>
                                                 <span class="permission-tag">Manage Check-ins</span>
                                                 <span class="permission-tag">View Reports</span>
+                                                <span class="permission-tag">Manage Activities</span>
                                             </div>
                                         </td>
-                                        <td>{{ facilitator_count }}</td>
+                                        <td>{{ psychometrician_count }}</td>
                                         <td>
                                             <div class="action-buttons">
-                                                <button class="btn-icon edit" title="Edit Role" onclick="editRolePermissions('facilitator')">
+                                                <button class="btn-icon edit" title="Edit Role" onclick="editRolePermissions('psychometrician')">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
                                             </div>
@@ -232,20 +233,21 @@
                                     <tr>
                                         <td>
                                             <div class="role-info">
-                                                <span class="role-badge caseworker">Case Worker</span>
+                                                <span class="role-badge house_worker">House Worker</span>
                                             </div>
                                         </td>
                                         <td>
                                             <div class="permission-tags">
                                                 <span class="permission-tag">View Clients</span>
                                                 <span class="permission-tag">Manage Check-ins</span>
+                                                <span class="permission-tag">Manage Activities</span>
                                                 <span class="permission-tag">Add Notes</span>
                                             </div>
                                         </td>
-                                        <td>{{ caseworker_count }}</td>
+                                        <td>{{ house_worker_count }}</td>
                                         <td>
                                             <div class="action-buttons">
-                                                <button class="btn-icon edit" title="Edit Role" onclick="editRolePermissions('caseworker')">
+                                                <button class="btn-icon edit" title="Edit Role" onclick="editRolePermissions('house_worker')">
                                                     <i class="fas fa-edit"></i>
                                                 </button>
                                             </div>

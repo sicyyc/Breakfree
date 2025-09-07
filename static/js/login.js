@@ -2,45 +2,7 @@ import { auth } from './firebase-config.js';
 import { signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.8.0/firebase-auth.js";
 
 document.addEventListener('DOMContentLoaded', function() {
-    const roleSelect = document.getElementById('roleSelect');
-    const roleDropdown = document.getElementById('roleDropdown');
-    const roleInput = document.getElementById('roleInput');
     const errorMessage = document.getElementById('error-message');
-
-    // Toggle dropdown when clicking the select button
-    roleSelect.addEventListener('click', function(e) {
-        e.preventDefault();
-        roleDropdown.style.display = roleDropdown.style.display === 'block' ? 'none' : 'block';
-        this.querySelector('.select-arrow').style.transform = 
-            roleDropdown.style.display === 'block' ? 'rotate(180deg)' : '';
-    });
-
-    // Close dropdown when clicking outside
-    document.addEventListener('click', function(e) {
-        if (!roleSelect.contains(e.target)) {
-            roleDropdown.style.display = 'none';
-            roleSelect.querySelector('.select-arrow').style.transform = '';
-        }
-    });
-
-    // Handle option selection
-    document.querySelectorAll('.select-option').forEach(option => {
-        option.addEventListener('click', function() {
-            const value = this.dataset.value;
-            const text = this.textContent;
-            
-            roleSelect.querySelector('span').textContent = text;
-            roleInput.value = value;
-            
-            document.querySelectorAll('.select-option').forEach(opt => {
-                opt.classList.remove('selected');
-            });
-            this.classList.add('selected');
-            
-            roleDropdown.style.display = 'none';
-            roleSelect.querySelector('.select-arrow').style.transform = '';
-        });
-    });
 
     // Handle login form submission
     const loginForm = document.getElementById('loginForm');
@@ -50,12 +12,6 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
-            const role = roleInput.value;
-
-            if (!role) {
-                showError('Please select a role');
-                return;
-            }
 
             try {
                 // Clear any previous error messages
@@ -66,7 +22,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const userCredential = await signInWithEmailAndPassword(auth, email, password);
                 const user = userCredential.user;
 
-                // Send login data to backend
+                // Send login data to backend (role will be auto-detected)
                 const response = await fetch('/login', {
                     method: 'POST',
                     headers: {
@@ -74,7 +30,6 @@ document.addEventListener('DOMContentLoaded', function() {
                     },
                     body: new URLSearchParams({
                         'email': email,
-                        'role': role,
                         'uid': user.uid
                     })
                 });
@@ -119,4 +74,4 @@ document.addEventListener('DOMContentLoaded', function() {
             errorMessage.style.display = 'none';
         }, 5000);
     }
-}); 
+});

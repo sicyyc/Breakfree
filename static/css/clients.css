@@ -1,5 +1,49 @@
 /* Professional UI/UX Design - Clients Page */
 
+/* Rejection Reason Column Styles */
+.rejection-reason-cell {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    padding: 0.5rem;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 6px;
+    max-width: 200px;
+    font-size: 0.85rem;
+    line-height: 1.3;
+}
+
+.rejection-reason-cell.aftercare-rejection {
+    background: #fffbeb;
+    border: 1px solid #fed7aa;
+}
+
+.rejection-reason-cell i {
+    color: #dc2626;
+    margin-top: 0.1rem;
+    flex-shrink: 0;
+}
+
+.rejection-reason-cell.aftercare-rejection i {
+    color: #d97706;
+}
+
+.rejection-text {
+    color: #dc2626;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+}
+
+.rejection-reason-cell.aftercare-rejection .rejection-text {
+    color: #d97706;
+}
+
+.no-rejection {
+    color: #9ca3af;
+    font-style: italic;
+}
+
 /* Main Container Styles */
 .main-header-clients {
     display: flex;
