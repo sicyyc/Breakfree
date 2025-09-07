@@ -492,6 +492,206 @@ def api_schedule_reset():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+# Daily Activities API Routes
+@app.route('/api/daily-activities', methods=['GET'])
+@role_required(['admin', 'psychometrician', 'house_worker'])
+def get_daily_activities():
+    """Get all daily activities"""
+    try:
+        activities_ref = db.collection('daily_activities')
+        activities = []
+        
+        for activity in activities_ref.stream():
+            activity_data = activity.to_dict()
+            activity_data['id'] = activity.id
+            activities.append(activity_data)
+        
+        # Sort by start time
+        activities.sort(key=lambda x: x.get('startTime', ''))
+        
+        return jsonify({'success': True, 'activities': activities})
+    except Exception as e:
+        print(f"Error fetching daily activities: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/daily-activities', methods=['POST'])
+@role_required(['admin', 'psychometrician', 'house_worker'])
+def create_daily_activity():
+    """Create a new daily activity"""
+    try:
+        data = request.get_json()
+        
+        # Validate required fields
+        required_fields = ['name', 'startTime', 'endTime', 'days']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({'success': False, 'error': f'Missing required field: {field}'}), 400
+        
+        # Validate time format
+        if data['startTime'] >= data['endTime']:
+            return jsonify({'success': False, 'error': 'End time must be after start time'}), 400
+        
+        # Prepare activity data
+        activity_data = {
+            'name': data['name'],
+            'startTime': data['startTime'],
+            'endTime': data['endTime'],
+            'days': data['days'],
+            'type': data.get('type', 'other'),
+            'description': data.get('description', ''),
+            'isRecurring': data.get('isRecurring', False),
+            'createdAt': firestore.SERVER_TIMESTAMP,
+            'updatedAt': firestore.SERVER_TIMESTAMP,
+            'createdBy': session.get('user_id'),
+            'createdByEmail': session.get('email')
+        }
+        
+        # Add to Firestore
+        doc_ref = db.collection('daily_activities').add(activity_data)
+        activity_id = doc_ref[1].id
+        
+        # Log activity
+        log_activity(
+            user_id=session.get('user_id'),
+            user_email=session.get('email'),
+            user_role=session.get('role'),
+            action='Create Daily Activity',
+            details=f'Created activity: {data["name"]}',
+            target_id=activity_id,
+            target_type='daily_activity'
+        )
+        
+        return jsonify({'success': True, 'id': activity_id})
+    except Exception as e:
+        print(f"Error creating daily activity: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/daily-activities/<activity_id>', methods=['PUT'])
+@role_required(['admin', 'psychometrician', 'house_worker'])
+def update_daily_activity(activity_id):
+    """Update an existing daily activity"""
+    try:
+        data = request.get_json()
+        
+        # Validate required fields
+        required_fields = ['name', 'startTime', 'endTime', 'days']
+        for field in required_fields:
+            if not data.get(field):
+                return jsonify({'success': False, 'error': f'Missing required field: {field}'}), 400
+        
+        # Validate time format
+        if data['startTime'] >= data['endTime']:
+            return jsonify({'success': False, 'error': 'End time must be after start time'}), 400
+        
+        # Check if activity exists
+        activity_ref = db.collection('daily_activities').document(activity_id)
+        if not activity_ref.get().exists:
+            return jsonify({'success': False, 'error': 'Activity not found'}), 404
+        
+        # Prepare update data
+        update_data = {
+            'name': data['name'],
+            'startTime': data['startTime'],
+            'endTime': data['endTime'],
+            'days': data['days'],
+            'type': data.get('type', 'other'),
+            'description': data.get('description', ''),
+            'isRecurring': data.get('isRecurring', False),
+            'updatedAt': firestore.SERVER_TIMESTAMP,
+            'updatedBy': session.get('user_id'),
+            'updatedByEmail': session.get('email')
+        }
+        
+        # Update in Firestore
+        activity_ref.update(update_data)
+        
+        # Log activity
+        log_activity(
+            user_id=session.get('user_id'),
+            user_email=session.get('email'),
+            user_role=session.get('role'),
+            action='Update Daily Activity',
+            details=f'Updated activity: {data["name"]}',
+            target_id=activity_id,
+            target_type='daily_activity'
+        )
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f"Error updating daily activity: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/daily-activities/<activity_id>', methods=['DELETE'])
+@role_required(['admin', 'psychometrician', 'house_worker'])
+def delete_daily_activity(activity_id):
+    """Delete a daily activity"""
+    try:
+        # Check if activity exists
+        activity_ref = db.collection('daily_activities').document(activity_id)
+        activity_doc = activity_ref.get()
+        
+        if not activity_doc.exists:
+            return jsonify({'success': False, 'error': 'Activity not found'}), 404
+        
+        activity_data = activity_doc.to_dict()
+        
+        # Delete from Firestore
+        activity_ref.delete()
+        
+        # Log activity
+        log_activity(
+            user_id=session.get('user_id'),
+            user_email=session.get('email'),
+            user_role=session.get('role'),
+            action='Delete Daily Activity',
+            details=f'Deleted activity: {activity_data.get("name", "Unknown")}',
+            target_id=activity_id,
+            target_type='daily_activity'
+        )
+        
+        return jsonify({'success': True})
+    except Exception as e:
+        print(f"Error deleting daily activity: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/daily-activities/schedule', methods=['GET'])
+@role_required(['admin', 'psychometrician', 'house_worker'])
+def get_daily_activities_schedule():
+    """Get daily activities formatted as a weekly schedule"""
+    try:
+        activities_ref = db.collection('daily_activities')
+        activities = []
+        
+        for activity in activities_ref.stream():
+            activity_data = activity.to_dict()
+            activity_data['id'] = activity.id
+            activities.append(activity_data)
+        
+        # Group activities by day
+        schedule = {
+            'monday': [],
+            'tuesday': [],
+            'wednesday': [],
+            'thursday': [],
+            'friday': [],
+            'saturday': [],
+            'sunday': []
+        }
+        
+        for activity in activities:
+            for day in activity.get('days', []):
+                if day in schedule:
+                    schedule[day].append(activity)
+        
+        # Sort activities by start time for each day
+        for day in schedule:
+            schedule[day].sort(key=lambda x: x.get('startTime', ''))
+        
+        return jsonify({'success': True, 'schedule': schedule})
+    except Exception as e:
+        print(f"Error fetching daily activities schedule: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/debug/clients')
 @role_required(['admin', 'psychometrician', 'house_worker'])
 def debug_clients():
