@@ -1,14 +1,14 @@
 /* Modern CSS Variables */
 :root {
-    --primary-color: #2563eb;
-    --primary-light: rgba(37, 99, 235, 0.1);
-    --primary-dark: #1d4ed8;
+    --primary-color: #6b46c1;
+    --primary-light: #e8e3ff;
+    --primary-dark: #553c9a;
     --success-color: #10b981;
-    --success-light: rgba(16, 185, 129, 0.1);
+    --success-light: #dcfce7;
     --warning-color: #f59e0b;
-    --warning-light: rgba(245, 158, 11, 0.1);
+    --warning-light: #fef3c7;
     --danger-color: #ef4444;
-    --danger-light: rgba(239, 68, 68, 0.1);
+    --danger-light: #fee2e2;
     --text-dark: #1f2937;
     --text-muted: #6b7280;
     --border-color: #e5e7eb;
@@ -334,7 +334,7 @@
 .search-container input:focus {
     outline: none;
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px var(--primary-light);
+    box-shadow: 0 0 0 3px rgba(107, 70, 193, 0.1);
 }
 
 .search-icon {
@@ -472,7 +472,7 @@
 
 .client-type {
     font-size: 11px;
-    color: var(--text-muted);
+    color: var(--primary-color);
     background: var(--primary-light);
     padding: 2px 6px;
     border-radius: var(--radius-sm);

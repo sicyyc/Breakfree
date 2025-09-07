@@ -45,64 +45,49 @@
   gap: 0rem;
 }
 .nav-item {
-  padding: 0.8rem 1rem;
-  border-radius: 8px;
+  padding: 0.9rem 1rem;
   cursor: pointer;
   transition: all 0.3s ease;
   display: flex;
   align-items: center;
-  gap: 0.8rem;
+  gap: 1rem;
   color: #666;
   text-decoration: none;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   position: relative;
-  border-right: 4px solid transparent; /* Add transparent border by default */
+  border-left: 4px solid transparent;
 }
 .nav-item:hover {
-  background: #ede9fe; /* soft violet hover background */
-  color: #6d28d9; /* violet text/icon color */
-  border-radius: 5px; /* slightly more pill-like on hover */
+  background: #f8f6fe;
+  color: #6b46c1;
+  border-radius: 8px;
 }
 
-/* Multiple selectors for active state to ensure it works */
+/* Active state styling */
 .nav-item.active,
 .nav-item[aria-current="page"],
 .sidebar .nav-item.active,
 a.nav-item.active {
-  background: #e8e3ff !important;
+  background: #f8f6fe !important;
   color: #6b46c1 !important;
-  border-right: 4px solid #6b46c1 !important;
   border-left: none !important;
   font-weight: 500;
+  border-radius: 8px;
 }
 
-/* Exact image design for dashboard active state only */
-.nav-item.active[href*="dashboard"],
-.nav-item[aria-current="page"][href*="dashboard"],
-.sidebar .nav-item.active[href*="dashboard"],
-a.nav-item.active[href*="dashboard"] {
-  background: #E0D9F7 !important;
-  color: #6A5ACD !important;
-  font-weight: 500;
-  position: relative;
-  border: none !important;
-  border-radius: 12px;
-}
-
-/* Right edge accent for dashboard active state only */
-.nav-item.active[href*="dashboard"]::after,
-.nav-item[aria-current="page"][href*="dashboard"]::after,
-.sidebar .nav-item.active[href*="dashboard"]::after,
-a.nav-item.active[href*="dashboard"]::after {
+/* Right edge accent bar on sidebar container */
+.nav-item.active::after,
+.nav-item[aria-current="page"]::after,
+.sidebar .nav-item.active::after,
+a.nav-item.active::after {
   content: '';
   position: absolute;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
+  right: -1.5rem;
+  top: 0;
   width: 4px;
-  height: 60%;
-  background: #6A5ACD;
-  border-radius: 2px 0 0 2px;
+  height: 100%;
+  background: #6b46c1;
+  border-radius: 10px 0px 0px 10px;
 }
 
 .nav-item i {

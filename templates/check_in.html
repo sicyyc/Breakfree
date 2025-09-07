@@ -5,21 +5,7 @@
 {% endblock %}
 {% block content %}
 <div class="main-content">
-    <!-- Header Section -->
-    <div class="activities-header">
-        <div class="header-left">
-            <h1>Daily Activities</h1>
-            <p>Manage daily activities and schedules</p>
-        </div>
-        <div class="header-right">
-            <button id="addActivityBtn" class="btn btn-primary">
-                <i class="fa-solid fa-plus"></i> Add Activity
-            </button>
-            <button id="viewScheduleBtn" class="btn btn-outline">
-                <i class="fa-solid fa-calendar"></i> View Schedule
-            </button>
-        </div>
-    </div>
+
 
     <!-- Filter and Search Section -->
     <div class="filter-section">
@@ -35,14 +21,24 @@
         </div>
     </div>
 
-    <!-- View Toggle -->
-    <div class="view-toggle">
-        <button id="listViewBtn" class="view-btn active">
-            <i class="fa-solid fa-list"></i> List View
-        </button>
-        <button id="tableViewBtn" class="view-btn">
-            <i class="fa-solid fa-table"></i> Weekly Table
-        </button>
+    <!-- Toolbar Section -->
+    <div class="toolbar">
+        <div class="view-toggle">
+            <button id="listViewBtn" class="view-btn active">
+                <i class="fa-solid fa-list"></i> List View
+            </button>
+            <button id="tableViewBtn" class="view-btn">
+                <i class="fa-solid fa-table"></i> Weekly Table
+            </button>
+        </div>
+        <div class="action-buttons">
+            <button id="addActivityBtn" class="btn btn-primary">
+                <i class="fa-solid fa-plus"></i> Add Activity
+            </button>
+            <button id="viewScheduleBtn" class="btn btn-outline">
+                <i class="fa-solid fa-calendar"></i> View Schedule
+            </button>
+        </div>
     </div>
 
     <!-- Activities List View -->
@@ -66,10 +62,6 @@
 
     <!-- Weekly Table View -->
     <div id="tableView" class="weekly-table-container" style="display: none;">
-                <div class="table-header">
-                    <h3><i class="fa-solid fa-calendar-week"></i> Weekly Schedule</h3>
-                    <p>All activities organized by day and time</p>
-                </div>
         <div class="table-wrapper">
             <table class="weekly-schedule-table">
                 <thead>

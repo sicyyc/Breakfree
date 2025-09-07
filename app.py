@@ -344,10 +344,9 @@ def login():
         try:
             # Get form data
             email = request.form.get('email')
-            selected_role = request.form.get('role')
             uid = request.form.get('uid')
 
-            if not all([email, selected_role, uid]):
+            if not all([email, uid]):
                 return jsonify({'success': False, 'error': 'Missing required fields'}), 400
 
             # Verify the Firebase ID token
@@ -363,12 +362,8 @@ def login():
                 
             actual_role = user_doc.to_dict().get('role')
             
-            # Verify that selected role matches actual role
-            if selected_role != actual_role:
-                return jsonify({
-                    'success': False, 
-                    'error': f'Access denied. You are not authorized as {selected_role}.'
-                }), 403
+            if not actual_role:
+                return jsonify({'success': False, 'error': 'User role not found'}), 404
             
             # Store user info in session
             session['user_id'] = uid
