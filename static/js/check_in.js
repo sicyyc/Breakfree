@@ -397,7 +397,7 @@ async function confirmDelete() {
 
 // Open schedule modal
 function openScheduleModal() {
-    scheduleModal.style.display = 'block';
+    scheduleModal.style.display = 'flex';
     document.body.style.overflow = 'hidden';
     generateScheduleView();
 }
