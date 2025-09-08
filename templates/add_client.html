@@ -505,19 +505,6 @@
           />
           <small class="input-help">4–32 characters; letters, numbers, dashes or underscores.</small>
         </div>
-        <div class="form-group">
-          <label for="clientPassword">Password</label>
-          <input
-            type="password"
-            id="clientPassword"
-            name="clientPassword"
-            required
-            minlength="6"
-            placeholder="Temporary password for mobile app"
-            class="input-enhanced"
-          />
-          <small class="input-help">Min 6 characters. You can change it later.</small>
-        </div>
       </div>
     </div>
 
@@ -561,23 +548,13 @@
         </div>
         <div class="form-group">
           <label for="street_address">Street Address (Optional)</label>
-          <div class="input-group">
-            <input
-              type="text"
-              id="street_address"
-              name="street_address"
-              class="input-enhanced"
-              placeholder="House/Building Number, Street Name"
-            />
-            <button type="button" id="validateAddress" class="btn-secondary" style="margin-left: 10px;">
-              <i class="fas fa-map-marker-alt"></i>
-              Validate Address
-            </button>
-          </div>
-          <small class="form-text text-muted">
-            <i class="fas fa-info-circle"></i>
-            Address validation will automatically set coordinates for accurate map placement
-          </small>
+          <input
+            type="text"
+            id="street_address"
+            name="street_address"
+            class="input-enhanced"
+            placeholder="House/Building Number, Street Name"
+          />
         </div>
         <input type="hidden" id="complete_address" name="address" />
         <input type="hidden" id="address_lat" name="lat" />

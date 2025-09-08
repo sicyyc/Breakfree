@@ -124,31 +124,14 @@ document.addEventListener('DOMContentLoaded', function() {
     // Handle barangay selection
     barangaySelect.addEventListener('change', updateCompleteAddress);
     
-    // Handle manual address validation button
-    const validateAddressBtn = document.getElementById('validateAddress');
-    if (validateAddressBtn) {
-        validateAddressBtn.addEventListener('click', function() {
-            if (completeAddressInput.value && completeAddressInput.value !== 'Laguna') {
-                validateAddress(completeAddressInput.value);
-            } else {
-                showAddressValidationMessage('Please complete the address fields first', 'warning');
-            }
+    // Address validation button removed - no longer needed
+    
+    // Handle street address input
+    if (streetAddressInput) {
+        streetAddressInput.addEventListener('input', function() {
+            updateCompleteAddress();
         });
     }
-    
-    // Handle street address input with debouncing
-    let addressValidationTimeout;
-    streetAddressInput.addEventListener('input', function() {
-        updateCompleteAddress();
-        
-        // Debounce address validation
-        clearTimeout(addressValidationTimeout);
-        addressValidationTimeout = setTimeout(() => {
-            if (completeAddressInput.value && completeAddressInput.value !== 'Laguna') {
-                validateAddress(completeAddressInput.value);
-            }
-        }, 1000); // Wait 1 second after user stops typing
-    });
 
     // Function to update complete address
     function updateCompleteAddress() {
@@ -164,63 +147,9 @@ document.addEventListener('DOMContentLoaded', function() {
         parts.push('Laguna');
 
         completeAddressInput.value = parts.join(', ');
-        
-        // Validate address if we have a complete address
-        if (completeAddressInput.value && completeAddressInput.value !== 'Laguna') {
-            validateAddress(completeAddressInput.value);
-        }
     }
 
-    // Function to validate address
-    function validateAddress(address) {
-        if (!address || address.trim() === '') return;
-        
-        fetch(`/api/locations/validate?address=${encodeURIComponent(address)}`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Validation request failed');
-                }
-                return response.json();
-            })
-            .then(data => {
-                if (data.success && data.coordinates) {
-                    // Update coordinates if validation successful
-                    if (latInput) latInput.value = data.coordinates.lat;
-                    if (lngInput) lngInput.value = data.coordinates.lng;
-                    
-                    // Show success message
-                    showAddressValidationMessage('Address validated successfully', 'success');
-                } else {
-                    showAddressValidationMessage('Address could not be validated. Please check the format.', 'warning');
-                }
-            })
-            .catch(error => {
-                console.error('Error validating address:', error);
-                showAddressValidationMessage('Error validating address', 'error');
-            });
-    }
-
-    // Function to show address validation messages
-    function showAddressValidationMessage(message, type) {
-        // Remove existing validation message
-        const existingMessage = document.querySelector('.address-validation-message');
-        if (existingMessage) {
-            existingMessage.remove();
-        }
-        
-        // Create new message element
-        const messageDiv = document.createElement('div');
-        messageDiv.className = `address-validation-message alert alert-${type === 'success' ? 'success' : type === 'warning' ? 'warning' : 'danger'}`;
-        messageDiv.style.marginTop = '10px';
-        messageDiv.style.fontSize = '14px';
-        messageDiv.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : type === 'warning' ? 'exclamation-triangle' : 'times-circle'}"></i> ${escapeHtml(message)}`;
-        
-        // Insert after the complete address input
-        const addressSection = document.querySelector('.address-section');
-        if (addressSection) {
-            addressSection.appendChild(messageDiv);
-        }
-    }
+    // Address validation functions removed - no longer needed
 
     // Utility function to escape HTML
     function escapeHtml(text) {
@@ -515,18 +444,5 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Handle street address input with null check
-    if (streetAddressInput) {
-        streetAddressInput.addEventListener('input', function() {
-            updateCompleteAddress();
-            
-            // Debounce address validation
-            clearTimeout(addressValidationTimeout);
-            addressValidationTimeout = setTimeout(() => {
-                if (completeAddressInput.value && completeAddressInput.value !== 'Laguna') {
-                    validateAddress(completeAddressInput.value);
-                }
-            }, 1000);
-        });
-    }
+    // Street address input handling moved above
 }); // End of DOMContentLoaded

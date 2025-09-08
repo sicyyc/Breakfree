@@ -4,6 +4,7 @@
   rel="stylesheet"
   href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
 />
+<link rel="stylesheet" href="https://unpkg.com/leaflet.fullscreen@2.0.0/Control.FullScreen.css" />
 <link rel="stylesheet" href="{{ url_for('static', filename='css/map.css') }}" />
 {% endblock %} {% block content %}
 <div class="main-header">
@@ -80,8 +81,11 @@
         <button class="btn-icon" title="Center Map">
           <i class="fas fa-crosshairs"></i>
         </button>
-        <button class="btn-icon active" title="Toggle Heat Map">
+        <button class="btn-icon active" title="Toggle Heat Map" id="toggleHeatMap">
           <i class="fas fa-fire"></i>
+        </button>
+        <button class="btn-icon" title="Show Markers Only" id="showMarkersOnly">
+          <i class="fas fa-map-marker-alt"></i>
         </button>
         <button class="btn-icon" title="Fit to Bounds" id="fitBounds">
           <i class="fas fa-expand-arrows-alt"></i>
@@ -89,10 +93,19 @@
       </div>
       <div class="map-info">
         <span id="clientCount" class="text-muted">Loading...</span>
+        <span id="networkStatus" class="network-status online" title="Network Status">
+          <i class="fas fa-wifi"></i>
+        </span>
+        <span id="lastUpdate" class="last-update" title="Last Data Update">
+          <i class="fas fa-clock"></i>
+          <span id="updateTime">Never</span>
+        </span>
       </div>
       <div class="map-layers">
-        <button class="btn-text active" data-layer="map">Map</button>
-        <button class="btn-text" data-layer="satellite">Satellite</button>
+        <button class="btn-text active" data-layer="map" title="OpenStreetMap">Map</button>
+        <button class="btn-text" data-layer="cartodb" title="CartoDB Light">Light</button>
+        <button class="btn-text" data-layer="esri" title="Esri Street">Street</button>
+        <button class="btn-text" data-layer="satellite" title="Satellite View">Satellite</button>
       </div>
     </div>
     <div class="map-canvas">
@@ -101,27 +114,67 @@
   </div>
 </div>
 
-<!-- Heat Map Legend -->
+<!-- Interactive Online Heat Map Legend -->
 <div class="heat-map-info">
-  <h4 class="legend-title"><i class="fas fa-fire"></i> Heat Map Legend</h4>
-  <p class="legend-description">Red areas indicate higher client density</p>
-  <div class="heat-map-legend">
+  <div class="legend-header">
+    <h4 class="legend-title"><i class="fas fa-fire"></i> Online Heat Map</h4>
+    <div class="legend-controls">
+      <button class="btn-legend" id="toggleLegend" title="Toggle Legend">
+        <i class="fas fa-eye"></i>
+      </button>
+      <button class="btn-legend" id="refreshHeatMap" title="Refresh Heat Map">
+        <i class="fas fa-sync-alt"></i>
+      </button>
+    </div>
+  </div>
+  <p class="legend-description">Real-time client density visualization. <strong>Click anywhere on the map</strong> to see detailed density information for that area.</p>
+  <div class="heat-map-legend" id="heatMapLegend">
     <div class="legend-scale">
-      <div class="gradient-bar"></div>
+      <div class="gradient-bar" id="gradientBar"></div>
       <div class="gradient-labels">
-        <span>Low</span>
+        <span>Low Density</span>
         <span>Medium</span>
-        <span>High</span>
+        <span>High Density</span>
       </div>
     </div>
     <div class="density-info">
       <div class="density-item">
+        <span class="density-color very-low"></span>
+        <span class="density-label">Very Low (0-1)</span>
+      </div>
+      <div class="density-item">
         <span class="density-color low"></span>
-        <span class="density-label">Less Clients</span>
+        <span class="density-label">Low (1-2)</span>
+      </div>
+      <div class="density-item">
+        <span class="density-color medium"></span>
+        <span class="density-label">Medium (2-3)</span>
       </div>
       <div class="density-item">
         <span class="density-color high"></span>
-        <span class="density-label">More Clients</span>
+        <span class="density-label">High (3-4)</span>
+      </div>
+      <div class="density-item">
+        <span class="density-color very-high"></span>
+        <span class="density-label">Very High (4-5)</span>
+      </div>
+      <div class="density-item">
+        <span class="density-color maximum"></span>
+        <span class="density-label">Maximum (5+)</span>
+      </div>
+    </div>
+    <div class="heat-map-stats">
+      <div class="stat-item">
+        <span class="stat-label">Total Points:</span>
+        <span class="stat-value" id="totalHeatPoints">0</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Max Density:</span>
+        <span class="stat-value" id="maxDensity">0</span>
+      </div>
+      <div class="stat-item">
+        <span class="stat-label">Last Update:</span>
+        <span class="stat-value" id="heatMapUpdateTime">Never</span>
       </div>
     </div>
   </div>
@@ -137,5 +190,6 @@
 {% endblock %} {% block scripts %}
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script src="https://unpkg.com/leaflet.heat@0.2.0/dist/leaflet-heat.js"></script>
+<script src="https://unpkg.com/leaflet.fullscreen@2.0.0/Control.FullScreen.js"></script>
 <script src="{{ url_for('static', filename='js/map.js') }}"></script>
 {% endblock %}

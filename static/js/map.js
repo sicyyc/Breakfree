@@ -32,33 +32,107 @@ document.addEventListener('DOMContentLoaded', function() {
         loadClientData();
     };
 
-    // Initialize map
+    // Initialize map with enhanced online capabilities
     function initializeMap() {
         // Create the map centered on Laguna
-        map = L.map('mapCanvas').setView(LAGUNA_CENTER, 10);
+        map = L.map('mapCanvas', {
+            zoomControl: true,
+            attributionControl: true,
+            preferCanvas: false
+        }).setView(LAGUNA_CENTER, 10);
 
-        // Add the default tile layer (OpenStreetMap)
-        baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-            attribution: '© OpenStreetMap contributors',
-            maxZoom: 18
+        // Define multiple online tile layers for better reliability
+        const tileLayers = {
+            osm: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 18,
+                subdomains: ['a', 'b', 'c']
+            }),
+            cartodb: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                attribution: '© OpenStreetMap contributors, © CartoDB',
+                maxZoom: 20,
+                subdomains: 'abcd'
+            }),
+            esri: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+                attribution: '© Esri',
+                maxZoom: 18
+            }),
+            satellite: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: '© Esri',
+                maxZoom: 18
+            }),
+            hybrid: L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+                attribution: '© Esri',
+                maxZoom: 18
+            })
+        };
+
+        // Add layer control for switching between different online maps
+        const layerControl = L.control.layers({
+            "OpenStreetMap": tileLayers.osm,
+            "CartoDB Light": tileLayers.cartodb,
+            "Esri Street": tileLayers.esri,
+            "Satellite": tileLayers.satellite
+        }, {}, {
+            position: 'topright',
+            collapsed: true
         }).addTo(map);
 
-        // Initialize empty heat layer
+        // Set default layer with error handling
+        baseLayer = tileLayers.osm;
+        baseLayer.addTo(map);
+
+        // Add error handling for tile loading
+        baseLayer.on('tileerror', function(e) {
+            console.warn('Tile loading error:', e);
+            showNotification('Map tile loading issue detected. Trying alternative source...', 'warning');
+        });
+
+        // Initialize enhanced online heat layer with better color mapping
         heatLayer = L.heatLayer([], {
-            radius: 25,
-            blur: 15,
-            maxZoom: 10,
-            gradient: {0.4: 'blue', 0.65: 'lime', 1: 'red'}
+            radius: 35,
+            blur: 25,
+            maxZoom: 12,
+            gradient: {
+                0.0: '#0066cc',  // Blue - Very Low (0-1 clients)
+                0.2: '#00cc66',  // Green - Low (1-2 clients)
+                0.4: '#ffcc00',  // Yellow - Medium (2-3 clients)
+                0.6: '#ff6600',  // Orange - High (3-4 clients)
+                0.8: '#ff3300',  // Red - Very High (4-5 clients)
+                1.0: '#cc0000'   // Dark Red - Maximum (5+ clients)
+            }
         }).addTo(map);
+
+        // Add click event to show heat map info
+        map.on('click', function(e) {
+            showHeatMapInfo(e.latlng);
+        });
 
         // Add zoom control to top-right
         map.zoomControl.setPosition('topright');
 
         // Add scale control
-        L.control.scale().addTo(map);
+        L.control.scale({
+            position: 'bottomright',
+            metric: true,
+            imperial: false
+        }).addTo(map);
+
+        // Add fullscreen control
+        if (L.control.fullscreen) {
+            L.control.fullscreen({
+                position: 'topright'
+            }).addTo(map);
+        }
+
+        // Store tile layers for later use
+        window.tileLayers = tileLayers;
 
         // Load real client data instead of sample data
         loadClientData();
+        
+        // Add test markers for demonstration (remove this after testing)
+        addTestMarkers();
     }
 
     // Show loading state
@@ -84,6 +158,127 @@ document.addEventListener('DOMContentLoaded', function() {
     function hideLoading() {
         isLoading = false;
         document.getElementById('loadingOverlay').style.display = 'none';
+    }
+
+    // Update last update time
+    function updateLastUpdateTime() {
+        const updateTimeElement = document.getElementById('updateTime');
+        if (updateTimeElement) {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-US', { 
+                hour12: false, 
+                hour: '2-digit', 
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            updateTimeElement.textContent = timeString;
+        }
+    }
+
+    // Update heat map statistics
+    function updateHeatMapStats(heatData) {
+        const totalPointsElement = document.getElementById('totalHeatPoints');
+        const maxDensityElement = document.getElementById('maxDensity');
+        const heatMapUpdateTimeElement = document.getElementById('heatMapUpdateTime');
+        
+        if (totalPointsElement) {
+            totalPointsElement.textContent = heatData.length;
+        }
+        
+        if (maxDensityElement) {
+            // Calculate max density (for now, just use the count)
+            const maxDensity = heatData.length > 0 ? Math.max(...heatData.map(point => point[2])) : 0;
+            maxDensityElement.textContent = maxDensity;
+        }
+        
+        if (heatMapUpdateTimeElement) {
+            const now = new Date();
+            const timeString = now.toLocaleTimeString('en-US', { 
+                hour12: false, 
+                hour: '2-digit', 
+                minute: '2-digit',
+                second: '2-digit'
+            });
+            heatMapUpdateTimeElement.textContent = timeString;
+        }
+    }
+
+    // Show heat map information when clicking on map
+    function showHeatMapInfo(latlng) {
+        if (!isHeatMapVisible) return;
+        
+        // Find nearby clients within a reasonable distance
+        const nearbyClients = clients.filter(client => {
+            if (!client.coordinates) return false;
+            const distance = calculateDistance(
+                latlng.lat, latlng.lng,
+                client.coordinates.lat, client.coordinates.lng
+            );
+            return distance <= 5; // Within 5km
+        });
+        
+        // Determine density level based on nearby clients
+        let densityLevel, densityColor, densityDescription;
+        const clientCount = nearbyClients.length;
+        
+        if (clientCount === 0) {
+            densityLevel = "Very Low";
+            densityColor = "#0066cc";
+            densityDescription = "No clients in this area";
+        } else if (clientCount <= 1) {
+            densityLevel = "Low";
+            densityColor = "#00cc66";
+            densityDescription = "1 client in this area";
+        } else if (clientCount <= 2) {
+            densityLevel = "Medium";
+            densityColor = "#ffcc00";
+            densityDescription = "2-3 clients in this area";
+        } else if (clientCount <= 3) {
+            densityLevel = "High";
+            densityColor = "#ff6600";
+            densityDescription = "3-4 clients in this area";
+        } else if (clientCount <= 4) {
+            densityLevel = "Very High";
+            densityColor = "#ff3300";
+            densityDescription = "4-5 clients in this area";
+        } else {
+            densityLevel = "Maximum";
+            densityColor = "#cc0000";
+            densityDescription = "5+ clients in this area";
+        }
+        
+        // Create popup content
+        const popupContent = `
+            <div class="heat-map-popup">
+                <div class="popup-header">
+                    <div class="density-indicator" style="background-color: ${densityColor}"></div>
+                    <h4>Client Density: ${densityLevel}</h4>
+                </div>
+                <div class="popup-content">
+                    <p><strong>${densityDescription}</strong></p>
+                    <p><strong>Coordinates:</strong> ${latlng.lat.toFixed(4)}, ${latlng.lng.toFixed(4)}</p>
+                    ${nearbyClients.length > 0 ? `
+                        <div class="nearby-clients">
+                            <h5>Nearby Clients:</h5>
+                            <ul>
+                                ${nearbyClients.map(client => `
+                                    <li>
+                                        <span class="client-name">${client.name}</span>
+                                        <span class="client-type ${client.care_type}">${client.care_type === 'in_house' ? 'In-House' : 'After Care'}</span>
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        </div>
+                    ` : ''}
+                </div>
+            </div>
+        `;
+        
+        // Create and show popup
+        L.popup()
+            .setLatLng(latlng)
+            .setContent(popupContent)
+            .openOn(map);
     }
 
     // Update client count display
@@ -150,6 +345,7 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log(`Loaded ${clients.length} clients with valid coordinates`);
             
             hideLoading();
+            updateLastUpdateTime(); // Update the last update time
             
             if (clients.length === 0) {
                 console.warn('No clients with valid coordinates found');
@@ -271,7 +467,7 @@ document.addEventListener('DOMContentLoaded', function() {
         markers.forEach(marker => map.removeLayer(marker));
         markers = [];
 
-        // Update heat map data
+        // Update heat map data with enhanced online functionality
         const heatData = filteredClients.map(client => [
             client.coordinates.lat,
             client.coordinates.lng,
@@ -280,6 +476,9 @@ document.addEventListener('DOMContentLoaded', function() {
         
         console.log('Updating heat map with', heatData.length, 'data points');
         heatLayer.setLatLngs(heatData);
+        
+        // Update heat map legend stats
+        updateHeatMapStats(heatData);
 
         // Group clients by location (within 0.001 degrees = ~100m)
         const locationGroups = groupClientsByLocation(filteredClients, 0.001);
@@ -405,26 +604,47 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Get custom marker icon based on client type and status
+    // Get custom marker icon based on client type and status (Google Maps style)
     function getClientMarkerIcon(client) {
-        let iconColor = '#3498db'; // Default blue
+        let iconColor = '#4285f4'; // Google Blue
+        let iconSymbol = '📍'; // Default pin emoji
         
-        // Color by care type
+        // Color and symbol by care type
         if (client.care_type === 'after_care') {
-            iconColor = '#e67e22'; // Orange for after care
+            iconColor = '#fbbc04'; // Google Yellow
+            iconSymbol = '🏠'; // House for after care
         } else {
-            iconColor = '#2ecc71'; // Green for in-house
+            iconColor = '#34a853'; // Google Green
+            iconSymbol = '🏥'; // Hospital for in-house
         }
         
         // Adjust opacity based on status
         const opacity = client.status === 'active' ? 1.0 : 0.7;
         
         return L.divIcon({
-            html: `<div style="background-color: ${iconColor}; opacity: ${opacity};" class="custom-marker">
-                     <i class="fas fa-user"></i>
-                   </div>`,
-            iconSize: [20, 20],
-            className: 'custom-div-icon'
+            html: `
+                <div class="google-style-marker" style="
+                    background-color: ${iconColor};
+                    opacity: ${opacity};
+                    width: 32px;
+                    height: 32px;
+                    border-radius: 50% 50% 50% 0;
+                    transform: rotate(-45deg);
+                    border: 3px solid white;
+                    box-shadow: 0 2px 6px rgba(0,0,0,0.3);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    font-size: 16px;
+                    color: white;
+                ">
+                    <span style="transform: rotate(45deg);">${iconSymbol}</span>
+                </div>
+            `,
+            iconSize: [32, 32],
+            iconAnchor: [16, 32],
+            popupAnchor: [0, -32],
+            className: 'google-marker-icon'
         });
     }
 
@@ -722,6 +942,30 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Add show markers only button
+    const showMarkersOnlyBtn = document.getElementById('showMarkersOnly');
+    if (showMarkersOnlyBtn) {
+        showMarkersOnlyBtn.addEventListener('click', () => {
+            // Hide heat map and show only markers
+            if (map.hasLayer(heatLayer)) {
+                map.removeLayer(heatLayer);
+                toggleHeatMapBtn.classList.remove('active');
+                isHeatMapVisible = false;
+            }
+            
+            // Toggle button state
+            showMarkersOnlyBtn.classList.toggle('active');
+            
+            if (showMarkersOnlyBtn.classList.contains('active')) {
+                showMarkersOnlyBtn.title = 'Show Heat Map';
+                console.log('Showing markers only');
+            } else {
+                showMarkersOnlyBtn.title = 'Show Markers Only';
+                console.log('Showing both markers and heat map');
+            }
+        });
+    }
+
     if (centerMapBtn) {
         centerMapBtn.addEventListener('click', () => {
             handleMapControls('center');
@@ -734,27 +978,40 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Map layer switching
+    // Enhanced map layer switching with online tile layers
     mapLayerBtns.forEach(btn => {
         btn.addEventListener('click', () => {
             mapLayerBtns.forEach(b => b.classList.remove('active'));
             btn.classList.add('active');
             
             const layer = btn.dataset.layer;
-            if (layer === 'satellite') {
+            if (window.tileLayers) {
+                // Remove current base layer
                 map.removeLayer(baseLayer);
-                baseLayer = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
-                    attribution: '© Esri',
-                    maxZoom: 18
-                }).addTo(map);
-                console.log('Switched to satellite view');
-            } else {
-                map.removeLayer(baseLayer);
-                baseLayer = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                    attribution: '© OpenStreetMap contributors',
-                    maxZoom: 18
-                }).addTo(map);
-                console.log('Switched to map view');
+                
+                // Switch to new layer
+                switch(layer) {
+                    case 'satellite':
+                        baseLayer = window.tileLayers.satellite;
+                        break;
+                    case 'cartodb':
+                        baseLayer = window.tileLayers.cartodb;
+                        break;
+                    case 'esri':
+                        baseLayer = window.tileLayers.esri;
+                        break;
+                    default:
+                        baseLayer = window.tileLayers.osm;
+                }
+                
+                // Add new layer with error handling
+                baseLayer.addTo(map);
+                baseLayer.on('tileerror', function(e) {
+                    console.warn('Tile loading error for', layer, ':', e);
+                    showNotification(`Map layer "${layer}" loading issue. Trying fallback...`, 'warning');
+                });
+                
+                console.log(`Switched to ${layer} view`);
             }
         });
     });
@@ -763,6 +1020,30 @@ document.addEventListener('DOMContentLoaded', function() {
     const updateCoordinatesBtn = document.getElementById('updateCoordinates');
     if (updateCoordinatesBtn) {
         updateCoordinatesBtn.addEventListener('click', updateClientCoordinates);
+    }
+
+    // Add refresh button functionality
+    const refreshDataBtn = document.getElementById('refreshData');
+    if (refreshDataBtn) {
+        refreshDataBtn.addEventListener('click', async () => {
+            if (!checkNetworkConnectivity()) {
+                showNotification('No internet connection. Cannot refresh data.', 'error');
+                return;
+            }
+            
+            refreshDataBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            refreshDataBtn.disabled = true;
+            
+            try {
+                await loadClientData();
+                showNotification('Map data refreshed successfully', 'success');
+            } catch (error) {
+                showNotification('Failed to refresh data. Please try again.', 'error');
+            } finally {
+                refreshDataBtn.innerHTML = '<i class="fas fa-sync-alt"></i>';
+                refreshDataBtn.disabled = false;
+            }
+        });
     }
 
     // Handle window resize
@@ -909,6 +1190,52 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Add test markers for demonstration
+    function addTestMarkers() {
+        // Add some test markers in Laguna area
+        const testLocations = [
+            {
+                name: "Test Client 1",
+                coordinates: { lat: 14.2500, lng: 121.3000 },
+                care_type: "in_house",
+                status: "active",
+                address: "Santa Rosa, Laguna"
+            },
+            {
+                name: "Test Client 2", 
+                coordinates: { lat: 14.2000, lng: 121.2500 },
+                care_type: "after_care",
+                status: "active",
+                address: "Calamba, Laguna"
+            },
+            {
+                name: "Test Client 3",
+                coordinates: { lat: 14.3000, lng: 121.3500 },
+                care_type: "in_house", 
+                status: "inactive",
+                address: "San Pablo, Laguna"
+            }
+        ];
+        
+        testLocations.forEach(client => {
+            const markerIcon = getClientMarkerIcon(client);
+            const marker = L.marker([client.coordinates.lat, client.coordinates.lng], {
+                icon: markerIcon
+            })
+            .bindPopup(createPopupContent(client))
+            .addTo(map);
+            markers.push(marker);
+        });
+        
+        console.log('Added', testLocations.length, 'test markers');
+        
+        // Fit map to show all test markers
+        if (markers.length > 0) {
+            const group = new L.featureGroup(markers);
+            map.fitBounds(group.getBounds().pad(0.1));
+        }
+    }
+
     // Initialize map
     console.log('DOM loaded, initializing map...');
     initializeMap();
@@ -982,11 +1309,122 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 5000);
     }
 
-    // Auto-refresh data every 5 minutes
+    // Network connectivity monitoring
+    function checkNetworkConnectivity() {
+        return navigator.onLine;
+    }
+
+    // Update network status indicator
+    function updateNetworkStatus() {
+        const networkStatus = document.getElementById('networkStatus');
+        if (networkStatus) {
+            if (checkNetworkConnectivity()) {
+                networkStatus.className = 'network-status online';
+                networkStatus.innerHTML = '<i class="fas fa-wifi"></i>';
+                networkStatus.title = 'Online - Connected to internet';
+            } else {
+                networkStatus.className = 'network-status offline';
+                networkStatus.innerHTML = '<i class="fas fa-wifi-slash"></i>';
+                networkStatus.title = 'Offline - No internet connection';
+            }
+        }
+    }
+
+    // Handle online/offline events
+    window.addEventListener('online', function() {
+        console.log('Network connection restored');
+        updateNetworkStatus();
+        showNotification('Internet connection restored. Refreshing map data...', 'success');
+        loadClientData();
+    });
+
+    window.addEventListener('offline', function() {
+        console.log('Network connection lost');
+        updateNetworkStatus();
+        showNotification('Internet connection lost. Map may not update properly.', 'warning');
+    });
+
+    // Initialize network status
+    updateNetworkStatus();
+
+    // Add interactive heat map legend controls
+    const toggleLegendBtn = document.getElementById('toggleLegend');
+    const refreshHeatMapBtn = document.getElementById('refreshHeatMap');
+    const heatMapLegend = document.getElementById('heatMapLegend');
+
+    if (toggleLegendBtn && heatMapLegend) {
+        toggleLegendBtn.addEventListener('click', () => {
+            heatMapLegend.style.display = heatMapLegend.style.display === 'none' ? 'block' : 'none';
+            toggleLegendBtn.classList.toggle('active');
+            
+            if (heatMapLegend.style.display === 'none') {
+                toggleLegendBtn.innerHTML = '<i class="fas fa-eye-slash"></i>';
+                toggleLegendBtn.title = 'Show Legend';
+            } else {
+                toggleLegendBtn.innerHTML = '<i class="fas fa-eye"></i>';
+                toggleLegendBtn.title = 'Hide Legend';
+            }
+        });
+    }
+
+    if (refreshHeatMapBtn) {
+        refreshHeatMapBtn.addEventListener('click', async () => {
+            if (!checkNetworkConnectivity()) {
+                showNotification('No internet connection. Cannot refresh heat map.', 'error');
+                return;
+            }
+            
+            refreshHeatMapBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            refreshHeatMapBtn.disabled = true;
+            
+            try {
+                await loadClientData();
+                showNotification('Heat map refreshed successfully', 'success');
+            } catch (error) {
+                showNotification('Failed to refresh heat map', 'error');
+            } finally {
+                refreshHeatMapBtn.innerHTML = '<i class="fas fa-sync-alt"></i>';
+                refreshHeatMapBtn.disabled = false;
+            }
+        });
+    }
+
+    // Enhanced auto-refresh with connectivity check
     setInterval(() => {
-        if (!isLoading && document.visibilityState === 'visible') {
+        if (!isLoading && document.visibilityState === 'visible' && checkNetworkConnectivity()) {
             console.log('Auto-refreshing client data...');
             loadClientData();
         }
     }, 300000); // 5 minutes
+
+    // Add real-time data updates (every 2 minutes if online)
+    setInterval(() => {
+        if (!isLoading && document.visibilityState === 'visible' && checkNetworkConnectivity()) {
+            console.log('Real-time data update...');
+            loadClientData();
+        }
+    }, 120000); // 2 minutes
+
+    // Add animated heat map updates for online feel
+    function animateHeatMap() {
+        if (heatLayer && map.hasLayer(heatLayer)) {
+            // Slightly adjust heat map intensity for animation effect
+            const currentData = heatLayer.getLatLngs();
+            if (currentData && currentData.length > 0) {
+                const animatedData = currentData.map(point => [
+                    point[0], 
+                    point[1], 
+                    point[2] * (0.8 + Math.random() * 0.4) // Vary intensity slightly
+                ]);
+                heatLayer.setLatLngs(animatedData);
+            }
+        }
+    }
+
+    // Animate heat map every 5 seconds for online effect
+    setInterval(() => {
+        if (isHeatMapVisible && checkNetworkConnectivity()) {
+            animateHeatMap();
+        }
+    }, 5000);
 }); 

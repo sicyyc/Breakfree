@@ -948,7 +948,6 @@ def add_client():
                 },
                 # Credentials for client mobile login
                 'clientId': request.form.get('clientId'),
-                'clientPassword': request.form.get('clientPassword'),
                 'registrationDate': request.form.get('registrationDate'),
                 'checkInDate': request.form.get('checkInDate'),
                 'status': 'pending',  # Always set as pending for new clients
@@ -1023,7 +1022,6 @@ def add_client():
 
             # Validate client credentials (basic)
             client_id = (client_data.get('clientId') or '').strip()
-            client_password = (client_data.get('clientPassword') or '').strip()
             # Auto-generate client_id if missing
             if not client_id:
                 try:
@@ -1032,8 +1030,7 @@ def add_client():
                     client_data['clientId'] = client_id
                 except Exception as e:
                     print(f"Error auto-generating clientId: {e}")
-            if not client_password:
-                return jsonify({'success': False, 'error': 'Client password is required.'}), 400
+            # Password field removed - no longer required
 
             # Geocode the address automatically
             address = client_data.get('address', '').strip()
