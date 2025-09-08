@@ -115,6 +115,17 @@ document.addEventListener('DOMContentLoaded', function() {
             const clientData = await response.json();
             console.log('Raw client data:', clientData); // Log raw data
             
+            // Also load location API stats for debugging
+            try {
+                const locationStatsResponse = await fetch('/api/locations/api-stats');
+                if (locationStatsResponse.ok) {
+                    const locationStats = await locationStatsResponse.json();
+                    console.log('Laguna Location API Stats:', locationStats);
+                }
+            } catch (e) {
+                console.warn('Could not load location API stats:', e);
+            }
+            
             // Process and validate client data
             const invalidClients = []; // Track invalid clients
             clients = clientData.filter(client => {

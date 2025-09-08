@@ -1,5 +1,5 @@
 document.addEventListener('DOMContentLoaded', function() {
-    // Get DOM elements with null checks
+    // Get DOM elements
     const municipalitySelect = document.getElementById('municipality');
     const barangaySelect = document.getElementById('barangay');
     const streetAddressInput = document.getElementById('street_address');
@@ -7,34 +7,15 @@ document.addEventListener('DOMContentLoaded', function() {
     const latInput = document.getElementById('address_lat');
     const lngInput = document.getElementById('address_lng');
 
-    // Early return if required elements don't exist
-    if (!municipalitySelect || !barangaySelect || !completeAddressInput) {
-        console.error('Required form elements not found');
-        return;
-    }
-
-    // Load municipalities on page load using Laguna Location API
+    // Load municipalities on page load using new API
     fetch('/api/municipalities')
         .then(response => {
             if (!response.ok) {
-                throw new Error(`HTTP ${response.status}: Failed to load municipalities`);
+                throw new Error('Failed to load municipalities');
             }
             return response.json();
         })
-        .then(data => {
-            // Handle error response
-            if (data.error) {
-                throw new Error(data.error);
-            }
-            
-            const municipalities = Array.isArray(data) ? data : [];
-            
-            if (municipalities.length === 0) {
-                console.warn('No municipalities received from API');
-                showNotification('No municipalities available. Please contact administrator.', 'warning');
-                return;
-            }
-            
+        .then(municipalities => {
             // Sort municipalities by type (cities first) then by name
             municipalities.sort((a, b) => {
                 if (a.type !== b.type) {
@@ -54,45 +35,32 @@ document.addEventListener('DOMContentLoaded', function() {
             });
             
             console.log(`Loaded ${municipalities.length} municipalities from Laguna Location API`);
-            
-            // Check if a municipality is already selected and load its barangays
-            const selectedMunicipality = municipalitySelect.value;
-            if (selectedMunicipality) {
-                loadBarangaysForMunicipality(selectedMunicipality);
-            }
         })
         .catch(error => {
             console.error('Error loading municipalities:', error);
             showNotification('Failed to load municipalities. Please refresh the page.', 'error');
         });
 
-    // Function to load barangays for a municipality
-    function loadBarangaysForMunicipality(municipalityId) {
+    // Handle municipality selection
+    municipalitySelect.addEventListener('change', function() {
         // Clear barangay dropdown
         barangaySelect.innerHTML = '<option value="">Select Barangay</option>';
         
         // Store municipality coordinates
-        const selectedOption = municipalitySelect.querySelector(`option[value="${municipalityId}"]`);
-        if (selectedOption) {
+        const selectedOption = this.options[this.selectedIndex];
+        if (selectedOption.value) {
             latInput.value = selectedOption.dataset.lat;
             lngInput.value = selectedOption.dataset.lng;
             
             // Load barangays for selected municipality using new API
-            fetch(`/api/barangays/${municipalityId}`)
+            fetch(`/api/barangays/${selectedOption.value}`)
                 .then(response => {
                     if (!response.ok) {
                         throw new Error('Failed to load barangays');
                     }
                     return response.json();
                 })
-                .then(data => {
-                    // Handle error response
-                    if (data.error) {
-                        throw new Error(data.error);
-                    }
-                    
-                    const barangays = Array.isArray(data) ? data : [];
-                    
+                .then(barangays => {
                     // Sort barangays alphabetically
                     barangays.sort((a, b) => a.localeCompare(b));
                     
@@ -108,17 +76,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
         }
         updateCompleteAddress();
-    }
-
-    // Handle municipality selection
-    municipalitySelect.addEventListener('change', function() {
-        if (this.value) {
-            loadBarangaysForMunicipality(this.value);
-        } else {
-            // Clear barangay dropdown if no municipality selected
-            barangaySelect.innerHTML = '<option value="">Select Barangay</option>';
-            updateCompleteAddress();
-        }
     });
 
     // Handle barangay selection
@@ -152,15 +109,14 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Function to update complete address
     function updateCompleteAddress() {
-        const municipalityIndex = municipalitySelect.selectedIndex;
-        const municipality = municipalityIndex > 0 ? municipalitySelect.options[municipalityIndex].text : '';
+        const municipality = municipalitySelect.options[municipalitySelect.selectedIndex].text;
         const barangay = barangaySelect.value;
-        const street = streetAddressInput ? streetAddressInput.value.trim() : '';
+        const street = streetAddressInput.value.trim();
 
         let parts = [];
         if (street) parts.push(street);
         if (barangay) parts.push(barangay);
-        if (municipality && municipality !== 'Select Municipality/City') parts.push(municipality);
+        if (municipality) parts.push(municipality);
         parts.push('Laguna');
 
         completeAddressInput.value = parts.join(', ');
@@ -176,17 +132,12 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!address || address.trim() === '') return;
         
         fetch(`/api/locations/validate?address=${encodeURIComponent(address)}`)
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Validation request failed');
-                }
-                return response.json();
-            })
+            .then(response => response.json())
             .then(data => {
-                if (data.success && data.coordinates) {
+                if (data.success) {
                     // Update coordinates if validation successful
-                    if (latInput) latInput.value = data.coordinates.lat;
-                    if (lngInput) lngInput.value = data.coordinates.lng;
+                    latInput.value = data.coordinates.lat;
+                    lngInput.value = data.coordinates.lng;
                     
                     // Show success message
                     showAddressValidationMessage('Address validated successfully', 'success');
@@ -213,7 +164,7 @@ document.addEventListener('DOMContentLoaded', function() {
         messageDiv.className = `address-validation-message alert alert-${type === 'success' ? 'success' : type === 'warning' ? 'warning' : 'danger'}`;
         messageDiv.style.marginTop = '10px';
         messageDiv.style.fontSize = '14px';
-        messageDiv.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : type === 'warning' ? 'exclamation-triangle' : 'times-circle'}"></i> ${escapeHtml(message)}`;
+        messageDiv.innerHTML = `<i class="fas fa-${type === 'success' ? 'check-circle' : type === 'warning' ? 'exclamation-triangle' : 'times-circle'}"></i> ${message}`;
         
         // Insert after the complete address input
         const addressSection = document.querySelector('.address-section');
@@ -222,30 +173,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // Utility function to escape HTML
-    function escapeHtml(text) {
-        const map = {
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            '"': '&quot;',
-            "'": '&#039;'
-        };
-        return text.replace(/[&<>"']/g, function(m) { return map[m]; });
-    }
-
     // Enhanced Image Upload Handling
     const clientImage = document.getElementById('clientImage');
     const imagePreview = document.getElementById('imagePreview');
     const uploadArea = document.querySelector('.image-upload-area');
 
-    // Handle drag and drop with null checks
-    if (uploadArea) {
-        uploadArea.addEventListener('dragenter', preventDefaults, false);
-        uploadArea.addEventListener('dragover', preventDefaults, false);
-        uploadArea.addEventListener('dragleave', preventDefaults, false);
-        uploadArea.addEventListener('drop', handleDrop, false);
-    }
+    // Handle drag and drop
+    uploadArea.addEventListener('dragenter', preventDefaults, false);
+    uploadArea.addEventListener('dragover', preventDefaults, false);
+    uploadArea.addEventListener('dragleave', preventDefaults, false);
+    uploadArea.addEventListener('drop', handleDrop, false);
 
     function preventDefaults(e) {
         e.preventDefault();
@@ -283,41 +220,27 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function displayPreview(file) {
-        if (!imagePreview) return;
-        
-        // Check file size before processing
-        if (file.size > 2 * 1024 * 1024) {
-            showNotification('Image too large for preview', 'warning');
-            return;
-        }
-        
         const reader = new FileReader();
         reader.onload = function(e) {
             imagePreview.innerHTML = `<img src="${e.target.result}" alt="Preview">`;
             imagePreview.classList.add('has-image');
-            const placeholder = uploadArea ? uploadArea.querySelector('.upload-placeholder') : null;
-            if (placeholder) {
-                placeholder.style.display = 'none';
-            }
+            uploadArea.querySelector('.upload-placeholder').style.display = 'none';
         };
         reader.readAsDataURL(file);
     }
 
-    if (clientImage) {
-        clientImage.addEventListener('change', function(e) {
-            const file = e.target.files[0];
-            if (file && validateImage(file)) {
-                displayPreview(file);
-            }
-        });
-    }
+    clientImage.addEventListener('change', function(e) {
+        const file = e.target.files[0];
+        if (file && validateImage(file)) {
+            displayPreview(file);
+        }
+    });
 
     // Form Validation and Submission
     const addClientForm = document.getElementById('addClientForm');
     let isSubmitting = false;
 
-    if (addClientForm) {
-        addClientForm.addEventListener('submit', async function(e) {
+    addClientForm.addEventListener('submit', async function(e) {
         e.preventDefault();
         
         if (isSubmitting) return;
@@ -357,18 +280,14 @@ document.addEventListener('DOMContentLoaded', function() {
             isSubmitting = false;
             hideLoadingState();
         }
-        });
-    }
+    });
 
     function validateForm() {
-        if (!addClientForm) return false;
-        
         const requiredFields = addClientForm.querySelectorAll('[required]');
         let isValid = true;
 
         requiredFields.forEach(field => {
-            const value = field.value ? field.value.trim() : '';
-            if (!value) {
+            if (!field.value) {
                 isValid = false;
                 field.classList.add('error');
                 showFieldError(field);
@@ -386,20 +305,16 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function showFieldError(field) {
-        if (!field.parentElement) return;
-        
         const errorDiv = field.parentElement.querySelector('.field-error');
         if (!errorDiv) {
             const div = document.createElement('div');
             div.className = 'field-error';
-            div.textContent = `${field.getAttribute('placeholder') || field.getAttribute('name') || 'Field'} is required`;
+            div.textContent = `${field.getAttribute('placeholder') || field.getAttribute('name')} is required`;
             field.parentElement.appendChild(div);
         }
     }
 
     function hideFieldError(field) {
-        if (!field.parentElement) return;
-        
         const errorDiv = field.parentElement.querySelector('.field-error');
         if (errorDiv) {
             errorDiv.remove();
@@ -407,33 +322,24 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     function showLoadingState() {
-        if (!addClientForm) return;
-        
         const submitBtn = addClientForm.querySelector('button[type="submit"]');
-        if (submitBtn) {
-            submitBtn.disabled = true;
-            submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding Client...';
-        }
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Adding Client...';
     }
 
     function hideLoadingState() {
-        if (!addClientForm) return;
-        
         const submitBtn = addClientForm.querySelector('button[type="submit"]');
-        if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = '<i class="fas fa-check"></i> Add Client';
-        }
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = '<i class="fas fa-check"></i> Add Client';
     }
 
     function showNotification(message, type) {
         // Create notification element
         const notification = document.createElement('div');
         notification.className = `notification ${type}`;
-        const iconClass = type === 'success' ? 'check-circle' : 'exclamation-circle';
         notification.innerHTML = `
-            <i class="fas fa-${iconClass}"></i>
-            <span>${escapeHtml(message)}</span>
+            <i class="fas fa-${type === 'success' ? 'check-circle' : 'exclamation-circle'}"></i>
+            <span>${message}</span>
         `;
 
         // Add to document
@@ -445,42 +351,29 @@ document.addEventListener('DOMContentLoaded', function() {
         // Remove after delay
         setTimeout(() => {
             notification.classList.remove('show');
-            setTimeout(() => {
-                if (notification.parentNode) {
-                    notification.remove();
-                }
-            }, 300);
+            setTimeout(() => notification.remove(), 300);
         }, 3000);
     }
 
     // Add input event listeners for real-time validation
-    if (addClientForm) {
-        const formInputs = addClientForm.querySelectorAll('input, select, textarea');
-        formInputs.forEach(input => {
-            input.addEventListener('input', function() {
-                if (this.hasAttribute('required')) {
-                    const value = this.value ? this.value.trim() : '';
-                    if (value) {
-                        this.classList.remove('error');
-                        hideFieldError(this);
-                    } else {
-                        this.classList.add('error');
-                        showFieldError(this);
-                    }
+    const formInputs = addClientForm.querySelectorAll('input, select, textarea');
+    formInputs.forEach(input => {
+        input.addEventListener('input', function() {
+            if (this.hasAttribute('required')) {
+                if (this.value) {
+                    this.classList.remove('error');
+                    hideFieldError(this);
+                } else {
+                    this.classList.add('error');
+                    showFieldError(this);
                 }
-            });
+            }
         });
-    }
+    });
 
     // Calculate age from birthday
     function calculateAge(birthday) {
         const birthDate = new Date(birthday);
-        
-        // Validate date
-        if (isNaN(birthDate.getTime())) {
-            return 0;
-        }
-        
         const today = new Date();
         let age = today.getFullYear() - birthDate.getFullYear();
         const monthDiff = today.getMonth() - birthDate.getMonth();
@@ -489,44 +382,20 @@ document.addEventListener('DOMContentLoaded', function() {
             age--;
         }
         
-        return Math.max(0, age);
+        return age;
     }
 
     // Update age when birthday changes
-    const clientBirthday = document.getElementById('clientBirthday');
-    const clientAge = document.getElementById('clientAge');
-    
-    if (clientBirthday && clientAge) {
-        clientBirthday.addEventListener('change', function() {
-            const age = calculateAge(this.value);
-            clientAge.value = age;
-        });
-    }
+    document.getElementById('clientBirthday').addEventListener('change', function() {
+        const age = calculateAge(this.value);
+        document.getElementById('clientAge').value = age;
+    });
 
     // Format middle initial input
-    const clientMiddleInitial = document.getElementById('clientMiddleInitial');
-    if (clientMiddleInitial) {
-        clientMiddleInitial.addEventListener('input', function() {
-            let value = this.value.toUpperCase();
-            if (value && !value.endsWith('.')) {
-                value += '.';
-            }
-            this.value = value;
-        });
-    }
-
-    // Handle street address input with null check
-    if (streetAddressInput) {
-        streetAddressInput.addEventListener('input', function() {
-            updateCompleteAddress();
-            
-            // Debounce address validation
-            clearTimeout(addressValidationTimeout);
-            addressValidationTimeout = setTimeout(() => {
-                if (completeAddressInput.value && completeAddressInput.value !== 'Laguna') {
-                    validateAddress(completeAddressInput.value);
-                }
-            }, 1000);
-        });
-    }
-}); // End of DOMContentLoaded
+    document.getElementById('clientMiddleInitial').addEventListener('input', function() {
+        this.value = this.value.toUpperCase();
+        if (this.value && !this.value.endsWith('.')) {
+            this.value += '.';
+        }
+    });
+}); 

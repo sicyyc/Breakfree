@@ -13,7 +13,7 @@ const emptyState = document.getElementById('emptyState');
 const searchInput = document.getElementById('searchInput');
 const filterButtons = document.querySelectorAll('.filter-btn');
 const addActivityBtn = document.getElementById('addActivityBtn');
-const viewScheduleBtn = document.getElementById('viewScheduleBtn');
+const printScheduleBtn = document.getElementById('printScheduleBtn');
 
 // View toggle elements
 const listViewBtn = document.getElementById('listViewBtn');
@@ -24,7 +24,6 @@ const weeklyTableBody = document.getElementById('weeklyTableBody');
 
 // Modal elements
 const activityModal = document.getElementById('activityModal');
-const scheduleModal = document.getElementById('scheduleModal');
 const deleteModal = document.getElementById('deleteModal');
 const activityForm = document.getElementById('activityForm');
 const modalTitle = document.getElementById('modalTitle');
@@ -48,7 +47,7 @@ function initializeEventListeners() {
     
     // Modal controls
     addActivityBtn.addEventListener('click', () => openActivityModal());
-    viewScheduleBtn.addEventListener('click', () => openScheduleModal());
+    printScheduleBtn.addEventListener('click', () => printWeeklySchedule());
     
     // View toggle controls
     listViewBtn.addEventListener('click', () => switchView('list'));
@@ -56,7 +55,6 @@ function initializeEventListeners() {
     
     // Close modal buttons
     document.getElementById('closeModal').addEventListener('click', closeActivityModal);
-    document.getElementById('closeScheduleModal').addEventListener('click', closeScheduleModal);
     document.getElementById('closeDeleteModal').addEventListener('click', closeDeleteModal);
     
     // Cancel buttons
@@ -72,7 +70,6 @@ function initializeEventListeners() {
     // Close modals when clicking outside
     window.addEventListener('click', (e) => {
         if (e.target === activityModal) closeActivityModal();
-        if (e.target === scheduleModal) closeScheduleModal();
         if (e.target === deleteModal) closeDeleteModal();
     });
 }
@@ -395,86 +392,191 @@ async function confirmDelete() {
     }
 }
 
-// Open schedule modal
-function openScheduleModal() {
-    scheduleModal.style.display = 'flex';
-    document.body.style.overflow = 'hidden';
-    generateScheduleView();
-}
-
-// Close schedule modal
-function closeScheduleModal() {
-    scheduleModal.style.display = 'none';
-    document.body.style.overflow = 'auto';
-}
-
-// Generate schedule view
-async function generateScheduleView() {
-    const scheduleView = document.getElementById('scheduleView');
-    
-    try {
-        // Show loading state
-        scheduleView.innerHTML = '<div class="loading-indicator"><i class="fa-solid fa-spinner fa-spin"></i><span>Loading schedule...</span></div>';
-        
-        const response = await fetch('/api/daily-activities/schedule', {
-            method: 'GET',
-            headers: {
-                'Content-Type': 'application/json',
-            }
-        });
-        
-        if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            const activitiesByDay = data.schedule;
-            
-            // Generate HTML
-            scheduleView.innerHTML = `
-                <div class="schedule-table">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Day</th>
-                                <th>Time</th>
-                                <th>Activity</th>
-                                <th>Type</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${Object.keys(activitiesByDay).map(day => 
-                                activitiesByDay[day].length > 0 ? 
-                                    activitiesByDay[day].map(activity => `
-                                        <tr>
-                                            <td>${day.charAt(0).toUpperCase() + day.slice(1)}</td>
-                                            <td>${formatTime(activity.startTime)} - ${formatTime(activity.endTime)}</td>
-                                            <td>${activity.name}</td>
-                                            <td><span class="activity-type ${activity.type}">${activity.type}</span></td>
-                                        </tr>
-                                    `).join('') :
-                                    `<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No activities scheduled</td></tr>`
-                            ).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            `;
+// Print weekly schedule
+function printWeeklySchedule() {
+    // Ensure we're in table view for printing
+    if (tableView.style.display === 'none') {
+        switchView('table');
+        // Wait a moment for the table to render
+        setTimeout(() => {
+            printTable();
+        }, 100);
     } else {
-            throw new Error(data.error || 'Failed to load schedule');
-        }
-        
-    } catch (error) {
-        console.error('Error loading schedule:', error);
-        scheduleView.innerHTML = `
-            <div class="error-state">
-                <i class="fa-solid fa-exclamation-triangle"></i>
-                <h3>Error Loading Schedule</h3>
-                <p>${error.message}</p>
-            </div>
-        `;
+        printTable();
     }
+}
+
+// Print the weekly table
+function printTable() {
+    // Create a new window for printing
+    const printWindow = window.open('', '_blank');
+    
+    // Get the current date for the header
+    const currentDate = new Date().toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+    });
+    
+    // Get the table HTML
+    const tableElement = document.querySelector('.weekly-schedule-table');
+    if (!tableElement) {
+        showNotification('No schedule table found to print', 'error');
+        return;
+    }
+    
+    // Create print-friendly HTML
+    const printHTML = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Weekly Schedule - BreakFree</title>
+            <style>
+                body {
+                    font-family: 'Poppins', Arial, sans-serif;
+                    margin: 0;
+                    padding: 20px;
+                    background: white;
+                    color: #333;
+                }
+                .print-header {
+                    text-align: center;
+                    margin-bottom: 30px;
+                    border-bottom: 2px solid #6b46c1;
+                    padding-bottom: 20px;
+                }
+                .print-header h1 {
+                    color: #6b46c1;
+                    margin: 0 0 10px 0;
+                    font-size: 28px;
+                    font-weight: 600;
+                }
+                .print-header p {
+                    margin: 0;
+                    color: #666;
+                    font-size: 16px;
+                }
+                table {
+                    width: 100%;
+                    border-collapse: collapse;
+                    font-size: 12px;
+                    background: white;
+                    border-radius: 8px;
+                    overflow: hidden;
+                    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+                }
+                th, td {
+                    padding: 8px 6px;
+                    text-align: center;
+                    border: 1px solid #e5e7eb;
+                    vertical-align: middle;
+                    height: 40px;
+                }
+                th {
+                    background: #6b46c1;
+                    color: white;
+                    font-weight: 600;
+                    text-transform: uppercase;
+                    letter-spacing: 0.5px;
+                    font-size: 11px;
+                }
+                th.time-header {
+                    background: #553c9a;
+                    min-width: 100px;
+                }
+                tbody tr:nth-child(even) {
+                    background: #f9fafb;
+                }
+                .time-slot {
+                    font-weight: 600;
+                    color: #374151;
+                    background: #f3f4f6;
+                    border-right: 2px solid #d1d5db;
+                    font-size: 11px;
+                }
+                .activity-slot {
+                    position: relative;
+                    min-height: 30px;
+                    padding: 2px;
+                    vertical-align: top;
+                    height: 40px;
+                }
+                .activity-item {
+                    background: #6b46c1;
+                    color: white;
+                    padding: 4px 6px;
+                    border-radius: 4px;
+                    font-size: 10px;
+                    font-weight: 500;
+                    text-align: center;
+                    line-height: 1.2;
+                    width: 100%;
+                    box-sizing: border-box;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: center;
+                    align-items: center;
+                }
+                .activity-item.meal { background: #fef3c7; color: #92400e; }
+                .activity-item.exercise { background: #d1fae5; color: #065f46; }
+                .activity-item.education { background: #dbeafe; color: #1e40af; }
+                .activity-item.recreation { background: #f3e8ff; color: #7c3aed; }
+                .activity-item.cleaning { background: #fecaca; color: #991b1b; }
+                .activity-item.spiritual { background: #fef7cd; color: #a16207; }
+                .activity-item.personal { background: #e0e7ff; color: #3730a3; }
+                .activity-item.other { background: #f3f4f6; color: #374151; }
+                .activity-name {
+                    font-weight: 600;
+                    margin-bottom: 1px;
+                    font-size: 10px;
+                    line-height: 1.1;
+                }
+                .activity-time {
+                    font-size: 9px;
+                    opacity: 0.9;
+                    font-weight: 500;
+                }
+                .print-footer {
+                    margin-top: 30px;
+                    text-align: center;
+                    color: #666;
+                    font-size: 12px;
+                    border-top: 1px solid #e5e7eb;
+                    padding-top: 20px;
+                }
+                @media print {
+                    body { margin: 0; padding: 15px; }
+                    .print-header { margin-bottom: 20px; }
+                    table { box-shadow: none; }
+                }
+            </style>
+        </head>
+        <body>
+            <div class="print-header">
+                <h1>Weekly Schedule</h1>
+                <p>Generated on ${currentDate}</p>
+            </div>
+            ${tableElement.outerHTML}
+            <div class="print-footer">
+                <p>BreakFree - Daily Activities Management System</p>
+            </div>
+        </body>
+        </html>
+    `;
+    
+    // Write the HTML to the print window
+    printWindow.document.write(printHTML);
+    printWindow.document.close();
+    
+    // Wait for content to load, then print
+    printWindow.onload = function() {
+        printWindow.focus();
+        printWindow.print();
+        printWindow.close();
+    };
+    
+    showNotification('Print dialog opened', 'success');
 }
 
 // Utility functions

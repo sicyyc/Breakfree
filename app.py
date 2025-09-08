@@ -10,13 +10,14 @@ import re
 from math import isnan
 import hashlib
 import math
+from datetime import datetime
 
 # Load environment variables before importing Firebase config
 load_dotenv()
 
+# Firebase imports
 from firebase_config import db
 from firebase_admin import auth, firestore
-from datetime import datetime
 
 app = Flask(__name__)
 app.secret_key = os.getenv('FLASK_SECRET_KEY', os.urandom(24))  # Use environment variable for session key
@@ -32,150 +33,9 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 GOOGLE_GEOCODING_API_KEY = os.getenv('GOOGLE_GEOCODING_API_KEY')  # Optional: Add to .env file
 NOMINATIM_BASE_URL = 'https://nominatim.openstreetmap.org/search'
 
-# Add this after the imports
-LAGUNA_LOCATIONS = {
-    "municipalities": [
-        # Cities
-        {"id": "calamba", "name": "Calamba City", "lat": 14.1877, "lng": 121.1251},
-        {"id": "sanpablo", "name": "San Pablo City", "lat": 14.0683, "lng": 121.3251},
-        {"id": "santarosa", "name": "Santa Rosa City", "lat": 14.3119, "lng": 121.1114},
-        {"id": "binan", "name": "Biñan City", "lat": 14.3306, "lng": 121.0856},
-        {"id": "cabuyao", "name": "Cabuyao City", "lat": 14.2471, "lng": 121.1367},
-        {"id": "sanpedro", "name": "San Pedro City", "lat": 14.3589, "lng": 121.0476},
-        
-        # Municipalities
-        {"id": "santacruz", "name": "Santa Cruz", "lat": 14.2854, "lng": 121.4134},
-        {"id": "kalayaan", "name": "Kalayaan", "lat": 14.2691, "lng": 121.4213},
-        {"id": "bay", "name": "Bay", "lat": 14.1833, "lng": 121.2833},
-        {"id": "losbanos", "name": "Los Baños", "lat": 14.1692, "lng": 121.2417},
-        {"id": "calauan", "name": "Calauan", "lat": 14.1497, "lng": 121.3156},
-        {"id": "alaminos", "name": "Alaminos", "lat": 14.0639, "lng": 121.2461},
-        {"id": "magdalena", "name": "Magdalena", "lat": 14.2000, "lng": 121.4333},
-        {"id": "majayjay", "name": "Majayjay", "lat": 14.1500, "lng": 121.4667},
-        {"id": "liliw", "name": "Liliw", "lat": 14.1333, "lng": 121.4333},
-        {"id": "nagcarlan", "name": "Nagcarlan", "lat": 14.1333, "lng": 121.4167},
-        {"id": "rizal", "name": "Rizal", "lat": 14.1167, "lng": 121.4000},
-        {"id": "sanpascual", "name": "San Pascual", "lat": 14.1000, "lng": 121.3833},
-        {"id": "pila", "name": "Pila", "lat": 14.2333, "lng": 121.3667},
-        {"id": "victoria", "name": "Victoria", "lat": 14.2167, "lng": 121.3333},
-        {"id": "pagsanjan", "name": "Pagsanjan", "lat": 14.2667, "lng": 121.4500},
-        {"id": "cavinti", "name": "Cavinti", "lat": 14.2500, "lng": 121.5000},
-        {"id": "lumban", "name": "Lumban", "lat": 14.3000, "lng": 121.4667},
-        {"id": "paete", "name": "Paete", "lat": 14.3667, "lng": 121.4833},
-        {"id": "pakil", "name": "Pakil", "lat": 14.3833, "lng": 121.4833},
-        {"id": "pangil", "name": "Pangil", "lat": 14.4000, "lng": 121.4667},
-        {"id": "siniloan", "name": "Siniloan", "lat": 14.4167, "lng": 121.4500},
-        {"id": "famy", "name": "Famy", "lat": 14.4333, "lng": 121.4500},
-        {"id": "mabitac", "name": "Mabitac", "lat": 14.4500, "lng": 121.4333},
-        {"id": "sta_maria", "name": "Sta. Maria", "lat": 14.4667, "lng": 121.4167},
-        {"id": "magsaysay", "name": "Magsaysay", "lat": 14.4833, "lng": 121.4000},
-        {"id": "sta_catalina", "name": "Sta. Catalina", "lat": 14.5000, "lng": 121.3833},
-        {"id": "pansol", "name": "Pansol", "lat": 14.5167, "lng": 121.3667},
-        {"id": "pagsanjan", "name": "Pagsanjan", "lat": 14.2667, "lng": 121.4500}
-    ],
-    "barangays": {
-        "calamba": [
-            "Barangay 1", "Barangay 2", "Barangay 3", "Barangay 4", "Barangay 5", "Barangay 6", "Barangay 7",
-            "Parian", "Crossing", "Real", "Mayapa", "Canlubang", "Pansol", "Bagong Kalsada", "Bucal",
-            "Banadero", "Banlic", "Batino", "Bubuyan", "Bunggo", "Burol", "Camaligan", "Halang",
-            "Hornalan", "Kay-Anlog", "La Mesa", "Laguerta", "Lawa", "Lecheria", "Lingga", "Looc",
-            "Mabato", "Majada Labas", "Makiling", "Mapagong", "Masili", "Maunong", "Milagrosa",
-            "Paciano Rizal", "Palingon", "Paliparan", "Palo-Alto", "Pansol", "Prinza", "Punta",
-            "Sucol", "Turbina", "Ulango", "Uwisan"
-        ],
-        "sanpablo": [
-            "San Roque", "San Rafael", "Santa Maria", "San Nicolas", "San Jose", "San Vicente",
-            "San Antonio", "San Bartolome", "San Francisco", "San Pedro", "San Lorenzo",
-            "San Diego", "San Lucas", "San Cristobal", "San Juan", "San Isidro", "San Miguel",
-            "San Gabriel", "San Mateo", "San Andres", "San Agustin", "San Buenaventura",
-            "San Ignacio", "San Luis", "San Marcos", "San Pablo", "San Sebastian", "San Simon",
-            "San Vicente", "Santa Ana", "Santa Catalina", "Santa Cruz", "Santa Elena",
-            "Santa Isabel", "Santa Monica", "Santa Veronica", "Santo Angel", "Santo Cristo",
-            "Santo Niño", "Santo Tomas"
-        ],
-        "santarosa": [
-            "Balibago", "Don Jose", "Dita", "Kanluran", "Labas", "Macabling", "Market Area",
-            "Malitlit", "Pooc", "Tagapo", "Aplaya", "Caingin", "Diliman", "Ibaba", "Malusak",
-            "Pook", "Pulong Santa Cruz", "Sinalhan", "Tunasan"
-        ],
-        "binan": [
-            "Canlalay", "Casile", "De La Paz", "Ganado", "Langkiwa", "Malaban", "Mampalasan",
-            "Platero", "San Antonio", "San Francisco", "San Jose", "San Vicente", "Santo Domingo",
-            "Santo Niño", "Santo Tomas", "Timbao", "Tubigan", "Zapote"
-        ],
-        "cabuyao": [
-            "Baclaran", "Banay-Banay", "Banlic", "Bigaa", "Butong", "Diezmo", "Gulod",
-            "Mamatid", "Marinig", "Niugan", "Pulong Buhangin", "Katapatan", "Pulo", "Sala",
-            "San Isidro", "San Vicente", "Santa Rosa", "Tambo", "Tuntungin-Putho"
-        ],
-        "sanpedro": [
-            "Bagong Silang", "Calendola", "Chrysanthemum", "Cuyab", "Estrella", "Fatima",
-            "G.S.I.S.", "Landayan", "Langgam", "Laram", "Magsaysay", "Maharlika", "Narra",
-            "Nueva", "Pacita 1", "Pacita 2", "Poblacion", "Riverside", "Rosario", "Sampaguita",
-            "San Antonio", "San Lorenzo Ruiz", "San Roque", "San Vicente", "Santo Niño",
-            "United Bayanihan", "United Better Living"
-        ],
-        "santacruz": [
-            "Alipit", "Bagumbayan", "Bubukal", "Gatid", "Labuin", "Oogong", "Pagsawitan",
-            "Patimbao", "Santisima Cruz", "Santo Angel", "San Jose", "San Pablo", "San Roque",
-            "San Vicente", "Santa Lucia", "Santa Maria", "Santo Domingo", "Santo Tomas"
-        ],
-        "kalayaan": [
-            "Longos", "San Antonio", "San Juan", 
-        ],
-        "bay": [
-            "Bitin", "Calo", "Dila", "Maitim", "Masaya", "Paciano Rizal", "Puypuy",
-            "San Agustin", "Santo Domingo", "Tagumpay", "San Antonio", "San Isidro",
-            "San Nicolas", "San Pablo", "San Pedro", "Santa Cruz", "Santo Domingo"
-        ],
-        "losbanos": [
-            "Anos", "Bambang", "Batong Malake", "Baybayin", "Bayog", "Lalakay", "Maahas",
-            "Malinta", "Mayondon", "San Antonio", "Bagong Silang", "Bambang", "Batong Malake",
-            "Baybayin", "Bayog", "Lalakay", "Maahas", "Malinta", "Mayondon", "San Antonio",
-            "Tuntungin-Putho"
-        ],
-        "siniloan": [
-            "Acevida", "Bagong Pag-asa", "Bagong Silang", "Baguio", "Burgos", "Calumpang",
-            "Casinsin", "De La Paz", "General Luna", "Halayhayin", "Jose Rizal", "Laguio",
-            "Liwayway", "Lourdes", "Macatad", "Magsaysay", "Mendiola", "Nabangka", "Nangka",
-            "P. Burgos", "Pandayan", "Poblacion", "Quisao", "Rizal", "San Andres", "San Antonio",
-            "San Francisco", "San Jose", "San Miguel", "San Nicolas", "San Pedro", "San Roque",
-            "San Vicente", "Santa Maria", "Santo Niño", "Santo Tomas", "Silangan", "Tatlong Krus"
-        ],
-        "paete": [
-            "Bagumbayan", "Balanac", "Bungkol", "Ibaba del Norte", "Ibaba del Sur", "Ilaya del Norte",
-            "Ilaya del Sur", "Maytoong", "Quinale", "San Antonio", "San Francisco", "San Jose",
-            "San Roque", "San Vicente", "Santa Barbara", "Santo Tomas"
-        ],
-        "pakil": [
-            "Banilan", "Burgos", "Casa Real", "Casinsin", "Dorado", "Gonzales", "Kabulusan",
-            "Matikiw", "Nabuclod", "Natalia", "Pagalangan", "Poblacion", "Rizal", "San Antonio",
-            "San Francisco", "San Jose", "San Miguel", "San Pedro", "San Vicente", "Santa Maria",
-            "Santo Niño", "Santo Tomas", "Taft", "Taquing", "Tubigan"
-        ],
-        "pangil": [
-            "Balian", "Dambo", "Galalan", "Isla", "Mabato-Azufre", "Nieves", "Poblacion",
-            "San Jose", "San Nicolas", "San Vicente", "Santa Maria", "Santo Niño", "Santo Tomas"
-        ],
-        "mabitac": [
-            "Amuyong", "Baliuag", "Bayanihan", "Lambac", "Lucong", "Matalatala", "Nangka",
-            "Nayon", "Paagahan", "Poblacion", "San Antonio", "San Gabriel", "San Miguel",
-            "San Vicente", "Santa Maria", "Santo Niño", "Santo Tomas"
-        ],
-        "sta_maria": [
-            "Adia", "Bagong Pook", "Bagumbayan", "Bubukal", "Cabuyao", "Calangay", "Cambuja",
-            "Cueva", "Jose Laurel Jr.", "Kayhakat", "Macasipac", "Manggahan", "Matala",
-            "Nagsaing", "Nangka", "Poblacion", "San Antonio", "San Gabriel", "San Jose",
-            "San Vicente", "Santa Ana", "Santa Clara", "Santa Cruz", "Santo Niño", "Santo Tomas"
-        ],
-        "cavinti": [
-            "Anglas", "Bangco", "Bukal", "Bulajo", "Cansuso", "Chico", "Dagatan", "Duhat",
-            "Inao-Awan", "Kanluran Talaongan", "Labayo", "Layasin", "Layug", "Mahipon",
-            "Paowin", "Poblacion", "Silangan Talaongan", "Sisilmin", "Sumucab", "Tibig",
-            "Udia", "Ulong-Sulok"
-        ]
-    }
-}
+# Import the new Laguna Location API
+from laguna_locations_api import laguna_api, get_municipality, get_all_municipalities, get_barangays, search_locations, get_location_stats
+
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -309,6 +169,50 @@ def generate_fallback_coordinates():
         'source': 'fallback',
         'formatted_address': 'Generated coordinates (Laguna area)'
     }
+
+def geocode_with_laguna_api(address):
+    """Geocode using Laguna Location API for municipalities and barangays."""
+    try:
+        address_lower = address.lower()
+        
+        # Search for locations using the Laguna API
+        search_results = search_locations(address_lower)
+        
+        if search_results:
+            # Prioritize municipality matches over barangay matches
+            municipality_matches = [r for r in search_results if r.type == 'municipality']
+            barangay_matches = [r for r in search_results if r.type == 'barangay']
+            
+            # Use municipality match if available, otherwise use barangay match
+            best_match = municipality_matches[0] if municipality_matches else barangay_matches[0]
+            
+            coords = {
+                'lat': best_match.lat,
+                'lng': best_match.lng,
+                'source': 'laguna_api',
+                'formatted_address': f"{best_match.name}, Laguna"
+            }
+            print(f"Laguna API geocoded '{address}' to {coords['lat']}, {coords['lng']} ({best_match.type}: {best_match.name})")
+            return coords
+        
+        # If no direct match found, try to find municipality by partial name matching
+        all_municipalities = get_all_municipalities()
+        for municipality in all_municipalities:
+            # Check if municipality name appears in the address
+            if municipality.name.lower() in address_lower:
+                coords = {
+                    'lat': municipality.lat,
+                    'lng': municipality.lng,
+                    'source': 'laguna_api',
+                    'formatted_address': f"{municipality.name}, Laguna"
+                }
+                print(f"Laguna API partial match geocoded '{address}' to {coords['lat']}, {coords['lng']} ({municipality.name})")
+                return coords
+                
+    except Exception as e:
+        print(f"Laguna API geocoding error for '{address}': {e}")
+    
+    return None
 
 def admin_required(f):
     @wraps(f)
@@ -1143,106 +1047,13 @@ def add_client():
                         print(f"Successfully geocoded address with offset: {client_data['coordinates']['lat']}, {client_data['coordinates']['lng']} (source: {client_data['coordinates']['source']})")
                     else:
                         print(f"Failed to geocode address: {address}")
-                        # Try manual mapping for common addresses
-                        address_lower = address.lower()
-                        manual_coords = None
-                        
-                        # PRIORITY 1: Municipality/City matching (highest priority)
-                        # Cities
-                        if 'calamba' in address_lower:
-                            manual_coords = {'lat': 14.1877, 'lng': 121.1251, 'source': 'manual'}
-                        elif 'san pablo' in address_lower and 'laguna' in address_lower:
-                            manual_coords = {'lat': 14.0683, 'lng': 121.3251, 'source': 'manual'}
-                        elif 'santa rosa' in address_lower and 'laguna' in address_lower:
-                            manual_coords = {'lat': 14.3119, 'lng': 121.1114, 'source': 'manual'}
-                        elif 'binan' in address_lower or 'biñan' in address_lower:
-                            manual_coords = {'lat': 14.3306, 'lng': 121.0856, 'source': 'manual'}
-                        elif 'cabuyao' in address_lower:
-                            manual_coords = {'lat': 14.2471, 'lng': 121.1367, 'source': 'manual'}
-                        elif 'san pedro' in address_lower and 'laguna' in address_lower:
-                            manual_coords = {'lat': 14.3589, 'lng': 121.0476, 'source': 'manual'}
-                        
-                        # Municipalities - Northern Laguna
-                        elif 'siniloan' in address_lower:
-                            manual_coords = {'lat': 14.4167, 'lng': 121.4500, 'source': 'manual'}
-                        elif 'famy' in address_lower:
-                            manual_coords = {'lat': 14.4333, 'lng': 121.4500, 'source': 'manual'}
-                        elif 'mabitac' in address_lower:
-                            manual_coords = {'lat': 14.4500, 'lng': 121.4333, 'source': 'manual'}
-                        elif 'sta maria' in address_lower or 'santa maria' in address_lower:
-                            manual_coords = {'lat': 14.4667, 'lng': 121.4167, 'source': 'manual'}
-                        elif 'magsaysay' in address_lower:
-                            manual_coords = {'lat': 14.4833, 'lng': 121.4000, 'source': 'manual'}
-                        elif 'sta catalina' in address_lower or 'santa catalina' in address_lower:
-                            manual_coords = {'lat': 14.5000, 'lng': 121.3833, 'source': 'manual'}
-                        elif 'pansol' in address_lower and 'laguna' in address_lower:
-                            manual_coords = {'lat': 14.5167, 'lng': 121.3667, 'source': 'manual'}
-                        
-                        # Municipalities - Eastern Laguna
-                        elif 'paete' in address_lower:
-                            manual_coords = {'lat': 14.3667, 'lng': 121.4833, 'source': 'manual'}
-                        elif 'pakil' in address_lower:
-                            manual_coords = {'lat': 14.3833, 'lng': 121.4833, 'source': 'manual'}
-                        elif 'pangil' in address_lower:
-                            manual_coords = {'lat': 14.4000, 'lng': 121.4667, 'source': 'manual'}
-                        elif 'pagsanjan' in address_lower:
-                            manual_coords = {'lat': 14.2667, 'lng': 121.4500, 'source': 'manual'}
-                        elif 'cavinti' in address_lower:
-                            manual_coords = {'lat': 14.2500, 'lng': 121.5000, 'source': 'manual'}
-                        elif 'lumban' in address_lower:
-                            manual_coords = {'lat': 14.3000, 'lng': 121.4667, 'source': 'manual'}
-                        elif 'kalayaan' in address_lower and 'laguna' in address_lower:
-                            manual_coords = {'lat': 14.2691, 'lng': 121.4213, 'source': 'manual'}
-                        elif 'longos' in address_lower and 'kalayaan' in address_lower:
-                            manual_coords = {'lat': 14.2691, 'lng': 121.4213, 'source': 'manual'}
-                        
-                        # Municipalities - Central Laguna
-                        elif 'sta cruz' in address_lower or 'santa cruz' in address_lower:
-                            if 'laguna' in address_lower or 'sambat' in address_lower:
-                                manual_coords = {'lat': 14.2854, 'lng': 121.4134, 'source': 'manual'}
-                        elif 'bay' in address_lower and 'laguna' in address_lower:
-                            manual_coords = {'lat': 14.1833, 'lng': 121.2833, 'source': 'manual'}
-                        elif 'los banos' in address_lower or 'los baños' in address_lower:
-                            manual_coords = {'lat': 14.1692, 'lng': 121.2417, 'source': 'manual'}
-                        elif 'calauan' in address_lower:
-                            manual_coords = {'lat': 14.1497, 'lng': 121.3156, 'source': 'manual'}
-                        elif 'alaminos' in address_lower:
-                            manual_coords = {'lat': 14.0639, 'lng': 121.2461, 'source': 'manual'}
-                        
-                        # Municipalities - Southern Laguna
-                        elif 'magdalena' in address_lower:
-                            manual_coords = {'lat': 14.2000, 'lng': 121.4333, 'source': 'manual'}
-                        elif 'majayjay' in address_lower:
-                            manual_coords = {'lat': 14.1500, 'lng': 121.4667, 'source': 'manual'}
-                        elif 'liliw' in address_lower:
-                            manual_coords = {'lat': 14.1333, 'lng': 121.4333, 'source': 'manual'}
-                        elif 'nagcarlan' in address_lower:
-                            manual_coords = {'lat': 14.1333, 'lng': 121.4167, 'source': 'manual'}
-                        elif 'rizal' in address_lower and 'laguna' in address_lower:
-                            manual_coords = {'lat': 14.1167, 'lng': 121.4000, 'source': 'manual'}
-                        elif 'san pascual' in address_lower:
-                            manual_coords = {'lat': 14.1000, 'lng': 121.3833, 'source': 'manual'}
-                        elif 'pila' in address_lower:
-                            manual_coords = {'lat': 14.2333, 'lng': 121.3667, 'source': 'manual'}
-                        elif 'victoria' in address_lower:
-                            manual_coords = {'lat': 14.2167, 'lng': 121.3333, 'source': 'manual'}
-                        
-                        # PRIORITY 2: Specific barangay matching (if no municipality found)
-                        elif 'longos' in address_lower:
-                            # Longos is a barangay in Kalayaan, Laguna
-                            manual_coords = {'lat': 14.2691, 'lng': 121.4213, 'source': 'manual'}
-                        
-                        # PRIORITY 3: Street-specific mapping (lowest priority - only if no municipality/barangay found)
-                        elif 'real' in address_lower and ('st' in address_lower or 'street' in address_lower):
-                            if 'zone' in address_lower or 'purok' in address_lower:
-                                manual_coords = {'lat': 14.2100, 'lng': 121.1200, 'source': 'manual'}
-                            else:
-                                manual_coords = {'lat': 14.2120, 'lng': 121.1250, 'source': 'manual'}
+                        # Try manual mapping using Laguna API
+                        manual_coords = geocode_with_laguna_api(address)
                         
                         if manual_coords:
                             # Generate offset coordinates to ensure unique positioning
                             client_data['coordinates'] = generate_offset_coordinates(manual_coords, client_data.get('clientId', client_data.get('name', 'unknown')))
-                            print(f"Used manual coordinates with offset: {client_data['coordinates']['lat']}, {client_data['coordinates']['lng']}")
+                            print(f"Used Laguna API coordinates with offset: {client_data['coordinates']['lat']}, {client_data['coordinates']['lng']}")
                 except Exception as geocode_error:
                     print(f"Error geocoding address: {geocode_error}")
                     # Continue without coordinates rather than failing the entire operation
@@ -2912,17 +2723,32 @@ def force_geocode_all():
         }), 500
 
 @app.route('/api/municipalities')
-@role_required(['admin', 'psychometrician', 'house_worker'])
 def get_municipalities():
     """Get all Laguna municipalities and cities with their coordinates"""
-    municipalities = LAGUNA_LOCATIONS['municipalities']
-    return jsonify(municipalities)
+    try:
+        municipalities = get_all_municipalities()
+        return jsonify([{
+            'id': muni.id,
+            'name': muni.name,
+            'type': muni.type,
+            'lat': muni.lat,
+            'lng': muni.lng,
+            'population': muni.population,
+            'area_km2': muni.area_km2
+        } for muni in municipalities])
+    except Exception as e:
+        print(f"Error fetching municipalities: {e}")
+        return jsonify({'error': 'Failed to load municipalities'}), 500
 
 @app.route('/api/barangays/<municipality_id>')
-@role_required(['admin', 'psychometrician', 'house_worker'])
-def get_barangays(municipality_id):
-    barangays = LAGUNA_LOCATIONS['barangays'].get(municipality_id, [])
-    return jsonify(barangays)
+def get_barangays_endpoint(municipality_id):
+    """Get barangays for a specific municipality"""
+    try:
+        barangays = get_barangays(municipality_id)
+        return jsonify(barangays)
+    except Exception as e:
+        print(f"Error fetching barangays for {municipality_id}: {e}")
+        return jsonify({'error': 'Failed to load barangays'}), 500
 
 @app.route('/api/locations/validate')
 @role_required(['admin', 'psychometrician', 'house_worker'])
@@ -2972,100 +2798,8 @@ def debug_locations():
                 'error': 'Address parameter required'
             }), 400
         
-        # Test the geocoding logic
-        manual_coords = None
-        
-        # PRIORITY 1: Municipality/City matching (highest priority)
-        # Cities
-        if 'calamba' in address:
-            manual_coords = {'lat': 14.1877, 'lng': 121.1251, 'source': 'manual'}
-        elif 'san pablo' in address and 'laguna' in address:
-            manual_coords = {'lat': 14.0683, 'lng': 121.3251, 'source': 'manual'}
-        elif 'santa rosa' in address and 'laguna' in address:
-            manual_coords = {'lat': 14.3119, 'lng': 121.1114, 'source': 'manual'}
-        elif 'binan' in address or 'biñan' in address:
-            manual_coords = {'lat': 14.3306, 'lng': 121.0856, 'source': 'manual'}
-        elif 'cabuyao' in address:
-            manual_coords = {'lat': 14.2471, 'lng': 121.1367, 'source': 'manual'}
-        elif 'san pedro' in address and 'laguna' in address:
-            manual_coords = {'lat': 14.3589, 'lng': 121.0476, 'source': 'manual'}
-        
-        # Municipalities - Northern Laguna
-        elif 'siniloan' in address:
-            manual_coords = {'lat': 14.4167, 'lng': 121.4500, 'source': 'manual'}
-        elif 'famy' in address:
-            manual_coords = {'lat': 14.4333, 'lng': 121.4500, 'source': 'manual'}
-        elif 'mabitac' in address:
-            manual_coords = {'lat': 14.4500, 'lng': 121.4333, 'source': 'manual'}
-        elif 'sta maria' in address or 'santa maria' in address:
-            manual_coords = {'lat': 14.4667, 'lng': 121.4167, 'source': 'manual'}
-        elif 'magsaysay' in address:
-            manual_coords = {'lat': 14.4833, 'lng': 121.4000, 'source': 'manual'}
-        elif 'sta catalina' in address or 'santa catalina' in address:
-            manual_coords = {'lat': 14.5000, 'lng': 121.3833, 'source': 'manual'}
-        elif 'pansol' in address and 'laguna' in address:
-            manual_coords = {'lat': 14.5167, 'lng': 121.3667, 'source': 'manual'}
-        
-        # Municipalities - Eastern Laguna
-        elif 'paete' in address:
-            manual_coords = {'lat': 14.3667, 'lng': 121.4833, 'source': 'manual'}
-        elif 'pakil' in address:
-            manual_coords = {'lat': 14.3833, 'lng': 121.4833, 'source': 'manual'}
-        elif 'pangil' in address:
-            manual_coords = {'lat': 14.4000, 'lng': 121.4667, 'source': 'manual'}
-        elif 'pagsanjan' in address:
-            manual_coords = {'lat': 14.2667, 'lng': 121.4500, 'source': 'manual'}
-        elif 'cavinti' in address:
-            manual_coords = {'lat': 14.2500, 'lng': 121.5000, 'source': 'manual'}
-        elif 'lumban' in address:
-            manual_coords = {'lat': 14.3000, 'lng': 121.4667, 'source': 'manual'}
-        elif 'kalayaan' in address and 'laguna' in address:
-            manual_coords = {'lat': 14.2691, 'lng': 121.4213, 'source': 'manual'}
-        elif 'longos' in address and 'kalayaan' in address:
-            manual_coords = {'lat': 14.2691, 'lng': 121.4213, 'source': 'manual'}
-        
-        # Municipalities - Central Laguna
-        elif 'sta cruz' in address or 'santa cruz' in address:
-            if 'laguna' in address or 'sambat' in address:
-                manual_coords = {'lat': 14.2854, 'lng': 121.4134, 'source': 'manual'}
-        elif 'bay' in address and 'laguna' in address:
-            manual_coords = {'lat': 14.1833, 'lng': 121.2833, 'source': 'manual'}
-        elif 'los banos' in address or 'los baños' in address:
-            manual_coords = {'lat': 14.1692, 'lng': 121.2417, 'source': 'manual'}
-        elif 'calauan' in address:
-            manual_coords = {'lat': 14.1497, 'lng': 121.3156, 'source': 'manual'}
-        elif 'alaminos' in address:
-            manual_coords = {'lat': 14.0639, 'lng': 121.2461, 'source': 'manual'}
-        
-        # Municipalities - Southern Laguna
-        elif 'magdalena' in address:
-            manual_coords = {'lat': 14.2000, 'lng': 121.4333, 'source': 'manual'}
-        elif 'majayjay' in address:
-            manual_coords = {'lat': 14.1500, 'lng': 121.4667, 'source': 'manual'}
-        elif 'liliw' in address:
-            manual_coords = {'lat': 14.1333, 'lng': 121.4333, 'source': 'manual'}
-        elif 'nagcarlan' in address:
-            manual_coords = {'lat': 14.1333, 'lng': 121.4167, 'source': 'manual'}
-        elif 'rizal' in address and 'laguna' in address:
-            manual_coords = {'lat': 14.1167, 'lng': 121.4000, 'source': 'manual'}
-        elif 'san pascual' in address:
-            manual_coords = {'lat': 14.1000, 'lng': 121.3833, 'source': 'manual'}
-        elif 'pila' in address:
-            manual_coords = {'lat': 14.2333, 'lng': 121.3667, 'source': 'manual'}
-        elif 'victoria' in address:
-            manual_coords = {'lat': 14.2167, 'lng': 121.3333, 'source': 'manual'}
-        
-        # PRIORITY 2: Specific barangay matching (if no municipality found)
-        elif 'longos' in address:
-            # Longos is a barangay in Kalayaan, Laguna
-            manual_coords = {'lat': 14.2691, 'lng': 121.4213, 'source': 'manual'}
-        
-        # PRIORITY 3: Street-specific mapping (lowest priority - only if no municipality/barangay found)
-        elif 'real' in address and ('st' in address or 'street' in address):
-            if 'zone' in address or 'purok' in address:
-                manual_coords = {'lat': 14.2100, 'lng': 121.1200, 'source': 'manual'}
-            else:
-                manual_coords = {'lat': 14.2120, 'lng': 121.1250, 'source': 'manual'}
+        # Test the geocoding logic using Laguna API
+        manual_coords = geocode_with_laguna_api(address)
         
         return jsonify({
             'success': True,
@@ -3097,19 +2831,21 @@ def get_location_stats():
             address = client_dict.get('address', '').lower()
             total_clients += 1
             
-            # Match address to municipality
+            # Match address to municipality using new API
             matched_municipality = None
-            for municipality in LAGUNA_LOCATIONS['municipalities']:
-                if municipality['id'] in address or municipality['name'].lower() in address:
-                    matched_municipality = municipality['id']
+            municipalities = get_all_municipalities()
+            for municipality in municipalities:
+                if municipality.id in address or municipality.name.lower() in address:
+                    matched_municipality = municipality.id
                     break
             
             if matched_municipality:
                 if matched_municipality not in location_stats:
+                    muni = get_municipality(matched_municipality)
                     location_stats[matched_municipality] = {
-                        'name': next(m['name'] for m in LAGUNA_LOCATIONS['municipalities'] if m['id'] == matched_municipality),
-                        'lat': next(m['lat'] for m in LAGUNA_LOCATIONS['municipalities'] if m['id'] == matched_municipality),
-                        'lng': next(m['lng'] for m in LAGUNA_LOCATIONS['municipalities'] if m['id'] == matched_municipality),
+                        'name': muni.name,
+                        'lat': muni.lat,
+                        'lng': muni.lng,
                         'count': 0,
                         'in_house': 0,
                         'after_care': 0
@@ -3136,9 +2872,25 @@ def get_location_stats():
             'error': str(e)
         }), 500
 
+@app.route('/api/locations/api-stats')
+@role_required(['admin', 'psychometrician', 'house_worker'])
+def get_location_api_stats():
+    """Get statistics about the Laguna location API data"""
+    try:
+        stats = get_location_stats()
+        return jsonify({
+            'success': True,
+            'stats': stats
+        })
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
 @app.route('/api/locations/search')
 @role_required(['admin', 'psychometrician', 'house_worker'])
-def search_locations():
+def search_locations_endpoint():
     """Search for Laguna locations by name"""
     query = request.args.get('q', '').lower()
     if not query or len(query) < 2:
@@ -3148,40 +2900,59 @@ def search_locations():
             'total': 0
         })
     
-    results = []
-    
-    # Search municipalities
-    for municipality in LAGUNA_LOCATIONS['municipalities']:
-        if query in municipality['name'].lower() or query in municipality['id'].lower():
-            results.append({
-                'type': 'municipality',
-                'name': municipality['name'],
-                'id': municipality['id'],
-                'lat': municipality['lat'],
-                'lng': municipality['lng']
-            })
-    
-    # Search barangays
-    for municipality_id, barangays in LAGUNA_LOCATIONS['barangays'].items():
-        for barangay in barangays:
-            if query in barangay.lower():
-                # Get municipality info
-                municipality = next((m for m in LAGUNA_LOCATIONS['municipalities'] if m['id'] == municipality_id), None)
-                if municipality:
-                    results.append({
-                        'type': 'barangay',
-                        'name': f"{barangay}, {municipality['name']}",
-                        'municipality': municipality['name'],
-                        'barangay': barangay,
-                        'lat': municipality['lat'],
-                        'lng': municipality['lng']
-                    })
+    results = search_locations(query)
+    formatted_results = [{
+        'type': result.type,
+        'name': result.name,
+        'id': result.municipality_id,
+        'municipality': result.municipality_name,
+        'barangay': result.barangay,
+        'lat': result.lat,
+        'lng': result.lng
+    } for result in results]
     
     return jsonify({
         'success': True,
-        'results': results[:20],  # Limit to 20 results
-        'total': len(results)
+        'results': formatted_results[:20],  # Limit to 20 results
+        'total': len(formatted_results)
     })
+
+@app.route('/api/locations/test')
+@role_required(['admin', 'psychometrician', 'house_worker'])
+def test_location_api():
+    """Test endpoint to verify Laguna Location API is working"""
+    try:
+        # Test getting all municipalities
+        municipalities = get_all_municipalities()
+        
+        # Test getting barangays for a specific municipality
+        test_municipality = 'calamba' if municipalities else None
+        test_barangays = get_barangays(test_municipality) if test_municipality else []
+        
+        # Test search functionality
+        search_results = search_locations('santa')
+        
+        # Get API stats
+        api_stats = get_location_stats()
+        
+        return jsonify({
+            'success': True,
+            'test_results': {
+                'total_municipalities': len(municipalities),
+                'sample_municipality': municipalities[0].name if municipalities else None,
+                'test_barangays_count': len(test_barangays),
+                'search_results_count': len(search_results),
+                'api_stats': api_stats
+            },
+            'message': 'Laguna Location API is working correctly'
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+            'message': 'Laguna Location API test failed'
+        }), 500
 
 # Activity Log API Endpoints
 @app.route('/api/activity-log/check-updates')
