@@ -1409,6 +1409,31 @@ def complete_treatment(client_id):
         if client_data.get('status') != 'active':
             return jsonify({'success': False, 'error': 'Client is not active'}), 400
         
+        # Check progress status - get progress data
+        progress_ref = db.collection('client_progress').document(client_id)
+        progress_doc = progress_ref.get()
+        progress_data = progress_doc.to_dict() if progress_doc.exists else {}
+        
+        # Calculate current progress
+        milestones = progress_data.get('milestones', [])
+        if milestones:
+            completed_milestones = len([m for m in milestones if m.get('status') == 'completed'])
+            total_milestones = len(milestones)
+            overall_progress = (completed_milestones / total_milestones * 100) if total_milestones > 0 else 0
+        else:
+            overall_progress = 0
+        
+        # Check if progress is sufficient for completion (at least 80% or force completion)
+        force_completion = request.json.get('force_completion', False) if request.is_json else False
+        
+        if overall_progress < 80 and not force_completion:
+            return jsonify({
+                'success': False, 
+                'error': f'Client progress is only {overall_progress:.1f}%. Minimum 80% progress required for treatment completion.',
+                'current_progress': overall_progress,
+                'requires_force': True
+            }), 400
+        
         # Update client status to completed
         client_ref.update({
             'status': 'completed',
@@ -3201,6 +3226,1351 @@ def log_activity(user_id, user_email, user_role, action, details=None, target_id
     except Exception as e:
         print(f"Error logging activity: {e}")
         # Don't fail the main operation if logging fails
+
+# ==================== CLIENT PROGRESS STATUS API ====================
+
+@app.route('/api/client-progress/<client_id>', methods=['GET'])
+@role_required(['admin', 'psychometrician', 'facilitator', 'caseworker'])
+def get_client_progress_status(client_id):
+    """Get comprehensive progress status for a client"""
+    try:
+        print(f"Getting progress status for client: {client_id}")
+        
+        # Get client data
+        client_ref = db.collection('clients').document(client_id)
+        client_doc = client_ref.get()
+        
+        if not client_doc.exists:
+            print(f"Client {client_id} not found")
+            return jsonify({'success': False, 'error': 'Client not found'}), 404
+        
+        client_data = client_doc.to_dict()
+        print(f"Client data found: {client_data.get('name', 'Unknown')}")
+        
+        # Get progress milestones
+        progress_ref = db.collection('client_progress').document(client_id)
+        progress_doc = progress_ref.get()
+        
+        progress_data = progress_doc.to_dict() if progress_doc.exists else {}
+        print(f"Progress data exists: {progress_doc.exists}")
+        
+        # Get recent activities for progress calculation
+        logs_ref = db.collection('activity_logs')
+        logs_query = logs_ref.where('target_id', '==', client_id).order_by('timestamp', direction=firestore.Query.DESCENDING).limit(50)
+        recent_logs = logs_query.stream()
+        
+        # If no progress data exists, create basic structure
+        if not progress_doc.exists:
+            print("No progress data found, creating basic structure")
+            basic_progress_data = {
+                'client_id': client_id,
+                'client_name': client_data.get('name', 'Unknown'),
+                'milestones': [],
+                'progress_scores': {},
+                'last_updated': datetime.now(),
+                'created_at': datetime.now()
+            }
+            progress_ref.set(basic_progress_data)
+            progress_data = basic_progress_data
+            print("Basic progress structure created")
+        
+        # Calculate progress metrics
+        recent_logs_list = []
+        try:
+            recent_logs_list = list(recent_logs)
+        except Exception as e:
+            print(f"Error converting logs to list: {e}")
+            recent_logs_list = []
+        
+        progress_metrics = calculate_progress_metrics(client_data, progress_data, recent_logs_list)
+        print(f"Calculated progress metrics: {progress_metrics}")
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'client_info': {
+                    'id': client_id,
+                    'name': client_data.get('name', 'Unknown'),
+                    'status': client_data.get('status', 'unknown'),
+                    'care_type': client_data.get('care_type', 'unknown'),
+                    'registration_date': client_data.get('registrationDate', 'Unknown')
+                },
+                'progress': progress_metrics,
+                'milestones': progress_data.get('milestones', []),
+                'last_updated': progress_data.get('last_updated', None)
+            }
+        })
+        
+    except Exception as e:
+        print(f"Error getting client progress status: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/client-progress/<client_id>/update', methods=['POST'])
+@role_required(['admin', 'psychometrician', 'facilitator'])
+def update_client_progress(client_id):
+    """Update client progress status and milestones"""
+    try:
+        data = request.get_json()
+        
+        # Validate required fields
+        if not data.get('progress_type'):
+            return jsonify({'success': False, 'error': 'Progress type is required'}), 400
+        
+        progress_type = data['progress_type']
+        
+        # Get client data
+        client_ref = db.collection('clients').document(client_id)
+        client_doc = client_ref.get()
+        
+        if not client_doc.exists:
+            return jsonify({'success': False, 'error': 'Client not found'}), 404
+        
+        client_data = client_doc.to_dict()
+        
+        # Get or create progress document
+        progress_ref = db.collection('client_progress').document(client_id)
+        progress_doc = progress_ref.get()
+        progress_data = progress_doc.to_dict() if progress_doc.exists else {}
+        
+        # Initialize progress data if it doesn't exist
+        if not progress_data:
+            progress_data = {
+                'client_id': client_id,
+                'client_name': client_data.get('name', 'Unknown'),
+                'milestones': [],
+                'progress_scores': {},
+                'last_updated': datetime.now(),
+                'created_at': datetime.now()
+            }
+        
+        # Update progress based on type
+        if progress_type == 'milestone':
+            milestone_id = data.get('milestone_id')
+            milestones = progress_data.get('milestones', [])
+            
+            if milestone_id:
+                # Update existing milestone
+                milestone_found = False
+                for i, milestone in enumerate(milestones):
+                    if milestone.get('id') == milestone_id:
+                        # Update existing milestone
+                        milestones[i].update({
+                            'title': data.get('title', milestone.get('title', '')),
+                            'description': data.get('description', milestone.get('description', '')),
+                            'category': data.get('category', milestone.get('category', 'general')),
+                            'status': data.get('status', milestone.get('status', 'pending')),
+                            'target_date': data.get('target_date', milestone.get('target_date')),
+                            'completed_date': data.get('completed_date', milestone.get('completed_date')),
+                            'updated_at': datetime.now(),
+                            'updated_by': session['user_id']
+                        })
+                        milestone_found = True
+                        break
+                
+                if not milestone_found:
+                    return jsonify({'success': False, 'error': 'Milestone not found'}), 404
+            else:
+                # Create new milestone
+                milestone_data = {
+                    'id': f"milestone_{len(milestones) + 1}_{int(datetime.now().timestamp())}",
+                    'title': data.get('title', ''),
+                    'description': data.get('description', ''),
+                    'category': data.get('category', 'general'),
+                    'status': data.get('status', 'pending'),
+                    'target_date': data.get('target_date'),
+                    'completed_date': data.get('completed_date'),
+                    'created_by': session['user_id'],
+                    'created_at': datetime.now(),
+                    'updated_at': datetime.now()
+                }
+                milestones.append(milestone_data)
+            
+            progress_data['milestones'] = milestones
+            
+            # Log the milestone activity
+            action = 'Milestone Updated' if milestone_id else 'Milestone Created'
+            log_activity(
+                user_id=session['user_id'],
+                user_email=session.get('email', 'Unknown'),
+                user_role=session.get('role', 'unknown'),
+                action=action,
+                details=f'Milestone: {data.get("title", "Unknown")}',
+                target_id=client_id,
+                target_type='client'
+            )
+            
+        elif progress_type == 'assessment':
+            assessment_data = {
+                'date': datetime.now(),
+                'category': data.get('category', 'general'),
+                'score': data.get('score', 0),
+                'max_score': data.get('max_score', 10),
+                'notes': data.get('notes', ''),
+                'assessed_by': session['user_id'],
+                'assessed_by_name': session.get('email', 'Unknown')
+            }
+            
+            # Store assessment scores
+            progress_scores = progress_data.get('progress_scores', {})
+            category = assessment_data['category']
+            
+            if category not in progress_scores:
+                progress_scores[category] = []
+            
+            progress_scores[category].append(assessment_data)
+            progress_data['progress_scores'] = progress_scores
+            
+            # Log the assessment activity
+            log_activity(
+                user_id=session['user_id'],
+                user_email=session.get('email', 'Unknown'),
+                user_role=session.get('role', 'unknown'),
+                action=f'Assessment Update - {category.title()}',
+                details=f'Score: {assessment_data["score"]}/{assessment_data["max_score"]}',
+                target_id=client_id,
+                target_type='client'
+            )
+            
+        elif progress_type == 'status_update':
+            new_status = data.get('status')
+            if new_status:
+                # Update client status
+                client_ref.update({
+                    'status': new_status,
+                    'status_updated_at': datetime.now(),
+                    'status_updated_by': session['user_id']
+                })
+                
+                # Log status change
+                log_activity(
+                    user_id=session['user_id'],
+                    user_email=session['email'],
+                    user_role=session['role'],
+                    action='Update Client Status',
+                    details=f'Status changed to: {new_status}',
+                    target_id=client_id,
+                    target_type='client'
+                )
+        
+        # Update progress document
+        progress_data['last_updated'] = datetime.now()
+        progress_data['updated_by'] = session['user_id']
+        
+        progress_ref.set(progress_data)
+        
+        # Log progress update
+        log_activity(
+            user_id=session['user_id'],
+            user_email=session['email'],
+            user_role=session['role'],
+            action='Update Client Progress',
+            details=f'Updated {progress_type}: {data.get("title", data.get("category", "progress"))}',
+            target_id=client_id,
+            target_type='client_progress'
+        )
+        
+        return jsonify({
+            'success': True,
+            'message': 'Progress updated successfully',
+            'data': progress_data
+        })
+        
+    except Exception as e:
+        print(f"Error updating client progress: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/client-progress/<client_id>/milestones', methods=['GET'])
+@role_required(['admin', 'psychometrician', 'facilitator', 'caseworker'])
+def get_client_milestones(client_id):
+    """Get client milestones and progress tracking"""
+    try:
+        progress_ref = db.collection('client_progress').document(client_id)
+        progress_doc = progress_ref.get()
+        
+        if not progress_doc.exists:
+            return jsonify({
+                'success': True,
+                'data': {
+                    'milestones': [],
+                    'progress_summary': {
+                        'total_milestones': 0,
+                        'completed_milestones': 0,
+                        'in_progress_milestones': 0,
+                        'pending_milestones': 0,
+                        'overall_progress': 0
+                    }
+                }
+            })
+        
+        progress_data = progress_doc.to_dict()
+        milestones = progress_data.get('milestones', [])
+        
+        # Calculate progress summary
+        total_milestones = len(milestones)
+        completed_milestones = len([m for m in milestones if m.get('status') == 'completed'])
+        in_progress_milestones = len([m for m in milestones if m.get('status') == 'in_progress'])
+        pending_milestones = len([m for m in milestones if m.get('status') == 'pending'])
+        
+        overall_progress = (completed_milestones / total_milestones * 100) if total_milestones > 0 else 0
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'milestones': milestones,
+                'progress_summary': {
+                    'total_milestones': total_milestones,
+                    'completed_milestones': completed_milestones,
+                    'in_progress_milestones': in_progress_milestones,
+                    'pending_milestones': pending_milestones,
+                    'overall_progress': round(overall_progress, 1)
+                }
+            }
+        })
+        
+    except Exception as e:
+        print(f"Error getting client milestones: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/client-progress/<client_id>/chart-data', methods=['GET'])
+@role_required(['admin', 'psychometrician', 'facilitator', 'caseworker'])
+def get_client_progress_chart_data(client_id):
+    """Get client progress chart data for visualization"""
+    try:
+        # Get date range from query parameters
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        period = request.args.get('period', 'month')
+        
+        # Default to last month if no dates provided
+        if not start_date or not end_date:
+            from datetime import timedelta
+            end_date = datetime.now()
+            if period == 'week':
+                start_date = end_date - timedelta(weeks=1)
+            elif period == 'year':
+                start_date = end_date - timedelta(days=365)
+            else:  # month
+                start_date = end_date - timedelta(days=30)
+        else:
+            start_date = datetime.strptime(start_date, '%Y-%m-%d')
+            end_date = datetime.strptime(end_date, '%Y-%m-%d')
+        
+        # Get client data
+        client_ref = db.collection('clients').document(client_id)
+        client_doc = client_ref.get()
+        
+        if not client_doc.exists:
+            return jsonify({'success': False, 'error': 'Client not found'}), 404
+        
+        client_data = client_doc.to_dict()
+        
+        # Get progress data
+        progress_ref = db.collection('client_progress').document(client_id)
+        progress_doc = progress_ref.get()
+        progress_data = progress_doc.to_dict() if progress_doc.exists else {}
+        
+        # Get activity logs for the period
+        logs_ref = db.collection('activity_logs')
+        logs_query = logs_ref.where('target_id', '==', client_id).where('timestamp', '>=', start_date).where('timestamp', '<=', end_date).order_by('timestamp')
+        logs = logs_query.stream()
+        
+        # Generate chart data based on period
+        if period == 'week':
+            # Daily data for week
+            labels = []
+            overall_progress = []
+            engagement_scores = []
+            
+            current_date = start_date
+            while current_date <= end_date:
+                labels.append(current_date.strftime('%a %m/%d'))
+                
+                # Calculate progress for this day
+                day_logs = [log for log in logs if log.to_dict().get('timestamp').date() == current_date.date()]
+                
+                # Calculate engagement score for the day
+                if day_logs:
+                    engagement_points = 0
+                    for log in day_logs:
+                        action = log.to_dict().get('action', '').lower()
+                        if 'complete' in action or 'finish' in action:
+                            engagement_points += 3
+                        elif 'check' in action or 'update' in action:
+                            engagement_points += 2
+                        else:
+                            engagement_points += 1
+                    engagement_scores.append(min(10, engagement_points))
+                else:
+                    engagement_scores.append(0)
+                
+                # Calculate cumulative progress (simplified)
+                milestones = progress_data.get('milestones', [])
+                if milestones:
+                    completed_milestones = len([m for m in milestones if m.get('status') == 'completed'])
+                    total_milestones = len(milestones)
+                    day_progress = (completed_milestones / total_milestones * 100) if total_milestones > 0 else 0
+                else:
+                    day_progress = 0
+                
+                overall_progress.append(day_progress)
+                current_date += timedelta(days=1)
+                
+        else:
+            # Weekly data for month/year
+            labels = []
+            overall_progress = []
+            engagement_scores = []
+            
+            current_date = start_date
+            week_num = 1
+            
+            while current_date <= end_date:
+                labels.append(f'Week {week_num}')
+                
+                # Get logs for this week
+                week_end = min(current_date + timedelta(days=6), end_date)
+                week_logs = [log for log in logs if current_date <= log.to_dict().get('timestamp') <= week_end]
+                
+                # Calculate engagement score for the week
+                if week_logs:
+                    engagement_points = 0
+                    for log in week_logs:
+                        action = log.to_dict().get('action', '').lower()
+                        if 'complete' in action or 'finish' in action:
+                            engagement_points += 3
+                        elif 'check' in action or 'update' in action:
+                            engagement_points += 2
+                        else:
+                            engagement_points += 1
+                    engagement_scores.append(min(10, engagement_points / len(week_logs) * 2))
+                else:
+                    engagement_scores.append(0)
+                
+                # Calculate cumulative progress
+                milestones = progress_data.get('milestones', [])
+                if milestones:
+                    completed_milestones = len([m for m in milestones if m.get('status') == 'completed'])
+                    total_milestones = len(milestones)
+                    week_progress = (completed_milestones / total_milestones * 100) if total_milestones > 0 else 0
+                else:
+                    week_progress = 0
+                
+                overall_progress.append(week_progress)
+                current_date += timedelta(weeks=1)
+                week_num += 1
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'labels': labels,
+                'overall_progress': overall_progress,
+                'engagement_scores': engagement_scores
+            }
+        })
+        
+    except Exception as e:
+        print(f"Error getting client progress chart data: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+def calculate_progress_metrics(client_data, progress_data, recent_logs):
+    """Calculate comprehensive progress metrics for a client"""
+    try:
+        # Initialize metrics
+        metrics = {
+            'overall_progress': 0,
+            'engagement_score': 0,
+            'compliance_rate': 0,
+            'mood_score': 5,  # Default neutral
+            'intervention_success_rate': 0,
+            'days_in_treatment': 0,
+            'last_activity_days_ago': 0,
+            'progress_trend': 'stable',
+            'risk_level': 'low',
+            'next_milestone': None
+        }
+        
+        # Calculate days in treatment
+        registration_date = client_data.get('created_at') or client_data.get('registrationDate')
+        if registration_date:
+            if isinstance(registration_date, str):
+                try:
+                    # Try multiple date formats
+                    for fmt in ['%Y-%m-%d', '%B %d, %Y', '%m/%d/%Y']:
+                        try:
+                            registration_date = datetime.strptime(registration_date, fmt)
+                            break
+                        except ValueError:
+                            continue
+                    else:
+                        registration_date = None
+                except:
+                    registration_date = None
+            elif hasattr(registration_date, 'timestamp'):
+                # Handle Firestore timestamp
+                registration_date = registration_date
+            
+            if registration_date:
+                days_in_treatment = (datetime.now() - registration_date).days
+                metrics['days_in_treatment'] = max(0, days_in_treatment)
+        
+        # Calculate engagement score from recent activities and stored assessments
+        engagement_scores = []
+        
+        # Get engagement scores from stored assessments
+        progress_scores = progress_data.get('progress_scores', {})
+        if 'engagement' in progress_scores:
+            recent_assessments = progress_scores['engagement'][-5:]  # Last 5 assessments
+            engagement_scores.extend([a.get('score', 0) for a in recent_assessments])
+        
+        # Calculate from recent activities if no assessments
+        if recent_logs and not engagement_scores:
+            total_activities = len(recent_logs)
+            engagement_points = 0
+            
+            for log in recent_logs:
+                try:
+                    log_data = log.to_dict() if hasattr(log, 'to_dict') else log
+                    action = log_data.get('action', '').lower()
+                    
+                    if 'complete' in action or 'finish' in action:
+                        engagement_points += 3
+                    elif 'check' in action or 'update' in action:
+                        engagement_points += 2
+                    elif 'participate' in action or 'attend' in action:
+                        engagement_points += 2
+                    else:
+                        engagement_points += 1
+                except Exception as e:
+                    print(f"Error processing log: {e}")
+                    engagement_points += 1
+            
+            if total_activities > 0:
+                calculated_score = min(10, max(1, engagement_points / total_activities * 2))
+                engagement_scores.append(calculated_score)
+        
+        # Calculate average engagement score
+        if engagement_scores:
+            metrics['engagement_score'] = sum(engagement_scores) / len(engagement_scores)
+        else:
+            metrics['engagement_score'] = 5.0  # Default neutral score
+            
+            # Calculate last activity
+            try:
+                last_log = recent_logs[0]
+                last_log_data = last_log.to_dict() if hasattr(last_log, 'to_dict') else last_log
+                last_activity_date = last_log_data.get('timestamp')
+                
+                if isinstance(last_activity_date, datetime):
+                    days_ago = (datetime.now() - last_activity_date).days
+                    metrics['last_activity_days_ago'] = days_ago
+            except Exception as e:
+                print(f"Error calculating last activity: {e}")
+                metrics['last_activity_days_ago'] = 0
+        
+        # Calculate milestone progress
+        milestones = progress_data.get('milestones', [])
+        if milestones:
+            completed_milestones = len([m for m in milestones if m.get('status') == 'completed'])
+            total_milestones = len(milestones)
+            metrics['overall_progress'] = (completed_milestones / total_milestones) * 100
+            
+            # Find next milestone
+            pending_milestones = [m for m in milestones if m.get('status') in ['pending', 'in_progress']]
+            if pending_milestones:
+                # Sort by target date or creation date
+                pending_milestones.sort(key=lambda x: x.get('target_date', x.get('created_at', '')))
+                metrics['next_milestone'] = pending_milestones[0]
+        
+        # Calculate compliance rate (simplified)
+        if metrics['days_in_treatment'] > 0:
+            expected_activities = metrics['days_in_treatment'] * 0.5  # Expected 0.5 activities per day
+            actual_activities = len(recent_logs)
+            metrics['compliance_rate'] = min(100, (actual_activities / expected_activities) * 100) if expected_activities > 0 else 0
+        
+        # Determine risk level
+        if metrics['last_activity_days_ago'] > 7:
+            metrics['risk_level'] = 'high'
+        elif metrics['last_activity_days_ago'] > 3:
+            metrics['risk_level'] = 'medium'
+        else:
+            metrics['risk_level'] = 'low'
+        
+        # Determine progress trend
+        if metrics['engagement_score'] > 7:
+            metrics['progress_trend'] = 'improving'
+        elif metrics['engagement_score'] < 4:
+            metrics['progress_trend'] = 'declining'
+        else:
+            metrics['progress_trend'] = 'stable'
+        
+        return metrics
+        
+    except Exception as e:
+        print(f"Error calculating progress metrics: {e}")
+        return {
+            'overall_progress': 0,
+            'engagement_score': 5,
+            'compliance_rate': 0,
+            'mood_score': 5,
+            'intervention_success_rate': 0,
+            'days_in_treatment': 0,
+            'last_activity_days_ago': 0,
+            'progress_trend': 'stable',
+            'risk_level': 'low',
+            'next_milestone': None
+        }
+
+# ==================== PROGRESS REPORTS API ====================
+
+@app.route('/api/reports/monthly-summary', methods=['GET'])
+@role_required(['admin', 'psychometrician', 'facilitator'])
+def get_monthly_summary_report():
+    """Generate monthly summary report data"""
+    try:
+        # Get date range from query parameters
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        
+        # Default to last 6 months if no dates provided
+        if not start_date or not end_date:
+            from datetime import timedelta
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=180)  # 6 months
+        else:
+            start_date = datetime.strptime(start_date, '%Y-%m-%d')
+            end_date = datetime.strptime(end_date, '%Y-%m-%d')
+        
+        # Get clients data
+        clients_ref = db.collection('clients')
+        clients = clients_ref.where('archived', '==', False).stream()
+        
+        # Initialize counters
+        monthly_data = {}
+        current_date = start_date
+        
+        # Initialize monthly data structure
+        while current_date <= end_date:
+            month_key = current_date.strftime('%Y-%m')
+            monthly_data[month_key] = {
+                'active_clients': 0,
+                'completed_treatments': 0,
+                'new_registrations': 0,
+                'relapse_cases': 0,
+                'aftercare_transfers': 0
+            }
+            current_date = current_date.replace(day=1) + timedelta(days=32)
+            current_date = current_date.replace(day=1)
+        
+        # Process clients data
+        for client_doc in clients:
+            client_data = client_doc.to_dict()
+            client_id = client_doc.id
+            
+            # Get registration date
+            reg_date = client_data.get('created_at') or client_data.get('registrationDate')
+            if reg_date:
+                if isinstance(reg_date, str):
+                    try:
+                        reg_date = datetime.strptime(reg_date, '%Y-%m-%d')
+                    except:
+                        reg_date = None
+                
+                if reg_date and start_date <= reg_date <= end_date:
+                    month_key = reg_date.strftime('%Y-%m')
+                    if month_key in monthly_data:
+                        monthly_data[month_key]['new_registrations'] += 1
+            
+            # Get completion date and check progress-based completion
+            completion_date = client_data.get('completion_date')
+            if completion_date:
+                if isinstance(completion_date, str):
+                    try:
+                        completion_date = datetime.strptime(completion_date, '%Y-%m-%d')
+                    except:
+                        completion_date = None
+                
+                if completion_date and start_date <= completion_date <= end_date:
+                    month_key = completion_date.strftime('%Y-%m')
+                    if month_key in monthly_data:
+                        monthly_data[month_key]['completed_treatments'] += 1
+            else:
+                # Check if client has 100% progress (milestone-based completion)
+                progress_ref = db.collection('client_progress').document(client_doc.id)
+                progress_doc = progress_ref.get()
+                if progress_doc.exists:
+                    progress_data = progress_doc.to_dict()
+                    milestones = progress_data.get('milestones', [])
+                    if milestones:
+                        completed_milestones = len([m for m in milestones if m.get('status') == 'completed'])
+                        total_milestones = len(milestones)
+                        progress_percentage = (completed_milestones / total_milestones * 100) if total_milestones > 0 else 0
+                        
+                        # If progress is 100% and client is active, count as completed
+                        if progress_percentage >= 100 and client_data.get('status') == 'active':
+                            # Use registration date as completion date for progress-based completion
+                            reg_date = client_data.get('created_at') or client_data.get('registrationDate')
+                            if reg_date:
+                                if isinstance(reg_date, str):
+                                    try:
+                                        reg_date = datetime.strptime(reg_date, '%Y-%m-%d')
+                                    except:
+                                        reg_date = None
+                                
+                                if reg_date and start_date <= reg_date <= end_date:
+                                    month_key = reg_date.strftime('%Y-%m')
+                                    if month_key in monthly_data:
+                                        monthly_data[month_key]['completed_treatments'] += 1
+            
+            # Count active clients (simplified - count current status)
+            if client_data.get('status') == 'active':
+                # Count as active in current month
+                current_month = datetime.now().strftime('%Y-%m')
+                if current_month in monthly_data:
+                    monthly_data[current_month]['active_clients'] += 1
+            
+            # Count aftercare transfers
+            transfer_date = client_data.get('transfer_to_aftercare_date')
+            if transfer_date:
+                if isinstance(transfer_date, str):
+                    try:
+                        transfer_date = datetime.strptime(transfer_date, '%Y-%m-%d')
+                    except:
+                        transfer_date = None
+                
+                if transfer_date and start_date <= transfer_date <= end_date:
+                    month_key = transfer_date.strftime('%Y-%m')
+                    if month_key in monthly_data:
+                        monthly_data[month_key]['aftercare_transfers'] += 1
+            
+            # Count relapse cases (clients with status 'relapsed')
+            if client_data.get('status') == 'relapsed':
+                # This is a simplified approach - you might want to track relapse dates separately
+                current_month = datetime.now().strftime('%Y-%m')
+                if current_month in monthly_data:
+                    monthly_data[current_month]['relapse_cases'] += 1
+        
+        # Convert to chart-friendly format
+        labels = sorted(monthly_data.keys())
+        active_clients = [monthly_data[month]['active_clients'] for month in labels]
+        completed_treatments = [monthly_data[month]['completed_treatments'] for month in labels]
+        new_registrations = [monthly_data[month]['new_registrations'] for month in labels]
+        relapse_cases = [monthly_data[month]['relapse_cases'] for month in labels]
+        aftercare_transfers = [monthly_data[month]['aftercare_transfers'] for month in labels]
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'labels': labels,
+                'datasets': [
+                    {
+                        'label': 'Active Clients',
+                        'data': active_clients,
+                        'backgroundColor': '#4682A9'
+                    },
+                    {
+                        'label': 'Completed Treatments',
+                        'data': completed_treatments,
+                        'backgroundColor': '#91C8E4'
+                    },
+                    {
+                        'label': 'New Registrations',
+                        'data': new_registrations,
+                        'backgroundColor': '#4CAF50'
+                    },
+                    {
+                        'label': 'Aftercare Transfers',
+                        'data': aftercare_transfers,
+                        'backgroundColor': '#FF9800'
+                    }
+                ]
+            }
+        })
+        
+    except Exception as e:
+        print(f"Error generating monthly summary report: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/reports/client-progress/<client_id>', methods=['GET'])
+@role_required(['admin', 'psychometrician', 'facilitator', 'caseworker'])
+def get_client_progress_report(client_id):
+    """Generate individual client progress report"""
+    try:
+        # Get client data
+        client_ref = db.collection('clients').document(client_id)
+        client_doc = client_ref.get()
+        
+        if not client_doc.exists:
+            return jsonify({'success': False, 'error': 'Client not found'}), 404
+        
+        client_data = client_doc.to_dict()
+        
+        # Get date range from query parameters
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        
+        # Default to last 4 weeks if no dates provided
+        if not start_date or not end_date:
+            from datetime import timedelta
+            end_date = datetime.now()
+            start_date = end_date - timedelta(weeks=4)
+        else:
+            start_date = datetime.strptime(start_date, '%Y-%m-%d')
+            end_date = datetime.strptime(end_date, '%Y-%m-%d')
+        
+        # Get activity logs for this client
+        logs_ref = db.collection('activity_logs')
+        logs_query = logs_ref.where('target_id', '==', client_id).where('timestamp', '>=', start_date).where('timestamp', '<=', end_date)
+        logs = logs_query.stream()
+        
+        # Process activity data
+        weekly_data = {}
+        current_date = start_date
+        
+        # Initialize weekly data structure
+        week_num = 1
+        while current_date <= end_date:
+            week_key = f'Week {week_num}'
+            weekly_data[week_key] = {
+                'activities_count': 0,
+                'engagement_score': 0,
+                'mood_score': 5,  # Default neutral mood
+                'interventions_completed': 0
+            }
+            current_date += timedelta(weeks=1)
+            week_num += 1
+        
+        # Process logs to calculate metrics
+        for log in logs:
+            log_data = log.to_dict()
+            log_date = log_data.get('timestamp')
+            
+            if isinstance(log_date, datetime):
+                # Calculate which week this log belongs to
+                days_diff = (log_date - start_date).days
+                week_num = (days_diff // 7) + 1
+                week_key = f'Week {week_num}'
+                
+                if week_key in weekly_data:
+                    weekly_data[week_key]['activities_count'] += 1
+                    
+                    # Simple engagement scoring based on activity type
+                    action = log_data.get('action', '').lower()
+                    if 'check' in action or 'update' in action:
+                        weekly_data[week_key]['engagement_score'] += 2
+                    elif 'complete' in action or 'finish' in action:
+                        weekly_data[week_key]['engagement_score'] += 3
+                        weekly_data[week_key]['interventions_completed'] += 1
+                    else:
+                        weekly_data[week_key]['engagement_score'] += 1
+        
+        # Normalize engagement scores (scale to 1-10)
+        for week_data in weekly_data.values():
+            if week_data['activities_count'] > 0:
+                week_data['engagement_score'] = min(10, max(1, week_data['engagement_score']))
+            else:
+                week_data['engagement_score'] = 1
+        
+        # Convert to chart-friendly format
+        labels = list(weekly_data.keys())
+        mood_scores = [weekly_data[week]['mood_score'] for week in labels]
+        engagement_scores = [weekly_data[week]['engagement_score'] for week in labels]
+        activities_count = [weekly_data[week]['activities_count'] for week in labels]
+        interventions_completed = [weekly_data[week]['interventions_completed'] for week in labels]
+        
+        # Calculate overall progress metrics
+        total_activities = sum(activities_count)
+        avg_engagement = sum(engagement_scores) / len(engagement_scores) if engagement_scores else 0
+        total_interventions = sum(interventions_completed)
+        
+        # Check if client is eligible for completion
+        progress_ref = db.collection('client_progress').document(client_id)
+        progress_doc = progress_ref.get()
+        progress_data = progress_doc.to_dict() if progress_doc.exists else {}
+        
+        milestones = progress_data.get('milestones', [])
+        if milestones:
+            completed_milestones = len([m for m in milestones if m.get('status') == 'completed'])
+            total_milestones = len(milestones)
+            overall_progress = (completed_milestones / total_milestones * 100) if total_milestones > 0 else 0
+        else:
+            overall_progress = 0
+        
+        # Determine completion eligibility
+        completion_eligible = overall_progress >= 100 and client_data.get('status') == 'active' and client_data.get('care_type') == 'in_house'
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'client_info': {
+                    'id': client_id,
+                    'name': client_data.get('name', 'Unknown'),
+                    'status': client_data.get('status', 'unknown'),
+                    'care_type': client_data.get('care_type', 'unknown'),
+                    'registration_date': client_data.get('registrationDate', 'Unknown'),
+                    'completion_date': client_data.get('completion_date', None),
+                    'overall_progress': round(overall_progress, 1),
+                    'completion_eligible': completion_eligible
+                },
+                'chart_data': {
+                    'labels': labels,
+                    'datasets': [
+                        {
+                            'label': 'Mood Score',
+                            'data': mood_scores,
+                            'borderColor': '#4682A9',
+                            'tension': 0.4
+                        },
+                        {
+                            'label': 'Engagement Score',
+                            'data': engagement_scores,
+                            'borderColor': '#91C8E4',
+                            'tension': 0.4
+                        }
+                    ]
+                },
+                'metrics': {
+                    'total_activities': total_activities,
+                    'average_engagement': round(avg_engagement, 1),
+                    'total_interventions': total_interventions,
+                    'progress_trend': 'improving' if engagement_scores[-1] > engagement_scores[0] else 'stable',
+                    'overall_progress': round(overall_progress, 1),
+                    'completion_eligible': completion_eligible
+                }
+            }
+        })
+        
+    except Exception as e:
+        print(f"Error generating client progress report: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/reports/relapse-trends', methods=['GET'])
+@role_required(['admin', 'psychometrician', 'facilitator'])
+def get_relapse_trends_report():
+    """Generate municipal relapse trends report"""
+    try:
+        # Get area filter from query parameters
+        area_filter = request.args.get('area', 'all')
+        
+        # Get date range from query parameters
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        
+        # Default to last 6 months if no dates provided
+        if not start_date or not end_date:
+            from datetime import timedelta
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=180)
+        else:
+            start_date = datetime.strptime(start_date, '%Y-%m-%d')
+            end_date = datetime.strptime(end_date, '%Y-%m-%d')
+        
+        # Get clients data
+        clients_ref = db.collection('clients')
+        clients = clients_ref.where('archived', '==', False).stream()
+        
+        # Initialize monthly data structure
+        monthly_data = {}
+        current_date = start_date
+        
+        while current_date <= end_date:
+            month_key = current_date.strftime('%Y-%m')
+            monthly_data[month_key] = {
+                'relapse_rate': 0,
+                'total_clients': 0,
+                'relapsed_clients': 0
+            }
+            current_date = current_date.replace(day=1) + timedelta(days=32)
+            current_date = current_date.replace(day=1)
+        
+        # Process clients data
+        for client_doc in clients:
+            client_data = client_doc.to_dict()
+            
+            # Apply area filter if specified
+            if area_filter != 'all':
+                address = client_data.get('address', '').lower()
+                if area_filter == 'north' and 'north' not in address:
+                    continue
+                elif area_filter == 'south' and 'south' not in address:
+                    continue
+                elif area_filter == 'east' and 'east' not in address:
+                    continue
+                elif area_filter == 'west' and 'west' not in address:
+                    continue
+            
+            # Get registration date
+            reg_date = client_data.get('created_at') or client_data.get('registrationDate')
+            if reg_date:
+                if isinstance(reg_date, str):
+                    try:
+                        reg_date = datetime.strptime(reg_date, '%Y-%m-%d')
+                    except:
+                        reg_date = None
+                
+                if reg_date and start_date <= reg_date <= end_date:
+                    month_key = reg_date.strftime('%Y-%m')
+                    if month_key in monthly_data:
+                        monthly_data[month_key]['total_clients'] += 1
+                        
+                        # Check if client relapsed
+                        if client_data.get('status') == 'relapsed':
+                            monthly_data[month_key]['relapsed_clients'] += 1
+        
+        # Calculate relapse rates
+        for month_data in monthly_data.values():
+            if month_data['total_clients'] > 0:
+                month_data['relapse_rate'] = (month_data['relapsed_clients'] / month_data['total_clients']) * 100
+        
+        # Convert to chart-friendly format
+        labels = sorted(monthly_data.keys())
+        relapse_rates = [monthly_data[month]['relapse_rate'] for month in labels]
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'labels': labels,
+                'datasets': [
+                    {
+                        'label': 'Relapse Rate (%)',
+                        'data': relapse_rates,
+                        'borderColor': '#4682A9',
+                        'tension': 0.4
+                    }
+                ],
+                'area_filter': area_filter
+            }
+        })
+        
+    except Exception as e:
+        print(f"Error generating relapse trends report: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/reports/intervention-success', methods=['GET'])
+@role_required(['admin', 'psychometrician', 'facilitator'])
+def get_intervention_success_report():
+    """Generate intervention success rate report"""
+    try:
+        # Get intervention type filter from query parameters
+        intervention_filter = request.args.get('type', 'all')
+        
+        # Get date range from query parameters
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        
+        # Default to last 6 months if no dates provided
+        if not start_date or not end_date:
+            from datetime import timedelta
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=180)
+        else:
+            start_date = datetime.strptime(start_date, '%Y-%m-%d')
+            end_date = datetime.strptime(end_date, '%Y-%m-%d')
+        
+        # Get activity logs for interventions
+        logs_ref = db.collection('activity_logs')
+        logs_query = logs_ref.where('timestamp', '>=', start_date).where('timestamp', '<=', end_date)
+        logs = logs_query.stream()
+        
+        # Initialize counters
+        intervention_stats = {
+            'successful': 0,
+            'partial': 0,
+            'needs_review': 0,
+            'total': 0
+        }
+        
+        # Process logs to categorize interventions
+        for log in logs:
+            log_data = log.to_dict()
+            action = log_data.get('action', '').lower()
+            details = log_data.get('details', '').lower()
+            
+            # Check if this is an intervention-related activity
+            if any(keyword in action for keyword in ['intervention', 'treatment', 'therapy', 'counseling']):
+                intervention_stats['total'] += 1
+                
+                # Apply type filter if specified
+                if intervention_filter != 'all':
+                    if intervention_filter == 'counseling' and 'counseling' not in action:
+                        continue
+                    elif intervention_filter == 'therapy' and 'therapy' not in action:
+                        continue
+                    elif intervention_filter == 'support' and 'support' not in action:
+                        continue
+                
+                # Categorize based on action and details
+                if 'complete' in action or 'success' in action or 'finished' in action:
+                    intervention_stats['successful'] += 1
+                elif 'partial' in action or 'ongoing' in action or 'continue' in action:
+                    intervention_stats['partial'] += 1
+                elif 'review' in action or 'assess' in action or 'evaluate' in action:
+                    intervention_stats['needs_review'] += 1
+                else:
+                    # Default categorization based on completion status
+                    if 'complete' in details:
+                        intervention_stats['successful'] += 1
+                    else:
+                        intervention_stats['partial'] += 1
+        
+        # Calculate percentages
+        total = intervention_stats['total']
+        if total > 0:
+            successful_pct = (intervention_stats['successful'] / total) * 100
+            partial_pct = (intervention_stats['partial'] / total) * 100
+            review_pct = (intervention_stats['needs_review'] / total) * 100
+        else:
+            successful_pct = partial_pct = review_pct = 0
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'labels': ['Successful', 'Partial', 'Needs Review'],
+                'datasets': [
+                    {
+                        'data': [successful_pct, partial_pct, review_pct],
+                        'backgroundColor': ['#4682A9', '#91C8E4', '#e0e0e0']
+                    }
+                ],
+                'raw_data': intervention_stats,
+                'intervention_filter': intervention_filter
+            }
+        })
+        
+    except Exception as e:
+        print(f"Error generating intervention success report: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/reports/aftercare-summary', methods=['GET'])
+@role_required(['caseworker', 'admin', 'psychometrician'])
+def get_aftercare_summary_report():
+    """Generate aftercare summary report for caseworkers"""
+    try:
+        # Get date range from query parameters
+        start_date = request.args.get('start_date')
+        end_date = request.args.get('end_date')
+        
+        # Default to last 30 days if no dates provided
+        if not start_date or not end_date:
+            from datetime import timedelta
+            end_date = datetime.now()
+            start_date = end_date - timedelta(days=30)
+        else:
+            start_date = datetime.strptime(start_date, '%Y-%m-%d')
+            end_date = datetime.strptime(end_date, '%Y-%m-%d')
+        
+        # Get aftercare clients
+        clients_ref = db.collection('clients')
+        aftercare_clients = clients_ref.where('care_type', '==', 'after_care').where('archived', '==', False).stream()
+        
+        # Initialize counters
+        aftercare_stats = {
+            'total_clients': 0,
+            'active_clients': 0,
+            'completed_clients': 0,
+            'pending_clients': 0,
+            'weekly_activities': 0,
+            'monthly_activities': 0
+        }
+        
+        # Process aftercare clients
+        for client_doc in aftercare_clients:
+            client_data = client_doc.to_dict()
+            aftercare_stats['total_clients'] += 1
+            
+            # Count by status
+            status = client_data.get('status', 'unknown')
+            if status == 'active':
+                aftercare_stats['active_clients'] += 1
+            elif status == 'completed':
+                aftercare_stats['completed_clients'] += 1
+            elif status == 'pending':
+                aftercare_stats['pending_clients'] += 1
+        
+        # Get activity logs for aftercare clients
+        logs_ref = db.collection('activity_logs')
+        logs_query = logs_ref.where('timestamp', '>=', start_date).where('timestamp', '<=', end_date)
+        logs = logs_query.stream()
+        
+        # Count activities
+        for log in logs:
+            log_data = log.to_dict()
+            target_type = log_data.get('target_type', '')
+            
+            if target_type == 'client':
+                # Check if this is for an aftercare client
+                target_id = log_data.get('target_id')
+                if target_id:
+                    client_ref = db.collection('clients').document(target_id)
+                    client_doc = client_ref.get()
+                    if client_doc.exists:
+                        client_data = client_doc.to_dict()
+                        if client_data.get('care_type') == 'after_care':
+                            aftercare_stats['monthly_activities'] += 1
+                            
+                            # Count weekly activities (last 7 days)
+                            log_date = log_data.get('timestamp')
+                            if isinstance(log_date, datetime):
+                                days_diff = (datetime.now() - log_date).days
+                                if days_diff <= 7:
+                                    aftercare_stats['weekly_activities'] += 1
+        
+        # Calculate success rate
+        if aftercare_stats['total_clients'] > 0:
+            success_rate = (aftercare_stats['completed_clients'] / aftercare_stats['total_clients']) * 100
+        else:
+            success_rate = 0
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'labels': ['Active', 'Completed', 'Pending'],
+                'datasets': [
+                    {
+                        'data': [
+                            aftercare_stats['active_clients'],
+                            aftercare_stats['completed_clients'],
+                            aftercare_stats['pending_clients']
+                        ],
+                        'backgroundColor': ['#4682A9', '#4CAF50', '#FF9800']
+                    }
+                ],
+                'metrics': {
+                    'total_clients': aftercare_stats['total_clients'],
+                    'success_rate': round(success_rate, 1),
+                    'weekly_activities': aftercare_stats['weekly_activities'],
+                    'monthly_activities': aftercare_stats['monthly_activities']
+                }
+            }
+        })
+        
+    except Exception as e:
+        print(f"Error generating aftercare summary report: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/reports/clients-list', methods=['GET'])
+@role_required(['admin', 'psychometrician', 'facilitator', 'caseworker'])
+def get_clients_for_reports():
+    """Get list of clients for report selection"""
+    try:
+        # Get clients data
+        clients_ref = db.collection('clients')
+        clients = clients_ref.where('archived', '==', False).stream()
+        
+        clients_list = []
+        for client_doc in clients:
+            client_data = client_doc.to_dict()
+            
+            # Only include active clients for progress reports
+            if client_data.get('status') in ['active', 'completed']:
+                clients_list.append({
+                    'id': client_doc.id,
+                    'name': client_data.get('name', 'Unknown'),
+                    'clientId': client_data.get('clientId', ''),
+                    'status': client_data.get('status', 'unknown'),
+                    'care_type': client_data.get('care_type', 'unknown')
+                })
+        
+        # Sort by name
+        clients_list.sort(key=lambda x: x['name'])
+        
+        return jsonify({
+            'success': True,
+            'clients': clients_list
+        })
+        
+    except Exception as e:
+        print(f"Error getting clients list for reports: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/reports/export/<report_type>', methods=['POST'])
+@role_required(['admin', 'psychometrician', 'facilitator', 'caseworker'])
+def export_report(report_type):
+    """Export report data in various formats"""
+    try:
+        data = request.get_json()
+        format_type = data.get('format', 'pdf')
+        report_data = data.get('data', {})
+        
+        if report_type == 'monthly-summary':
+            # Generate CSV for monthly summary
+            if format_type == 'csv':
+                import csv
+                import io
+                
+                output = io.StringIO()
+                writer = csv.writer(output)
+                
+                # Write headers
+                writer.writerow(['Month', 'Active Clients', 'Completed Treatments', 'New Registrations', 'Aftercare Transfers'])
+                
+                # Write data
+                labels = report_data.get('labels', [])
+                datasets = report_data.get('datasets', [])
+                
+                for i, month in enumerate(labels):
+                    row = [month]
+                    for dataset in datasets:
+                        if i < len(dataset.get('data', [])):
+                            row.append(dataset['data'][i])
+                        else:
+                            row.append(0)
+                    writer.writerow(row)
+                
+                csv_content = output.getvalue()
+                output.close()
+                
+                return jsonify({
+                    'success': True,
+                    'content': csv_content,
+                    'filename': f'monthly_summary_{datetime.now().strftime("%Y%m%d")}.csv'
+                })
+        
+        elif report_type == 'client-progress':
+            # Generate CSV for client progress
+            if format_type == 'csv':
+                import csv
+                import io
+                
+                output = io.StringIO()
+                writer = csv.writer(output)
+                
+                # Write headers
+                writer.writerow(['Week', 'Mood Score', 'Engagement Score', 'Activities Count'])
+                
+                # Write data
+                chart_data = report_data.get('chart_data', {})
+                labels = chart_data.get('labels', [])
+                datasets = chart_data.get('datasets', [])
+                
+                for i, week in enumerate(labels):
+                    row = [week]
+                    for dataset in datasets:
+                        if i < len(dataset.get('data', [])):
+                            row.append(dataset['data'][i])
+                        else:
+                            row.append(0)
+                    writer.writerow(row)
+                
+                csv_content = output.getvalue()
+                output.close()
+                
+                return jsonify({
+                    'success': True,
+                    'content': csv_content,
+                    'filename': f'client_progress_{datetime.now().strftime("%Y%m%d")}.csv'
+                })
+        
+        # For other formats (PDF, Excel), you would implement additional logic here
+        # For now, return a placeholder response
+        return jsonify({
+            'success': True,
+            'message': f'{format_type.upper()} export for {report_type} is not yet implemented',
+            'content': 'Export functionality will be implemented in future updates'
+        })
+        
+    except Exception as e:
+        print(f"Error exporting report: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 def generate_offset_coordinates(base_coords, client_id, offset_radius=0.001):
     """

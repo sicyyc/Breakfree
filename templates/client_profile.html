@@ -7,6 +7,7 @@
 <link rel="stylesheet" href="{{ url_for('static', filename='css/stats.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/charts.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/activity.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/progress.css') }}">
 {% endblock %}
 
 {% block content %}
@@ -16,7 +17,7 @@
         Back to Clients
     </a>
 </div>
-<div class="main-header">
+<div class="main-header" data-client-id="{{ client.id }}" data-client-status="{{ client.status }}" data-client-care-type="{{ client.care_type }}">
     <div class="client-header">
         <div class="client-info-section">
             <div class="client-image">
@@ -85,7 +86,7 @@
             <!-- Progress and Aftercare Actions -->
             {% if client.care_type == 'in_house' and client.status == 'active' %}
                 {% if session.role in ['admin', 'facilitator'] %}
-                <button class="btn-success" id="completeTreatmentBtn" onclick="completeTreatment('{{ client.id }}', '{{ client.name|e }}')">
+                <button class="btn-success" id="completeTreatmentBtn" onclick="completeTreatment('{{ client.id }}', '{{ client.name|e }}')" style="display: none;">
                     <i class="fas fa-check-circle"></i>
                     Complete Treatment
                 </button>
@@ -1200,9 +1201,23 @@
                                     <label class="progress-label">Progress</label>
                                     <div class="progress-container">
                                         <div class="progress-bar">
-                                            <div class="progress-fill" style="width: 45%"></div>
+                                            <div class="progress-fill" id="overallProgressFill" style="width: 0%"></div>
                                         </div>
-                                        <span class="progress-percentage">45%</span>
+                                        <span class="progress-percentage" id="overallProgressText">0%</span>
+                                    </div>
+                                    <div class="progress-details">
+                                        <div class="progress-metric">
+                                            <span class="metric-label">Engagement:</span>
+                                            <span class="metric-value" id="engagementScore">Loading...</span>
+                                        </div>
+                                        <div class="progress-metric">
+                                            <span class="metric-label">Risk Level:</span>
+                                            <span class="metric-value risk-level risk-low" id="riskLevel">Loading...</span>
+                                        </div>
+                                        <div class="progress-metric">
+                                            <span class="metric-label">Days in Treatment:</span>
+                                            <span class="metric-value" id="daysInTreatment">Loading...</span>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -1361,40 +1376,117 @@
     <!-- Progress Tab -->
     <div class="tab-pane" id="progress">
         <div class="profile-grid">
-            <!-- Recovery Progress Card -->
+            <!-- Progress Overview Card -->
             <div class="card progress-card">
                 <div class="card-header">
-                    <h3><i class="fas fa-chart-line"></i> Recovery Progress</h3>
+                    <h3><i class="fas fa-chart-line"></i> Progress Overview</h3>
                     <div class="header-actions">
-                        <div class="period-selector">
-                            <button class="btn-text active">Week</button>
-                            <button class="btn-text">Month</button>
-                            <button class="btn-text">Year</button>
-                        </div>
+                        <button class="btn-primary" id="updateProgressBtn">
+                            <i class="fas fa-plus"></i>
+                            Update Progress
+                        </button>
                     </div>
                 </div>
                 <div class="card-content">
                     <div class="progress-stats">
                         <div class="stat-item">
-                            <span class="stat-label">Current Phase</span>
-                            <span class="stat-value phase-badge">Phase 2</span>
+                            <span class="stat-label">Overall Progress</span>
+                            <span class="stat-value" id="overallProgressStat">Loading...</span>
                         </div>
                         <div class="stat-item">
-                            <span class="stat-label">Days Clean</span>
-                            <span class="stat-value">45</span>
+                            <span class="stat-label">Engagement Score</span>
+                            <span class="stat-value" id="engagementStat">Loading...</span>
                         </div>
                         <div class="stat-item">
-                            <span class="stat-label">Check-in Rate</span>
-                            <span class="stat-value">92%</span>
+                            <span class="stat-label">Risk Level</span>
+                            <span class="stat-value risk-level risk-low" id="riskLevelStat">Loading...</span>
+                        </div>
+                        <div class="stat-item">
+                            <span class="stat-label">Days in Treatment</span>
+                            <span class="stat-value" id="daysInTreatmentStat">Loading...</span>
                         </div>
                     </div>
-                    <div class="chart-container">
-                        <canvas id="recoveryChart"></canvas>
+                    <div class="progress-trend">
+                        <span class="trend-label">Progress Trend:</span>
+                        <span class="trend-value" id="progressTrend">Loading...</span>
                     </div>
                 </div>
-                                </div>
+            </div>
 
+            <!-- Milestones Card -->
+            <div class="card milestones-card">
+                <div class="card-header">
+                    <h3><i class="fas fa-flag-checkered"></i> Milestones</h3>
+                    <div class="header-actions">
+                        <button class="btn-secondary" id="addMilestoneBtn">
+                            <i class="fas fa-plus"></i>
+                            Add Milestone
+                        </button>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="milestones-summary">
+                        <div class="milestone-stat">
+                            <span class="milestone-count" id="completedMilestones">0</span>
+                            <span class="milestone-label">Completed</span>
+                        </div>
+                        <div class="milestone-stat">
+                            <span class="milestone-count" id="inProgressMilestones">0</span>
+                            <span class="milestone-label">In Progress</span>
+                        </div>
+                        <div class="milestone-stat">
+                            <span class="milestone-count" id="pendingMilestones">0</span>
+                            <span class="milestone-label">Pending</span>
+                        </div>
+                    </div>
+                    <div class="milestones-list" id="milestonesList">
+                        <!-- Milestones will be loaded here -->
+                    </div>
+                </div>
+            </div>
 
+            <!-- Progress Chart Card -->
+            <div class="card chart-card">
+                <div class="card-header">
+                    <h3><i class="fas fa-chart-area"></i> Progress Chart</h3>
+                    <div class="header-actions">
+                        <div class="period-selector">
+                            <button class="btn-text active" data-period="week">Week</button>
+                            <button class="btn-text" data-period="month">Month</button>
+                            <button class="btn-text" data-period="year">Year</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="chart-container">
+                        <canvas id="progressChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Next Actions Card -->
+            <div class="card actions-card">
+                <div class="card-header">
+                    <h3><i class="fas fa-tasks"></i> Next Actions</h3>
+                </div>
+                <div class="card-content">
+                    <div class="next-milestone" id="nextMilestone">
+                        <div class="milestone-info">
+                            <h4>Next Milestone</h4>
+                            <p id="nextMilestoneTitle">No upcoming milestones</p>
+                            <span class="milestone-category" id="nextMilestoneCategory"></span>
+                        </div>
+                        <div class="milestone-actions">
+                            <button class="btn-primary" id="updateMilestoneBtn" style="display: none;">
+                                Update Status
+                            </button>
+                        </div>
+                    </div>
+                    <div class="recommended-actions" id="recommendedActions">
+                        <!-- Recommended actions will be loaded here -->
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -1487,13 +1579,21 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/client_profile.js') }}"></script>
+<script src="{{ url_for('static', filename='js/client_progress.js') }}"></script>
 <script>
 // Treatment completion and aftercare transfer functions
 function completeTreatment(clientId, clientName) {
-    if (confirm(`Are you sure you want to mark treatment as completed for "${clientName}"?`)) {
+    // Get current progress to show in confirmation
+    const progressElement = document.getElementById('overallProgressStat');
+    const currentProgress = progressElement ? progressElement.textContent : 'Unknown';
+    
+    const confirmMessage = `Are you sure you want to mark treatment as completed for "${clientName}"?\n\nCurrent Progress: ${currentProgress}`;
+    
+    if (confirm(confirmMessage)) {
         fetch(`/clients/${clientId}/complete-treatment`, {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' }
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ force_completion: false })
         })
         .then(response => response.json())
         .then(result => {
@@ -1502,7 +1602,33 @@ function completeTreatment(clientId, clientName) {
                 // Reload the page to show updated status
                 location.reload();
             } else {
-                alert(result.error || 'Failed to complete treatment');
+                // Check if force completion is required
+                if (result.requires_force) {
+                    const forceConfirm = confirm(`${result.error}\n\nDo you want to force complete the treatment anyway?`);
+                    if (forceConfirm) {
+                        // Force complete the treatment
+                        fetch(`/clients/${clientId}/complete-treatment`, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ force_completion: true })
+                        })
+                        .then(response => response.json())
+                        .then(forceResult => {
+                            if (forceResult.success) {
+                                alert('Treatment completed successfully (forced completion)');
+                                location.reload();
+                            } else {
+                                alert(forceResult.error || 'Failed to force complete treatment');
+                            }
+                        })
+                        .catch(e => {
+                            console.error(e);
+                            alert('Failed to force complete treatment');
+                        });
+                    }
+                } else {
+                    alert(result.error || 'Failed to complete treatment');
+                }
             }
         })
         .catch(e => {
@@ -1534,5 +1660,49 @@ function sendToAftercare(clientId, clientName) {
         });
     }
 }
+
+// Progress Tracking Functions - Now handled by client_progress.js
+let progressChart = null;
+let currentClientId = '{{ client.id }}';
+
+// Progress display is now handled by client_progress.js
+
+// Milestones are now handled by client_progress.js
+
+// Milestone display functions are now handled by client_progress.js
+
+// Completion eligibility is now handled by client_progress.js
+
+// Initialize progress tracking when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Initializing progress tracking for client:', currentClientId);
+    
+    // Progress tracking is now handled by client_progress.js
+    // The client_progress.js file will automatically initialize when loaded
+    
+    // Initialize progress chart
+    if (typeof initializeProgressChart === 'function') {
+        initializeProgressChart();
+        loadProgressChartData('month');
+    }
+    
+    // Period selector for chart
+    document.querySelectorAll('[data-period]').forEach(btn => {
+        btn.addEventListener('click', function() {
+            document.querySelectorAll('[data-period]').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            // Update chart based on period
+            if (typeof updateProgressChart === 'function') {
+                updateProgressChart(this.dataset.period);
+            }
+        });
+    });
+});
+
+// Modal functions are now handled by client_progress.js
+
+// Helper functions are now handled by client_progress.js
+
+// Chart functions are now handled by client_progress.js
 </script>
 {% endblock %}
