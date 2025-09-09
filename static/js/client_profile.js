@@ -358,14 +358,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Add Note Button
-    const addNoteBtn = document.querySelector('.notes-card .btn-primary');
-    if (addNoteBtn) {
-        addNoteBtn.addEventListener('click', function() {
-            // Implement add note functionality
-            console.log('Add note clicked');
-        });
-    }
+    // Add Note Modal - Now handled in HTML template
 
     // Collapsible Card Functionality
     const collapsibleCards = document.querySelectorAll('.collapsible-card');

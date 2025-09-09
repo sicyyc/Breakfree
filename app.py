@@ -4659,6 +4659,29 @@ def debug_client(client_id):
 from nlp_analyzer import nlp_analyzer, progress_aggregator
 from firestore_schema import firestore_schema
 
+@app.route('/analyze-text', methods=['POST'])
+def analyze_text():
+    """
+    Analyze text in real-time for preview purposes
+    """
+    try:
+        data = request.get_json()
+        if not data or 'text' not in data:
+            return jsonify({'error': 'Missing text field'}), 400
+        
+        text = data['text'].strip()
+        if not text:
+            return jsonify({'error': 'Text cannot be empty'}), 400
+        
+        # Analyze the text with NLP
+        analysis = nlp_analyzer.analyze_note(text)
+        
+        return jsonify(analysis), 200
+        
+    except Exception as e:
+        app.logger.error(f"Error analyzing text: {e}")
+        return jsonify({'error': 'Analysis failed'}), 500
+
 @app.route('/clients/<client_id>/notes', methods=['POST'])
 def add_client_note(client_id):
     """
@@ -4687,13 +4710,39 @@ def add_client_note(client_id):
         if not client_data:
             return jsonify({'error': 'Client not found'}), 404
         
+        # Get current user information from session
+        user_id = session.get('user_id')
+        user_email = session.get('email')
+        user_role = session.get('role')
+        
+        if not user_id:
+            return jsonify({'error': 'User not authenticated'}), 401
+        
         # Analyze the note with NLP
-        note_analysis = nlp_analyzer.analyze_note(text)
+        try:
+            note_analysis = nlp_analyzer.analyze_note(text)
+            app.logger.info(f"NLP analysis completed for client {client_id}")
+        except Exception as e:
+            app.logger.error(f"NLP analysis failed: {e}")
+            return jsonify({'error': 'NLP analysis failed'}), 500
+        
+        # Add user information to the note analysis
+        note_analysis['author'] = {
+            'user_id': user_id,
+            'email': user_email,
+            'role': user_role
+        }
         
         # Save to Firestore
-        success = firestore_schema.add_note_to_client(client_id, note_analysis)
-        if not success:
-            return jsonify({'error': 'Failed to save note'}), 500
+        try:
+            success = firestore_schema.add_note_to_client(client_id, note_analysis)
+            if not success:
+                app.logger.error(f"Failed to save note to Firestore for client {client_id}")
+                return jsonify({'error': 'Failed to save note to database'}), 500
+            app.logger.info(f"Note saved successfully for client {client_id} by user {user_email}")
+        except Exception as e:
+            app.logger.error(f"Firestore save error: {e}")
+            return jsonify({'error': 'Database error'}), 500
         
         # Return analysis results
         return jsonify({

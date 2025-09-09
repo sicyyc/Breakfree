@@ -9,42 +9,56 @@ from datetime import datetime
 import logging
 
 # Try to import NLP libraries, but make them optional
-try:
-    import nltk
-    NLTK_AVAILABLE = True
-    # Download required NLTK data
-    try:
-        nltk.data.find('tokenizers/punkt')
-    except LookupError:
-        nltk.download('punkt')
-    try:
-        nltk.data.find('corpora/stopwords')
-    except LookupError:
-        nltk.download('stopwords')
-except ImportError:
-    NLTK_AVAILABLE = False
-    print("NLTK not available. Using basic text processing.")
+NLTK_AVAILABLE = False
+SPACY_AVAILABLE = False
+TEXTBLOB_AVAILABLE = False
+nlp = None
 
-try:
-    import spacy
-    SPACY_AVAILABLE = True
-    # Load spaCy model (download with: python -m spacy download en_core_web_sm)
+def _init_nltk():
+    global NLTK_AVAILABLE
     try:
-        nlp = spacy.load("en_core_web_sm")
-    except OSError:
-        print("spaCy model not found. Using basic text processing.")
+        import nltk
+        NLTK_AVAILABLE = True
+        # Download required NLTK data
+        try:
+            nltk.data.find('tokenizers/punkt')
+        except LookupError:
+            nltk.download('punkt', quiet=True)
+        try:
+            nltk.data.find('corpora/stopwords')
+        except LookupError:
+            nltk.download('stopwords', quiet=True)
+        return True
+    except ImportError:
+        NLTK_AVAILABLE = False
+        return False
+
+def _init_spacy():
+    global SPACY_AVAILABLE, nlp
+    try:
+        import spacy
+        SPACY_AVAILABLE = True
+        # Load spaCy model (download with: python -m spacy download en_core_web_sm)
+        try:
+            nlp = spacy.load("en_core_web_sm")
+            return True
+        except OSError:
+            nlp = None
+            return False
+    except ImportError:
+        SPACY_AVAILABLE = False
         nlp = None
-except ImportError:
-    SPACY_AVAILABLE = False
-    nlp = None
-    print("spaCy not available. Using basic text processing.")
+        return False
 
-try:
-    from textblob import TextBlob
-    TEXTBLOB_AVAILABLE = True
-except ImportError:
-    TEXTBLOB_AVAILABLE = False
-    print("TextBlob not available. Using basic sentiment analysis.")
+def _init_textblob():
+    global TEXTBLOB_AVAILABLE
+    try:
+        from textblob import TextBlob
+        TEXTBLOB_AVAILABLE = True
+        return True
+    except ImportError:
+        TEXTBLOB_AVAILABLE = False
+        return False
 
 # Domain-specific keyword dictionaries
 DOMAIN_KEYWORDS = {
@@ -74,13 +88,33 @@ class NLPAnalyzer:
             'a', 'an', 'and', 'are', 'as', 'at', 'be', 'by', 'for', 'from', 'has', 'he', 'in', 'is', 'it', 'its', 'of', 'on', 'that', 'the', 'to', 'was', 'will', 'with'
         }
         
-        if NLTK_AVAILABLE:
-            try:
-                self.stop_words = set(nltk.corpus.stopwords.words('english'))
-            except:
-                pass  # Use basic stop words if NLTK fails
-        
         self.logger = logging.getLogger(__name__)
+        self._nltk_initialized = False
+        self._spacy_initialized = False
+        self._textblob_initialized = False
+    
+    def _ensure_nltk(self):
+        """Lazy initialization of NLTK"""
+        if not self._nltk_initialized:
+            if _init_nltk():
+                try:
+                    import nltk
+                    self.stop_words = set(nltk.corpus.stopwords.words('english'))
+                except:
+                    pass  # Use basic stop words if NLTK fails
+            self._nltk_initialized = True
+    
+    def _ensure_spacy(self):
+        """Lazy initialization of spaCy"""
+        if not self._spacy_initialized:
+            _init_spacy()
+            self._spacy_initialized = True
+    
+    def _ensure_textblob(self):
+        """Lazy initialization of TextBlob"""
+        if not self._textblob_initialized:
+            _init_textblob()
+            self._textblob_initialized = True
     
     def analyze_note(self, text):
         """
@@ -137,8 +171,11 @@ class NLPAnalyzer:
         Returns:
             dict: Sentiment analysis results
         """
+        self._ensure_textblob()
+        
         if TEXTBLOB_AVAILABLE:
             try:
+                from textblob import TextBlob
                 blob = TextBlob(text)
                 polarity = blob.sentiment.polarity
                 
@@ -207,6 +244,8 @@ class NLPAnalyzer:
             list: List of extracted keywords
         """
         try:
+            self._ensure_spacy()
+            
             # Use spaCy for better keyword extraction if available
             if SPACY_AVAILABLE and nlp:
                 doc = nlp(text)
@@ -226,6 +265,8 @@ class NLPAnalyzer:
             
             # Use NLTK if available
             elif NLTK_AVAILABLE:
+                self._ensure_nltk()
+                import nltk
                 words = nltk.word_tokenize(text)
                 words = [word for word in words if word.lower() not in self.stop_words and len(word) > 2]
                 word_counts = Counter(words)

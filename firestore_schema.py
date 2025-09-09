@@ -3,6 +3,7 @@ Firestore Schema and Database Operations for Client Notes NLP Pipeline
 """
 
 from firebase_config import db
+from firebase_admin import firestore
 from datetime import datetime
 from typing import Dict, List, Optional, Any
 import logging

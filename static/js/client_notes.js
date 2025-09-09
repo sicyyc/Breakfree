@@ -19,24 +19,43 @@ class ClientNotesManager {
         this.setupEventListeners();
         this.loadNotes();
         this.loadNLPSummary();
+        
+        // Also set up event listeners when notes tab becomes active
+        this.setupTabActivationListener();
     }
 
     setupEventListeners() {
         // Add Note Button
         const addNoteBtn = document.getElementById('addNoteBtn');
+        console.log('Add Note Button found:', addNoteBtn);
         if (addNoteBtn) {
-            addNoteBtn.addEventListener('click', () => this.showAddNoteModal());
+            // Remove any existing listeners to prevent duplicates
+            addNoteBtn.removeEventListener('click', this.showAddNoteModal);
+            addNoteBtn.addEventListener('click', (e) => {
+                e.preventDefault();
+                console.log('Add Note button clicked!');
+                this.showAddNoteModal();
+            });
+        } else {
+            console.error('Add Note Button not found!');
         }
 
         // Modal controls
         const closeModal = document.getElementById('closeNoteModal');
         const cancelBtn = document.getElementById('cancelNoteBtn');
-        if (closeModal) closeModal.addEventListener('click', () => this.hideAddNoteModal());
-        if (cancelBtn) cancelBtn.addEventListener('click', () => this.hideAddNoteModal());
+        if (closeModal) {
+            closeModal.removeEventListener('click', this.hideAddNoteModal);
+            closeModal.addEventListener('click', () => this.hideAddNoteModal());
+        }
+        if (cancelBtn) {
+            cancelBtn.removeEventListener('click', this.hideAddNoteModal);
+            cancelBtn.addEventListener('click', () => this.hideAddNoteModal());
+        }
 
         // Form submission
         const addNoteForm = document.getElementById('addNoteForm');
         if (addNoteForm) {
+            addNoteForm.removeEventListener('submit', this.handleAddNote);
             addNoteForm.addEventListener('submit', (e) => this.handleAddNote(e));
         }
 
@@ -73,6 +92,19 @@ class ClientNotesManager {
                 if (e.target === modal) {
                     this.hideAddNoteModal();
                 }
+            });
+        }
+    }
+
+    setupTabActivationListener() {
+        // Listen for tab changes to re-setup event listeners if needed
+        const notesTab = document.querySelector('[data-tab="notes"]');
+        if (notesTab) {
+            notesTab.addEventListener('click', () => {
+                // Small delay to ensure tab content is visible
+                setTimeout(() => {
+                    this.setupEventListeners();
+                }, 100);
             });
         }
     }
@@ -260,16 +292,29 @@ class ClientNotesManager {
     }
 
     showAddNoteModal() {
+        console.log('showAddNoteModal called');
         const modal = document.getElementById('addNoteModal');
+        console.log('Modal element found:', modal);
         if (modal) {
-            modal.style.display = 'block';
+            modal.style.display = 'flex';
+            modal.classList.add('show');
             document.body.style.overflow = 'hidden';
+            console.log('Modal should be visible now');
+            
+            // Focus on the first input
+            const noteText = document.getElementById('noteText');
+            if (noteText) {
+                setTimeout(() => noteText.focus(), 100);
+            }
+        } else {
+            console.error('Modal element not found!');
         }
     }
 
     hideAddNoteModal() {
         const modal = document.getElementById('addNoteModal');
         if (modal) {
+            modal.classList.remove('show');
             modal.style.display = 'none';
             document.body.style.overflow = 'auto';
             this.resetAddNoteForm();
@@ -285,9 +330,13 @@ class ClientNotesManager {
 
     async handleAddNote(e) {
         e.preventDefault();
+        console.log('handleAddNote called');
 
         const noteText = document.getElementById('noteText').value.trim();
         const noteAuthor = document.getElementById('noteAuthor').value.trim();
+
+        console.log('Note text:', noteText);
+        console.log('Note author:', noteAuthor);
 
         if (!noteText) {
             this.showError('Please enter note content');
@@ -305,6 +354,7 @@ class ClientNotesManager {
         saveBtn.disabled = true;
 
         try {
+            console.log('Sending note to server...');
             const response = await fetch(`/clients/${this.clientId}/notes`, {
                 method: 'POST',
                 headers: {
@@ -317,6 +367,7 @@ class ClientNotesManager {
             });
 
             const data = await response.json();
+            console.log('Server response:', data);
 
             if (response.ok) {
                 this.hideAddNoteModal();
@@ -405,8 +456,132 @@ class ClientNotesManager {
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
     // Get client ID from the current page
-    const clientId = window.location.pathname.split('/').pop();
-    if (clientId && clientId !== 'clients') {
+    let clientId = window.location.pathname.split('/').pop();
+    
+    // If we're on a client profile page, extract the client ID properly
+    if (window.location.pathname.includes('/client/')) {
+        const pathParts = window.location.pathname.split('/');
+        const clientIndex = pathParts.indexOf('client');
+        if (clientIndex !== -1 && pathParts[clientIndex + 1]) {
+            clientId = pathParts[clientIndex + 1];
+        }
+    }
+    
+    // Also handle the case where URL might have hash fragments
+    if (clientId && clientId.includes('#')) {
+        clientId = clientId.split('#')[0];
+    }
+    
+    // Also try to get it from the data attribute on the main header
+    if (!clientId || clientId === 'clients') {
+        const mainHeader = document.querySelector('.main-header');
+        if (mainHeader) {
+            clientId = mainHeader.getAttribute('data-client-id');
+        }
+    }
+    
+    console.log('Client ID extracted:', clientId);
+    
+    if (clientId && clientId !== 'clients' && clientId !== '') {
         window.clientNotesManager = new ClientNotesManager(clientId);
+        console.log('ClientNotesManager initialized for client:', clientId);
+    } else {
+        console.log('No valid client ID found, skipping ClientNotesManager initialization');
+        
+        // Add fallback event listeners for when ClientNotesManager isn't initialized
+        const addNoteBtn = document.getElementById('addNoteBtn');
+        if (addNoteBtn) {
+            addNoteBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                console.log('Fallback Add Note button clicked!');
+                const modal = document.getElementById('addNoteModal');
+                if (modal) {
+                    modal.style.display = 'flex';
+                    modal.classList.add('show');
+                    document.body.style.overflow = 'hidden';
+                    console.log('Modal shown via fallback listener');
+                } else {
+                    console.error('Modal not found in fallback listener');
+                }
+            });
+        }
+        
+        // Add fallback for modal close buttons
+        const closeModal = document.getElementById('closeNoteModal');
+        const cancelBtn = document.getElementById('cancelNoteBtn');
+        
+        if (closeModal) {
+            closeModal.addEventListener('click', function() {
+                const modal = document.getElementById('addNoteModal');
+                if (modal) {
+                    modal.style.display = 'none';
+                    modal.classList.remove('show');
+                    document.body.style.overflow = 'auto';
+                }
+            });
+        }
+        
+        if (cancelBtn) {
+            cancelBtn.addEventListener('click', function() {
+                const modal = document.getElementById('addNoteModal');
+                if (modal) {
+                    modal.style.display = 'none';
+                    modal.classList.remove('show');
+                    document.body.style.overflow = 'auto';
+                }
+            });
+        }
+        
+        // Add fallback for form submission
+        const addNoteForm = document.getElementById('addNoteForm');
+        if (addNoteForm) {
+            addNoteForm.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                console.log('Fallback form submission');
+                
+                const noteText = document.getElementById('noteText').value.trim();
+                const noteAuthor = document.getElementById('noteAuthor').value.trim();
+                
+                if (!noteText || !noteAuthor) {
+                    alert('Please fill in all fields');
+                    return;
+                }
+                
+                const saveBtn = document.getElementById('saveNoteBtn');
+                const originalText = saveBtn.innerHTML;
+                saveBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Analyzing...';
+                saveBtn.disabled = true;
+                
+                try {
+                    const response = await fetch(`/clients/${clientId}/notes`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ text: noteText, author: noteAuthor })
+                    });
+                    
+                    const data = await response.json();
+                    
+                    if (response.ok) {
+                        const modal = document.getElementById('addNoteModal');
+                        if (modal) {
+                            modal.style.display = 'none';
+                            modal.classList.remove('show');
+                            document.body.style.overflow = 'auto';
+                        }
+                        addNoteForm.reset();
+                        alert('Note added successfully!');
+                        location.reload(); // Simple reload to refresh notes
+                    } else {
+                        alert('Error: ' + (data.error || 'Failed to add note'));
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Failed to add note');
+                } finally {
+                    saveBtn.innerHTML = originalText;
+                    saveBtn.disabled = false;
+                }
+            });
+        }
     }
 });
