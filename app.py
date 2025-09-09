@@ -4651,5 +4651,257 @@ def debug_client(client_id):
         return jsonify({'error': str(e)}), 500
 
 
+# =============================================================================
+# NLP PIPELINE ROUTES FOR CLIENT NOTES ANALYSIS
+# =============================================================================
+
+# Import NLP modules
+from nlp_analyzer import nlp_analyzer, progress_aggregator
+from firestore_schema import firestore_schema
+
+@app.route('/clients/<client_id>/notes', methods=['POST'])
+def add_client_note(client_id):
+    """
+    Add a new narrative note for a client and automatically analyze it with NLP
+    
+    Expected JSON payload:
+    {
+        "text": "Client narrative observation text"
+    }
+    """
+    try:
+        # Validate request
+        if not request.is_json:
+            return jsonify({'error': 'Request must be JSON'}), 400
+        
+        data = request.get_json()
+        if not data or 'text' not in data:
+            return jsonify({'error': 'Missing required field: text'}), 400
+        
+        text = data['text'].strip()
+        if not text:
+            return jsonify({'error': 'Text cannot be empty'}), 400
+        
+        # Check if client exists
+        client_data = firestore_schema.get_client_demographics(client_id)
+        if not client_data:
+            return jsonify({'error': 'Client not found'}), 404
+        
+        # Analyze the note with NLP
+        note_analysis = nlp_analyzer.analyze_note(text)
+        
+        # Save to Firestore
+        success = firestore_schema.add_note_to_client(client_id, note_analysis)
+        if not success:
+            return jsonify({'error': 'Failed to save note'}), 500
+        
+        # Return analysis results
+        return jsonify({
+            'message': 'Note added and analyzed successfully',
+            'client_id': client_id,
+            'analysis': note_analysis
+        }), 201
+        
+    except Exception as e:
+        app.logger.error(f"Error adding client note: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/clients/<client_id>/notes', methods=['GET'])
+def get_client_notes(client_id):
+    """
+    Retrieve all notes for a client with NLP analysis
+    
+    Query parameters:
+    - limit: Maximum number of notes to return (optional)
+    - sentiment: Filter by sentiment (positive/neutral/negative) (optional)
+    - domain: Filter by domain (emotional/cognitive/social) (optional)
+    - min_score: Minimum domain score for filtering (optional)
+    """
+    try:
+        # Check if client exists
+        client_data = firestore_schema.get_client_demographics(client_id)
+        if not client_data:
+            return jsonify({'error': 'Client not found'}), 404
+        
+        # Get query parameters
+        limit = request.args.get('limit', type=int)
+        sentiment_filter = request.args.get('sentiment')
+        domain_filter = request.args.get('domain')
+        min_score = request.args.get('min_score', type=float, default=0.0)
+        
+        # Get notes based on filters
+        if sentiment_filter:
+            notes = firestore_schema.get_notes_by_sentiment(client_id, sentiment_filter)
+        elif domain_filter:
+            notes = firestore_schema.get_notes_by_domain(client_id, domain_filter, min_score)
+        else:
+            notes = firestore_schema.get_client_notes(client_id, limit)
+        
+        # Add client demographics to response
+        response_data = {
+            'client_id': client_id,
+            'demographics': {
+                'name': client_data.get('name', 'Unknown'),
+                'age': client_data.get('age', 'N/A'),
+                'gender': client_data.get('gender', 'Not specified'),
+                'care_type': client_data.get('care_type', 'in_house')
+            },
+            'total_notes': client_data.get('total_notes', 0),
+            'last_note_date': client_data.get('last_note_date'),
+            'notes': notes,
+            'filters_applied': {
+                'limit': limit,
+                'sentiment': sentiment_filter,
+                'domain': domain_filter,
+                'min_score': min_score
+            }
+        }
+        
+        return jsonify(response_data), 200
+        
+    except Exception as e:
+        app.logger.error(f"Error retrieving client notes: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/clients/<client_id>/progress', methods=['GET'])
+def get_client_progress(client_id):
+    """
+    Get progress metrics for a client
+    
+    Query parameters:
+    - period: Time period (weekly/monthly) - defaults to both if not specified
+    """
+    try:
+        # Check if client exists
+        client_data = firestore_schema.get_client_demographics(client_id)
+        if not client_data:
+            return jsonify({'error': 'Client not found'}), 404
+        
+        period = request.args.get('period', 'both')
+        
+        # Get all notes for calculations
+        all_notes = firestore_schema.get_client_notes(client_id)
+        
+        response_data = {
+            'client_id': client_id,
+            'demographics': {
+                'name': client_data.get('name', 'Unknown'),
+                'age': client_data.get('age', 'N/A'),
+                'gender': client_data.get('gender', 'Not specified'),
+                'care_type': client_data.get('care_type', 'in_house')
+            },
+            'total_notes': client_data.get('total_notes', 0),
+            'progress': {}
+        }
+        
+        # Calculate metrics based on requested period
+        if period in ['weekly', 'both']:
+            weekly_metrics = progress_aggregator.calculate_weekly_metrics(all_notes)
+            response_data['progress']['weekly'] = weekly_metrics
+            
+            # Save to Firestore for caching
+            firestore_schema.update_progress_metrics(client_id, weekly_metrics, 'weekly')
+        
+        if period in ['monthly', 'both']:
+            monthly_metrics = progress_aggregator.calculate_monthly_metrics(all_notes)
+            response_data['progress']['monthly'] = monthly_metrics
+            
+            # Save to Firestore for caching
+            firestore_schema.update_progress_metrics(client_id, monthly_metrics, 'monthly')
+        
+        return jsonify(response_data), 200
+        
+    except Exception as e:
+        app.logger.error(f"Error retrieving client progress: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/api/clients/notes', methods=['GET'])
+def get_all_clients_with_notes():
+    """
+    Get all clients with basic information and note counts
+    """
+    try:
+        clients = firestore_schema.get_all_clients()
+        
+        # Add note counts to each client
+        for client in clients:
+            client_id = client.get('client_id')
+            if client_id:
+                notes = firestore_schema.get_client_notes(client_id, limit=1)
+                client['has_notes'] = len(notes) > 0
+                client['total_notes'] = client.get('total_notes', 0)
+        
+        return jsonify({
+            'clients': clients,
+            'total_count': len(clients)
+        }), 200
+        
+    except Exception as e:
+        app.logger.error(f"Error retrieving all clients: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/clients/<client_id>/notes/search', methods=['GET'])
+def search_client_notes(client_id):
+    """
+    Search client notes by keywords
+    
+    Query parameters:
+    - keywords: Comma-separated list of keywords to search for
+    """
+    try:
+        # Check if client exists
+        client_data = firestore_schema.get_client_demographics(client_id)
+        if not client_data:
+            return jsonify({'error': 'Client not found'}), 404
+        
+        keywords_param = request.args.get('keywords')
+        if not keywords_param:
+            return jsonify({'error': 'Missing keywords parameter'}), 400
+        
+        keywords = [kw.strip() for kw in keywords_param.split(',') if kw.strip()]
+        if not keywords:
+            return jsonify({'error': 'No valid keywords provided'}), 400
+        
+        # Search notes
+        matching_notes = firestore_schema.search_notes_by_keywords(client_id, keywords)
+        
+        return jsonify({
+            'client_id': client_id,
+            'search_keywords': keywords,
+            'matching_notes': matching_notes,
+            'total_matches': len(matching_notes)
+        }), 200
+        
+    except Exception as e:
+        app.logger.error(f"Error searching client notes: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+@app.route('/clients/<client_id>/notes/<note_id>', methods=['DELETE'])
+def delete_client_note(client_id, note_id):
+    """
+    Delete a specific note for a client
+    """
+    try:
+        # Check if client exists
+        client_data = firestore_schema.get_client_demographics(client_id)
+        if not client_data:
+            return jsonify({'error': 'Client not found'}), 404
+        
+        # Delete note
+        success = firestore_schema.delete_client_note(client_id, note_id)
+        if not success:
+            return jsonify({'error': 'Failed to delete note'}), 500
+        
+        return jsonify({
+            'message': 'Note deleted successfully',
+            'client_id': client_id,
+            'note_id': note_id
+        }), 200
+        
+    except Exception as e:
+        app.logger.error(f"Error deleting client note: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
+
+
 if __name__ == '__main__':
     app.run(debug=True)

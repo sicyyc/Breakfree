@@ -4,6 +4,7 @@
 
 {% block page_css %}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/client_profile.css') }}">
+<link rel="stylesheet" href="{{ url_for('static', filename='css/client_notes.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/stats.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/charts.css') }}">
 <link rel="stylesheet" href="{{ url_for('static', filename='css/activity.css') }}">
@@ -1498,6 +1499,21 @@
                 <div class="card-header">
                     <h3><i class="fas fa-sticky-note"></i>  Notes and Observations</h3>
                     <div class="header-actions">
+                        <div class="notes-filters">
+                            <select id="sentimentFilter" class="filter-select">
+                                <option value="">All Sentiments</option>
+                                <option value="positive">Positive</option>
+                                <option value="neutral">Neutral</option>
+                                <option value="negative">Negative</option>
+                            </select>
+                            <select id="domainFilter" class="filter-select">
+                                <option value="">All Domains</option>
+                                <option value="emotional">Emotional</option>
+                                <option value="cognitive">Cognitive</option>
+                                <option value="social">Social</option>
+                            </select>
+                            <input type="text" id="keywordSearch" placeholder="Search keywords..." class="search-input">
+                        </div>
                         <button class="btn-edit" id="addNoteBtn" title="Add Note">
                             <i class="fas fa-plus"></i>
                             Add Note
@@ -1505,69 +1521,33 @@
                     </div>
                 </div>
                 <div class="card-content">
-                    <div class="notes-list">
-                        <!-- Sample notes - these would be populated from the database -->
-                        <div class="note-item">
-                            <div class="note-header">
-                                <span class="note-date">December 15, 2024 - 2:30 PM</span>
-                                <span class="note-author">Dr. Sarah Johnson</span>
-                            </div>
-                            <p class="note-content">
-                                Client showed significant improvement in group therapy today. 
-                                Actively participated in discussions about coping mechanisms and 
-                                shared personal experiences with the group. Recommended to continue 
-                                with current treatment plan.
-                            </p>
-                            <div class="note-tags">
-                                <span class="tag">Group Therapy</span>
-                                <span class="tag">Progress</span>
-                                <span class="tag">Positive</span>
-                            </div>
-                        </div>
-                        
-                        <div class="note-item">
-                            <div class="note-header">
-                                <span class="note-date">December 12, 2024 - 10:15 AM</span>
-                                <span class="note-author">Mike Chen</span>
-                            </div>
-                            <p class="note-content">
-                                Initial assessment completed. Client appears motivated for recovery 
-                                but expresses concerns about returning to previous social environment. 
-                                Discussed relapse prevention strategies and importance of building 
-                                new support networks.
-                            </p>
-                            <div class="note-tags">
-                                <span class="tag">Assessment</span>
-                                <span class="tag">Concerns</span>
-                                <span class="tag">Relapse Prevention</span>
-                            </div>
-                        </div>
-                        
-                        <div class="note-item">
-                            <div class="note-header">
-                                <span class="note-date">December 10, 2024 - 4:45 PM</span>
-                                <span class="note-author">Lisa Rodriguez</span>
-                            </div>
-                            <p class="note-content">
-                                Family session conducted. Client's spouse and children attended. 
-                                Good progress in communication skills observed. Family expressed 
-                                support and commitment to the recovery process. Scheduled follow-up 
-                                session for next week.
-                            </p>
-                            <div class="note-tags">
-                                <span class="tag">Family Session</span>
-                                <span class="tag">Communication</span>
-                                <span class="tag">Support</span>
-                            </div>
-                        </div>
+                    <div class="notes-list" id="notesList">
+                        <!-- Notes will be loaded dynamically -->
                     </div>
                     
                     <!-- No notes message (hidden when notes exist) -->
-                    <div class="no-data-message" style="display: none;">
+                    <div class="no-data-message" id="noNotesMessage" style="display: none;">
                         <p>
                             <i class="fas fa-sticky-note"></i>
                             No notes have been added yet. Click "Add Note" to create the first note.
                         </p>
+                    </div>
+                    
+                    <!-- Loading message -->
+                    <div class="loading-message" id="notesLoading" style="display: none;">
+                        <p><i class="fas fa-spinner fa-spin"></i> Loading notes...</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- NLP Analysis Summary Card -->
+            <div class="card nlp-summary-card">
+                <div class="card-header">
+                    <h3><i class="fas fa-brain"></i>  NLP Analysis Summary</h3>
+                </div>
+                <div class="card-content">
+                    <div class="nlp-summary" id="nlpSummary">
+                        <!-- NLP analysis will be loaded here -->
                     </div>
                 </div>
             </div>
@@ -1575,11 +1555,40 @@
     </div>
 </div>
 </div>
+
+<!-- Add Note Modal -->
+<div id="addNoteModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-sticky-note"></i> Add New Note</h3>
+            <span class="close" id="closeNoteModal">&times;</span>
+        </div>
+        <div class="modal-body">
+            <form id="addNoteForm">
+                <div class="form-group">
+                    <label for="noteText">Note Content</label>
+                    <textarea id="noteText" placeholder="Enter your observation about the client..." rows="6" required></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="noteAuthor">Author</label>
+                    <input type="text" id="noteAuthor" placeholder="Your name" required>
+                </div>
+                <div class="form-actions">
+                    <button type="button" class="btn-secondary" id="cancelNoteBtn">Cancel</button>
+                    <button type="submit" class="btn-primary" id="saveNoteBtn">
+                        <i class="fas fa-save"></i> Save Note
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
 {% endblock %}
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/client_profile.js') }}"></script>
 <script src="{{ url_for('static', filename='js/client_progress.js') }}"></script>
+<script src="{{ url_for('static', filename='js/client_notes.js') }}"></script>
 <script>
 // Treatment completion and aftercare transfer functions
 function completeTreatment(clientId, clientName) {
