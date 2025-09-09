@@ -3230,7 +3230,7 @@ def log_activity(user_id, user_email, user_role, action, details=None, target_id
 # ==================== CLIENT PROGRESS STATUS API ====================
 
 @app.route('/api/client-progress/<client_id>', methods=['GET'])
-@role_required(['admin', 'psychometrician', 'facilitator', 'caseworker'])
+@role_required(['admin', 'psychometrician', 'facilitator', 'caseworker', 'house_worker'])
 def get_client_progress_status(client_id):
     """Get comprehensive progress status for a client"""
     try:
@@ -3480,7 +3480,7 @@ def update_client_progress(client_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/client-progress/<client_id>/milestones', methods=['GET'])
-@role_required(['admin', 'psychometrician', 'facilitator', 'caseworker'])
+@role_required(['admin', 'psychometrician', 'facilitator', 'caseworker', 'house_worker'])
 def get_client_milestones(client_id):
     """Get client milestones and progress tracking"""
     try:
@@ -3532,7 +3532,7 @@ def get_client_milestones(client_id):
         return jsonify({'success': False, 'error': str(e)}), 500
 
 @app.route('/api/client-progress/<client_id>/chart-data', methods=['GET'])
-@role_required(['admin', 'psychometrician', 'facilitator', 'caseworker'])
+@role_required(['admin', 'psychometrician', 'facilitator', 'caseworker', 'house_worker'])
 def get_client_progress_chart_data(client_id):
     """Get client progress chart data for visualization"""
     try:
