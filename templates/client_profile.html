@@ -1378,113 +1378,61 @@
     <div class="tab-pane" id="progress">
         <div class="profile-grid">
             <!-- Progress Overview Card -->
-            <div class="card progress-card">
+            <div class="card progress-overview-card">
                 <div class="card-header">
                     <h3><i class="fas fa-chart-line"></i> Progress Overview</h3>
                     <div class="header-actions">
-                        <button class="btn-primary" id="updateProgressBtn">
-                            <i class="fas fa-plus"></i>
-                            Update Progress
-                        </button>
-                    </div>
-                </div>
-                <div class="card-content">
-                    <div class="progress-stats">
-                        <div class="stat-item">
-                            <span class="stat-label">Overall Progress</span>
-                            <span class="stat-value" id="overallProgressStat">Loading...</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">Engagement Score</span>
-                            <span class="stat-value" id="engagementStat">Loading...</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">Risk Level</span>
-                            <span class="stat-value risk-level risk-low" id="riskLevelStat">Loading...</span>
-                        </div>
-                        <div class="stat-item">
-                            <span class="stat-label">Days in Treatment</span>
-                            <span class="stat-value" id="daysInTreatmentStat">Loading...</span>
-                        </div>
-                    </div>
-                    <div class="progress-trend">
-                        <span class="trend-label">Progress Trend:</span>
-                        <span class="trend-value" id="progressTrend">Loading...</span>
-                    </div>
-                </div>
-            </div>
-
-            <!-- Milestones Card -->
-            <div class="card milestones-card">
-                <div class="card-header">
-                    <h3><i class="fas fa-flag-checkered"></i> Milestones</h3>
-                    <div class="header-actions">
-                        <button class="btn-secondary" id="addMilestoneBtn">
-                            <i class="fas fa-plus"></i>
-                            Add Milestone
-                        </button>
-                    </div>
-                </div>
-                <div class="card-content">
-                    <div class="milestones-summary">
-                        <div class="milestone-stat">
-                            <span class="milestone-count" id="completedMilestones">0</span>
-                            <span class="milestone-label">Completed</span>
-                        </div>
-                        <div class="milestone-stat">
-                            <span class="milestone-count" id="inProgressMilestones">0</span>
-                            <span class="milestone-label">In Progress</span>
-                        </div>
-                        <div class="milestone-stat">
-                            <span class="milestone-count" id="pendingMilestones">0</span>
-                            <span class="milestone-label">Pending</span>
-                        </div>
-                    </div>
-                    <div class="milestones-list" id="milestonesList">
-                        <!-- Milestones will be loaded here -->
-                    </div>
-                </div>
-            </div>
-
-            <!-- Progress Chart Card -->
-            <div class="card chart-card">
-                <div class="card-header">
-                    <h3><i class="fas fa-chart-area"></i> Progress Chart</h3>
-                    <div class="header-actions">
                         <div class="period-selector">
-                            <button class="btn-text active" data-period="week">Week</button>
-                            <button class="btn-text" data-period="month">Month</button>
-                            <button class="btn-text" data-period="year">Year</button>
+                            <button class="btn-text active" data-period="weekly">Weekly</button>
+                            <button class="btn-text" data-period="monthly">Monthly</button>
+                        </div>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="progress-insights" id="progressInsights">
+                        <!-- Progress insights will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sentiment Trend Chart Card -->
+            <div class="card sentiment-chart-card">
+                <div class="card-header">
+                    <h3><i class="fas fa-heart"></i> Sentiment Trend</h3>
+                    <div class="header-actions">
+                        <div class="chart-period-selector">
+                            <button class="btn-text active" data-chart-period="weekly">Weekly</button>
+                            <button class="btn-text" data-chart-period="monthly">Monthly</button>
                         </div>
                     </div>
                 </div>
                 <div class="card-content">
                     <div class="chart-container">
-                        <canvas id="progressChart"></canvas>
+                        <canvas id="sentimentChart"></canvas>
                     </div>
                 </div>
             </div>
 
-            <!-- Next Actions Card -->
-            <div class="card actions-card">
+            <!-- Domain Breakdown Chart Card -->
+            <div class="card domain-chart-card">
                 <div class="card-header">
-                    <h3><i class="fas fa-tasks"></i> Next Actions</h3>
+                    <h3><i class="fas fa-chart-bar"></i> Domain Analysis</h3>
                 </div>
                 <div class="card-content">
-                    <div class="next-milestone" id="nextMilestone">
-                        <div class="milestone-info">
-                            <h4>Next Milestone</h4>
-                            <p id="nextMilestoneTitle">No upcoming milestones</p>
-                            <span class="milestone-category" id="nextMilestoneCategory"></span>
-                        </div>
-                        <div class="milestone-actions">
-                            <button class="btn-primary" id="updateMilestoneBtn" style="display: none;">
-                                Update Status
-                            </button>
-                        </div>
+                    <div class="chart-container">
+                        <canvas id="domainChart"></canvas>
                     </div>
-                    <div class="recommended-actions" id="recommendedActions">
-                        <!-- Recommended actions will be loaded here -->
+                </div>
+            </div>
+
+            <!-- Keywords Word Cloud Card -->
+            <div class="card keywords-card">
+                <div class="card-header">
+                    <h3><i class="fas fa-tags"></i> Top Keywords</h3>
+                </div>
+                <div class="card-content">
+                    <div class="keywords-cloud" id="keywordsCloud">
+                        <!-- Keywords will be loaded here -->
                     </div>
                 </div>
             </div>
@@ -1606,7 +1554,7 @@
 
 {% block scripts %}
 <script src="{{ url_for('static', filename='js/client_profile.js') }}"></script>
-<script src="{{ url_for('static', filename='js/client_progress.js') }}"></script>
+<script src="{{ url_for('static', filename='js/progress.js') }}"></script>
 <script>
 // Treatment completion and aftercare transfer functions
 function completeTreatment(clientId, clientName) {
@@ -1688,49 +1636,8 @@ function sendToAftercare(clientId, clientName) {
     }
 }
 
-// Progress Tracking Functions - Now handled by client_progress.js
-let progressChart = null;
+// Progress tracking will be implemented here
 let currentClientId = '{{ client.id }}';
-
-// Progress display is now handled by client_progress.js
-
-// Milestones are now handled by client_progress.js
-
-// Milestone display functions are now handled by client_progress.js
-
-// Completion eligibility is now handled by client_progress.js
-
-// Initialize progress tracking when page loads
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Initializing progress tracking for client:', currentClientId);
-    
-    // Progress tracking is now handled by client_progress.js
-    // The client_progress.js file will automatically initialize when loaded
-    
-    // Initialize progress chart
-    if (typeof initializeProgressChart === 'function') {
-        initializeProgressChart();
-        loadProgressChartData('month');
-    }
-    
-    // Period selector for chart
-    document.querySelectorAll('[data-period]').forEach(btn => {
-        btn.addEventListener('click', function() {
-            document.querySelectorAll('[data-period]').forEach(b => b.classList.remove('active'));
-            this.classList.add('active');
-            // Update chart based on period
-            if (typeof updateProgressChart === 'function') {
-                updateProgressChart(this.dataset.period);
-            }
-        });
-    });
-});
-
-// Modal functions are now handled by client_progress.js
-
-// Helper functions are now handled by client_progress.js
-
-// Chart functions are now handled by client_progress.js
 
 // BULLETPROOF ADD NOTE MODAL - WORKS 100%
 document.addEventListener('DOMContentLoaded', function() {
@@ -2446,6 +2353,30 @@ document.addEventListener('DOMContentLoaded', function() {
             console.log('Already on notes tab, loading notes and NLP summary...');
             loadNotes();
             loadNLPSummary();
+        }
+    }, 1000);
+    
+    // Set up progress tab click handler
+    const progressTab = document.querySelector('[data-tab="progress"]');
+    if (progressTab) {
+        progressTab.addEventListener('click', function() {
+            console.log('Progress tab clicked, loading progress data...');
+            setTimeout(() => {
+                if (typeof loadProgressData === 'function') {
+                    loadProgressData();
+                }
+            }, 100);
+        });
+    }
+    
+    // Also try to load progress data immediately if we're already on the progress tab
+    setTimeout(() => {
+        const activeTab = document.querySelector('.tab-pane.active');
+        if (activeTab && activeTab.id === 'progress') {
+            console.log('Already on progress tab, loading progress data...');
+            if (typeof loadProgressData === 'function') {
+                loadProgressData();
+            }
         }
     }, 1000);
 });
