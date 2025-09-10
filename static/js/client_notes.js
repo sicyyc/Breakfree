@@ -142,11 +142,11 @@ class ClientNotesManager {
         if (!nlpSummary) return;
 
         try {
-            const response = await fetch(`/clients/${this.clientId}/progress?period=weekly`);
+            const response = await fetch(`/api/client-progress/${this.clientId}/analytics`);
             const data = await response.json();
 
-            if (response.ok && data.progress && data.progress.weekly) {
-                this.displayNLPSummary(data.progress.weekly);
+            if (response.ok && data.success && data.data) {
+                this.displayNLPSummary(data.data);
             } else {
                 nlpSummary.innerHTML = '<p>No analysis data available yet.</p>';
             }
@@ -233,9 +233,29 @@ class ClientNotesManager {
         const nlpSummary = document.getElementById('nlpSummary');
         if (!nlpSummary) return;
 
-        const sentiment = progressData.sentiment || {};
-        const domains = progressData.domains || {};
-        const keywords = progressData.keyword_frequency || {};
+        // Extract data from the analytics response
+        const sentimentTrend = progressData.sentiment_trend || {};
+        const domainBreakdown = progressData.domain_breakdown || {};
+        const topKeywords = progressData.top_keywords || [];
+        
+        // Calculate sentiment summary from trend data
+        const weeklyData = sentimentTrend.weekly || [];
+        let totalSentiment = 0;
+        let positiveCount = 0;
+        let neutralCount = 0;
+        let negativeCount = 0;
+        
+        weeklyData.forEach(week => {
+            const score = week.average_sentiment || 0;
+            totalSentiment += score;
+            
+            if (score > 0.1) positiveCount++;
+            else if (score < -0.1) negativeCount++;
+            else neutralCount++;
+        });
+        
+        const averageSentiment = weeklyData.length > 0 ? totalSentiment / weeklyData.length : 0;
+        const totalWeeks = weeklyData.length;
 
         nlpSummary.innerHTML = `
             <div class="summary-section">
@@ -243,35 +263,36 @@ class ClientNotesManager {
                 <div class="sentiment-overview">
                     <div class="sentiment-item">
                         <span class="sentiment-label positive">Positive</span>
-                        <span class="sentiment-count">${sentiment.counts?.positive || 0}</span>
-                        <span class="sentiment-percentage">(${sentiment.distribution?.positive_pct || 0}%)</span>
+                        <span class="sentiment-count">${positiveCount}</span>
+                        <span class="sentiment-percentage">(${totalWeeks > 0 ? Math.round((positiveCount / totalWeeks) * 100) : 0}%)</span>
                     </div>
                     <div class="sentiment-item">
                         <span class="sentiment-label neutral">Neutral</span>
-                        <span class="sentiment-count">${sentiment.counts?.neutral || 0}</span>
-                        <span class="sentiment-percentage">(${sentiment.distribution?.neutral_pct || 0}%)</span>
+                        <span class="sentiment-count">${neutralCount}</span>
+                        <span class="sentiment-percentage">(${totalWeeks > 0 ? Math.round((neutralCount / totalWeeks) * 100) : 0}%)</span>
                     </div>
                     <div class="sentiment-item">
                         <span class="sentiment-label negative">Negative</span>
-                        <span class="sentiment-count">${sentiment.counts?.negative || 0}</span>
-                        <span class="sentiment-percentage">(${sentiment.distribution?.negative_pct || 0}%)</span>
+                        <span class="sentiment-count">${negativeCount}</span>
+                        <span class="sentiment-percentage">(${totalWeeks > 0 ? Math.round((negativeCount / totalWeeks) * 100) : 0}%)</span>
                     </div>
                 </div>
                 <div class="average-sentiment">
-                    <strong>Average Score: ${sentiment.average_score || 0}</strong>
+                    <strong>Average Score: ${averageSentiment.toFixed(2)}</strong>
                 </div>
             </div>
 
             <div class="summary-section">
-                <h4><i class="fas fa-chart-line"></i> Domain Trends</h4>
+                <h4><i class="fas fa-chart-line"></i> Domain Analysis</h4>
                 <div class="domain-trends">
-                    ${Object.entries(domains).map(([domain, data]) => `
+                    ${Object.entries(domainBreakdown).map(([domain, data]) => `
                         <div class="domain-trend">
-                            <span class="domain-name">${domain}</span>
+                            <span class="domain-name">${domain.charAt(0).toUpperCase() + domain.slice(1)}</span>
                             <div class="trend-bar">
-                                <div class="trend-fill" style="width: ${Math.abs(data.score) * 100}%; background-color: ${data.score >= 0 ? '#4CAF50' : '#f44336'}"></div>
+                                <div class="trend-fill" style="width: ${Math.abs(data.average_score || 0) * 100}%; background-color: ${(data.average_score || 0) >= 0 ? '#4CAF50' : '#f44336'}"></div>
                             </div>
-                            <span class="trend-score">${data.score.toFixed(2)}</span>
+                            <span class="trend-score">${(data.average_score || 0).toFixed(2)}</span>
+                            <span class="trend-mentions">(${data.mentions || 0} mentions)</span>
                         </div>
                     `).join('')}
                 </div>
@@ -280,10 +301,10 @@ class ClientNotesManager {
             <div class="summary-section">
                 <h4><i class="fas fa-search"></i> Top Keywords</h4>
                 <div class="top-keywords">
-                    ${Object.entries(keywords).slice(0, 5).map(([keyword, count]) => `
+                    ${topKeywords.slice(0, 5).map(keyword => `
                         <span class="keyword-item">
-                            <span class="keyword-text">${keyword}</span>
-                            <span class="keyword-count">${count}</span>
+                            <span class="keyword-text">${keyword.keyword}</span>
+                            <span class="keyword-count">${keyword.count}</span>
                         </span>
                     `).join('')}
                 </div>
@@ -300,6 +321,9 @@ class ClientNotesManager {
             modal.classList.add('show');
             document.body.style.overflow = 'hidden';
             console.log('Modal should be visible now');
+            
+            // Set up real-time analysis
+            this.setupRealTimeAnalysis();
             
             // Focus on the first input
             const noteText = document.getElementById('noteText');
@@ -326,6 +350,18 @@ class ClientNotesManager {
         if (form) {
             form.reset();
         }
+        
+        // Reset character count
+        const charCount = document.getElementById('charCount');
+        if (charCount) {
+            charCount.textContent = '0';
+        }
+        
+        // Hide NLP preview
+        const nlpPreview = document.getElementById('nlpPreview');
+        if (nlpPreview) {
+            nlpPreview.style.display = 'none';
+        }
     }
 
     async handleAddNote(e) {
@@ -333,18 +369,11 @@ class ClientNotesManager {
         console.log('handleAddNote called');
 
         const noteText = document.getElementById('noteText').value.trim();
-        const noteAuthor = document.getElementById('noteAuthor').value.trim();
 
         console.log('Note text:', noteText);
-        console.log('Note author:', noteAuthor);
 
         if (!noteText) {
             this.showError('Please enter note content');
-            return;
-        }
-
-        if (!noteAuthor) {
-            this.showError('Please enter your name');
             return;
         }
 
@@ -361,8 +390,7 @@ class ClientNotesManager {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    text: noteText,
-                    author: noteAuthor
+                    text: noteText
                 })
             });
 
@@ -451,36 +479,188 @@ class ClientNotesManager {
         console.error('Error:', message);
         alert('Error: ' + message); // Simple alert for now
     }
+
+    setupRealTimeAnalysis() {
+        const noteText = document.getElementById('noteText');
+        const charCount = document.getElementById('charCount');
+        const nlpPreview = document.getElementById('nlpPreview');
+        
+        if (!noteText || !charCount || !nlpPreview) return;
+        
+        // Remove existing listeners to prevent duplicates
+        noteText.removeEventListener('input', this.handleTextInput);
+        noteText.removeEventListener('keyup', this.handleTextInput);
+        
+        // Add new listeners
+        noteText.addEventListener('input', (e) => this.handleTextInput(e));
+        noteText.addEventListener('keyup', (e) => this.handleTextInput(e));
+    }
+    
+    handleTextInput(event) {
+        const noteText = event.target;
+        const charCount = document.getElementById('charCount');
+        const nlpPreview = document.getElementById('nlpPreview');
+        
+        if (!charCount || !nlpPreview) return;
+        
+        const count = noteText.value.length;
+        charCount.textContent = count;
+        
+        // Show preview if text is long enough
+        if (count > 10) {
+            nlpPreview.style.display = 'block';
+            this.analyzeTextRealTime(noteText.value);
+        } else {
+            nlpPreview.style.display = 'none';
+        }
+    }
+    
+    analyzeTextRealTime(text) {
+        // Clear previous timeout
+        if (this.analysisTimeout) {
+            clearTimeout(this.analysisTimeout);
+        }
+        
+        // Debounce the analysis
+        this.analysisTimeout = setTimeout(async () => {
+            try {
+                const response = await fetch('/analyze-text', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ text: text })
+                });
+                
+                if (response.ok) {
+                    const analysis = await response.json();
+                    this.updatePreviewWithAnalysis(analysis);
+                } else {
+                    this.updatePreviewError(`Analysis failed (${response.status})`);
+                }
+            } catch (error) {
+                console.error('Real-time analysis error:', error);
+                this.updatePreviewError('Network error: ' + error.message);
+            }
+        }, 1000); // Wait 1 second after user stops typing
+    }
+    
+    updatePreviewWithAnalysis(analysis) {
+        // Update sentiment
+        const sentiment = analysis.sentiment || {};
+        const sentimentPreview = document.getElementById('sentimentPreview');
+        if (sentimentPreview) {
+            sentimentPreview.innerHTML = `
+                <span class="sentiment-badge sentiment-${sentiment.sentiment || 'neutral'}">
+                    <i class="fas fa-${this.getSentimentIcon(sentiment.sentiment)}"></i>
+                    ${sentiment.sentiment || 'neutral'}
+                    ${sentiment.score ? ` (${sentiment.score.toFixed(2)})` : ''}
+                </span>
+            `;
+        }
+        
+        // Update keywords
+        const keywords = analysis.keywords || [];
+        const keywordsPreview = document.getElementById('keywordsPreview');
+        if (keywordsPreview) {
+            if (keywords.length > 0) {
+                keywordsPreview.innerHTML = keywords.map(keyword => 
+                    `<span class="keyword-tag">${keyword}</span>`
+                ).join('');
+            } else {
+                keywordsPreview.innerHTML = '<span class="no-data">No keywords detected</span>';
+            }
+        }
+        
+        // Update domains
+        const tags = analysis.tags || {};
+        const domainsPreview = document.getElementById('domainsPreview');
+        if (domainsPreview) {
+            domainsPreview.innerHTML = this.getDomainAnalysisPreviewHTML(tags);
+        }
+    }
+    
+    updatePreviewError(message) {
+        const sentimentPreview = document.getElementById('sentimentPreview');
+        const keywordsPreview = document.getElementById('keywordsPreview');
+        const domainsPreview = document.getElementById('domainsPreview');
+        
+        if (sentimentPreview) sentimentPreview.innerHTML = `<span class="error">${message}</span>`;
+        if (keywordsPreview) keywordsPreview.innerHTML = `<span class="error">${message}</span>`;
+        if (domainsPreview) domainsPreview.innerHTML = `<span class="error">${message}</span>`;
+    }
+    
+    getDomainAnalysisPreviewHTML(tags) {
+        const domainLabels = {
+            'emotional': 'Emotional',
+            'cognitive': 'Cognitive', 
+            'social': 'Social'
+        };
+        
+        const domainIcons = {
+            'emotional': 'fas fa-heart',
+            'cognitive': 'fas fa-brain',
+            'social': 'fas fa-users'
+        };
+        
+        const domains = ['emotional', 'cognitive', 'social'];
+        
+        return domains.map(domain => {
+            const data = tags[domain] || { score: 0, counts: { positive: 0, negative: 0, neutral: 0 }, total_mentions: 0 };
+            const score = data.score || 0;
+            const totalMentions = data.total_mentions || 0;
+            
+            const barWidth = Math.max(0, Math.min(100, ((score + 1) / 2) * 100));
+            
+            let barColor = '#e0e0e0';
+            if (score > 0.1) barColor = '#4CAF50';
+            else if (score < -0.1) barColor = '#f44336';
+            else if (totalMentions > 0) barColor = '#ff9800';
+            
+            return `
+                <div class="domain-preview-item">
+                    <div class="domain-preview-header">
+                        <i class="${domainIcons[domain]}"></i>
+                        <span class="domain-preview-name">${domainLabels[domain]}</span>
+                        <span class="domain-preview-mentions">${totalMentions}</span>
+                    </div>
+                    <div class="domain-score-preview">
+                        <div class="score-bar-preview">
+                            <div class="score-fill-preview" style="width: ${barWidth}%; background-color: ${barColor}"></div>
+                        </div>
+                        <span class="score-value-preview">${score.toFixed(2)}</span>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
 }
 
 // Initialize when DOM is loaded
 document.addEventListener('DOMContentLoaded', function() {
-    // Get client ID from the current page
-    let clientId = window.location.pathname.split('/').pop();
+    // Get client ID from multiple sources
+    let clientId = null;
     
-    // If we're on a client profile page, extract the client ID properly
-    if (window.location.pathname.includes('/client/')) {
-        const pathParts = window.location.pathname.split('/');
-        const clientIndex = pathParts.indexOf('client');
-        if (clientIndex !== -1 && pathParts[clientIndex + 1]) {
-            clientId = pathParts[clientIndex + 1];
+    // Try to get from main header data attribute first
+    const mainHeader = document.querySelector('.main-header');
+    if (mainHeader) {
+        clientId = mainHeader.getAttribute('data-client-id');
+    }
+    
+    // If not found, try to extract from URL
+    if (!clientId) {
+        if (window.location.pathname.includes('/client/')) {
+            const pathParts = window.location.pathname.split('/');
+            const clientIndex = pathParts.indexOf('client');
+            if (clientIndex !== -1 && pathParts[clientIndex + 1]) {
+                clientId = pathParts[clientIndex + 1];
+                // Remove any hash fragments
+                if (clientId && clientId.includes('#')) {
+                    clientId = clientId.split('#')[0];
+                }
+            }
         }
     }
     
-    // Also handle the case where URL might have hash fragments
-    if (clientId && clientId.includes('#')) {
-        clientId = clientId.split('#')[0];
-    }
-    
-    // Also try to get it from the data attribute on the main header
-    if (!clientId || clientId === 'clients') {
-        const mainHeader = document.querySelector('.main-header');
-        if (mainHeader) {
-            clientId = mainHeader.getAttribute('data-client-id');
-        }
-    }
-    
-    console.log('Client ID extracted:', clientId);
+    console.log('Client ID extracted in client_notes.js:', clientId);
     
     if (clientId && clientId !== 'clients' && clientId !== '') {
         window.clientNotesManager = new ClientNotesManager(clientId);
@@ -540,10 +720,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 console.log('Fallback form submission');
                 
                 const noteText = document.getElementById('noteText').value.trim();
-                const noteAuthor = document.getElementById('noteAuthor').value.trim();
                 
-                if (!noteText || !noteAuthor) {
-                    alert('Please fill in all fields');
+                if (!noteText) {
+                    alert('Please enter note content');
                     return;
                 }
                 
@@ -556,7 +735,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     const response = await fetch(`/clients/${clientId}/notes`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ text: noteText, author: noteAuthor })
+                        body: JSON.stringify({ text: noteText })
                     });
                     
                     const data = await response.json();
@@ -583,5 +762,42 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
         }
+    }
+});
+
+// Initialize the ClientNotesManager when DOM is loaded
+document.addEventListener('DOMContentLoaded', function() {
+    console.log('Client Notes JS loaded, initializing...');
+    
+    // Get client ID from multiple sources
+    let clientId = null;
+    
+    // Try to get from main header data attribute
+    const mainHeader = document.querySelector('.main-header');
+    if (mainHeader) {
+        clientId = mainHeader.getAttribute('data-client-id');
+    }
+    
+    // If not found, try to extract from URL
+    if (!clientId) {
+        const pathParts = window.location.pathname.split('/');
+        const clientIndex = pathParts.indexOf('client');
+        if (clientIndex !== -1 && pathParts[clientIndex + 1]) {
+            clientId = pathParts[clientIndex + 1];
+            // Remove any hash fragments
+            if (clientId && clientId.includes('#')) {
+                clientId = clientId.split('#')[0];
+            }
+        }
+    }
+    
+    console.log('Client ID for notes manager:', clientId);
+    
+    if (clientId) {
+        // Initialize the notes manager
+        window.notesManager = new ClientNotesManager(clientId);
+        console.log('Notes manager initialized for client:', clientId);
+    } else {
+        console.error('No client ID found for notes manager');
     }
 });

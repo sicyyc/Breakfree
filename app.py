@@ -3230,7 +3230,6 @@ def log_activity(user_id, user_email, user_role, action, details=None, target_id
 # ==================== CLIENT PROGRESS STATUS API ====================
 
 @app.route('/api/client-progress/<client_id>/analytics', methods=['GET'])
-@role_required(['admin', 'psychometrician', 'facilitator', 'house_worker'])
 def get_client_progress_analytics(client_id):
     """Get comprehensive progress analytics for a client based on notes"""
     try:
