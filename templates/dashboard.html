@@ -21,7 +21,7 @@
             <span class="search-icon"><i class="fas fa-search"></i></span>
             <input type="text" placeholder="Search...">
         </div>
-        <button class="btn-primary">+ Add new task</button>
+        <button class="btn-primary" id="createSampleNotes">+ Create Sample Data</button>
     </div>
 </div>
 
@@ -54,80 +54,52 @@
     </div>
 </div>
 
-<div class="actions-activity-container">
-    <div class="card">
-        <h3>Calendar</h3>
-        <div class="calendar">
-            <div class="calendar-header">
-                <button class="calendar-nav-btn" id="checkinPrevMonth">
-                    <i class="fas fa-chevron-left"></i>
-                </button>
-                <h4 id="checkinCurrentMonth">June 2025</h4>
-                <button class="calendar-nav-btn" id="checkinNextMonth">
-                    <i class="fas fa-chevron-right"></i>
-                </button>
-            </div>
-            <div class="calendar-weekdays">
-                <div>Sun</div>
-                <div>Mon</div>
-                <div>Tue</div>
-                <div>Wed</div>
-                <div>Thu</div>
-                <div>Fri</div>
-                <div>Sat</div>
-            </div>
-            <div class="calendar-days" id="checkinCalendarDays">
-                <!-- Days will be populated by JavaScript -->
-            </div>
-            <div class="calendar-legend">
-                <div class="legend-item">
-                    <span class="legend-dot has-appointment"></span>
-                    <span>Appointment</span>
-                </div>
-                <div class="legend-item">
-                    <span class="legend-dot has-checkup"></span>
-                    <span>Check-up</span>
-                </div>
-            </div>
-        </div>
+<div class="analytics-container">
+    <div class="card sentiment-trend">
+        <h3>Overall Sentiment Trend</h3>
+        <canvas id="sentimentChart"></canvas>
     </div>
+    
+    <div class="card domain-scores">
+        <h3>Average Domain Scores</h3>
+        <canvas id="domainScoresChart"></canvas>
+    </div>
+</div>
 
-    <div class="card">
-        <h3>Recent Activity</h3>
-        <div class="activity-item">
-            <div class="activity-icon">
-                <i class="fas fa-check"></i>
+<div class="word-cloud-container">
+    <div class="card word-cloud-card">
+        <h3>Top Behaviors Across All Clients</h3>
+        <div id="wordCloud"></div>
+    </div>
+    
+    <div class="card summary-stats">
+        <h3>Summary Statistics</h3>
+        <div class="stats-grid-summary">
+            <div class="stat-item">
+                <div class="stat-value" id="improvementPercentage">65%</div>
+                <div class="stat-label">Positive Improvement</div>
             </div>
-            <div class="activity-content">
-                <h4>Task Completed</h4>
-                <p>Morning Meditation</p>
+            <div class="stat-item">
+                <div class="stat-value" id="avgSentimentScore">7.2</div>
+                <div class="stat-label">Average Sentiment</div>
             </div>
-            <span class="activity-time">2m ago</span>
-        </div>
-        <div class="activity-item">
-            <div class="activity-icon">
-                <i class="fas fa-plus"></i>
+            <div class="stat-item">
+                <div class="stat-value" id="totalNotes">1,247</div>
+                <div class="stat-label">Total Notes Analyzed</div>
             </div>
-            <div class="activity-content">
-                <h4>New Task Added</h4>
-                <p>Evening Exercise</p>
+            <div class="stat-item">
+                <div class="stat-value" id="activeClients">{{ total_clients }}</div>
+                <div class="stat-label">Active Clients</div>
             </div>
-            <span class="activity-time">1h ago</span>
-        </div>
-        <div class="activity-item">
-            <div class="activity-icon">
-                <i class="fas fa-star"></i>
-            </div>
-            <div class="activity-content">
-                <h4>Achievement Unlocked</h4>
-                <p>7-Day Streak!</p>
-            </div>
-            <span class="activity-time">3h ago</span>
         </div>
     </div>
 </div>
 {% endblock %}
 
 {% block scripts %}
+<script>
+    // Pass analytics data to JavaScript
+    window.analyticsData = {{ analytics_data | tojson }};
+</script>
 <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 {% endblock %}

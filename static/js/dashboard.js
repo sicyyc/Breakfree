@@ -31,8 +31,6 @@ document.addEventListener('DOMContentLoaded', function() {
             initializeCharts();
         } else if (tabId === 'client-profile') {
             initClientProgressChart();
-        } else if (tabId === 'check-in') {
-            initializeCheckinCalendar();
         }
     }
 
@@ -61,21 +59,46 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    // Initialize Line Chart
+    // Initialize Analytics Charts
     function initializeCharts() {
-        const lineCtx = document.getElementById('lineChart');
-        if (!lineCtx) return;
+        // Get analytics data from global variable
+        const analyticsData = window.analyticsData || getDefaultAnalyticsData();
+        
+        // Initialize Sentiment Trend Chart
+        initializeSentimentChart(analyticsData.sentiment_trend);
+        
+        // Initialize Domain Scores Chart
+        initializeDomainScoresChart(analyticsData.domain_scores);
+        
+        // Initialize Word Cloud
+        initializeWordCloud(analyticsData.top_behaviors);
+        
+        // Update Summary Stats
+        updateSummaryStats(analyticsData.summary_stats);
+        
+        // Keep existing doughnut chart for task distribution
+        initializeTaskDistributionChart();
+    }
+    
+    function initializeSentimentChart(sentimentData) {
+        const sentimentCtx = document.getElementById('sentimentChart');
+        if (!sentimentCtx) return;
 
-        new Chart(lineCtx, {
+        new Chart(sentimentCtx, {
             type: 'line',
             data: {
-                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                labels: sentimentData.labels,
                 datasets: [{
-                    label: 'Tasks Completed',
-                    data: [12, 19, 15, 17, 14, 15, 16],
+                    label: 'Sentiment Score',
+                    data: sentimentData.data,
                     borderColor: '#4682A9',
+                    backgroundColor: 'rgba(70, 130, 169, 0.1)',
                     tension: 0.4,
-                    fill: false
+                    fill: true,
+                    pointBackgroundColor: '#4682A9',
+                    pointBorderColor: '#4682A9',
+                    pointRadius: 6,
+                    pointHoverRadius: 8
                 }]
             },
             options: {
@@ -84,18 +107,142 @@ document.addEventListener('DOMContentLoaded', function() {
                 scales: {
                     y: {
                         beginAtZero: true,
-                        max: 20
+                        max: 10,
+                        ticks: {
+                            stepSize: 1
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.1)'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
                     }
                 },
                 plugins: {
                     legend: {
                         display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `Sentiment: ${context.parsed.y}/10`;
+                            }
+                        }
                     }
                 }
             }
         });
+    }
+    
+    function initializeDomainScoresChart(domainData) {
+        const domainCtx = document.getElementById('domainScoresChart');
+        if (!domainCtx) return;
 
-        // Initialize Doughnut Chart
+        const labels = Object.keys(domainData).map(key => 
+            key.charAt(0).toUpperCase() + key.slice(1)
+        );
+        const data = Object.values(domainData);
+
+        new Chart(domainCtx, {
+            type: 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Average Score',
+                    data: data,
+                    backgroundColor: [
+                        'rgba(70, 130, 169, 0.8)',
+                        'rgba(145, 200, 228, 0.8)',
+                        'rgba(75, 0, 130, 0.8)'
+                    ],
+                    borderColor: [
+                        '#4682A9',
+                        '#91C8E4',
+                        '#4B0082'
+                    ],
+                    borderWidth: 2,
+                    borderRadius: 8,
+                    borderSkipped: false
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        max: 10,
+                        ticks: {
+                            stepSize: 1
+                        },
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.1)'
+                        }
+                    },
+                    x: {
+                        grid: {
+                            display: false
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return `Score: ${context.parsed.y}/10`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+    
+    function initializeWordCloud(behaviors) {
+        const wordCloudContainer = document.getElementById('wordCloud');
+        if (!wordCloudContainer) return;
+        
+        // Clear existing content
+        wordCloudContainer.innerHTML = '';
+        
+        // Create word cloud items
+        behaviors.forEach(behavior => {
+            const wordElement = document.createElement('span');
+            wordElement.className = 'word-cloud-item';
+            wordElement.textContent = behavior.text;
+            wordElement.style.fontSize = `${Math.max(12, Math.min(24, behavior.count * 0.5))}px`;
+            wordElement.title = `Mentioned ${behavior.count} times`;
+            wordCloudContainer.appendChild(wordElement);
+        });
+    }
+    
+    function updateSummaryStats(summaryStats) {
+        // Update improvement percentage
+        const improvementEl = document.getElementById('improvementPercentage');
+        if (improvementEl) {
+            improvementEl.textContent = `${summaryStats.improvement_percentage}%`;
+        }
+        
+        // Update average sentiment
+        const sentimentEl = document.getElementById('avgSentimentScore');
+        if (sentimentEl) {
+            sentimentEl.textContent = summaryStats.avg_sentiment;
+        }
+        
+        // Update total notes
+        const notesEl = document.getElementById('totalNotes');
+        if (notesEl) {
+            notesEl.textContent = summaryStats.total_notes.toLocaleString();
+        }
+    }
+    
+    function initializeTaskDistributionChart() {
         const doughnutCtx = document.getElementById('doughnutChart');
         if (!doughnutCtx) return;
 
@@ -134,6 +281,32 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+    
+    function getDefaultAnalyticsData() {
+        return {
+            sentiment_trend: {
+                labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                data: [6.2, 6.8, 7.1, 6.9, 7.3, 7.0, 6.7]
+            },
+            domain_scores: {
+                emotional: 7.2,
+                cognitive: 6.8,
+                social: 7.5
+            },
+            top_behaviors: [
+                {text: 'positive attitude', count: 45},
+                {text: 'active participation', count: 38},
+                {text: 'improved communication', count: 32},
+                {text: 'better focus', count: 28},
+                {text: 'increased confidence', count: 25}
+            ],
+            summary_stats: {
+                improvement_percentage: 65.0,
+                avg_sentiment: 7.2,
+                total_notes: 1247
+            }
+        };
+    }
 
     // Initialize charts on page load
     initializeCharts();
@@ -151,12 +324,34 @@ document.addEventListener('DOMContentLoaded', function() {
         console.log('Searching for:', e.target.value);
     });
 
-    // Handle add task button
-    const addTaskBtn = document.querySelector('.btn-primary');
-    addTaskBtn.addEventListener('click', function() {
-        // Implement add task functionality here
-        alert('Add task functionality would be implemented here');
-    });
+    // Handle create sample data button
+    const createSampleBtn = document.getElementById('createSampleNotes');
+    if (createSampleBtn) {
+        createSampleBtn.addEventListener('click', function() {
+            if (confirm('This will create sample notes for all clients to test the analytics. Continue?')) {
+                fetch('/create-sample-notes', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert(`Success! Created ${data.notes_created} sample notes. Refresh the page to see updated analytics.`);
+                        // Refresh the page to show updated data
+                        window.location.reload();
+                    } else {
+                        alert('Error: ' + data.error);
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    alert('Error creating sample data');
+                });
+            }
+        });
+    }
 
     // Handle quick action buttons
     const quickActionBtns = document.querySelectorAll('.quick-action-btn');
@@ -260,123 +455,6 @@ document.addEventListener('DOMContentLoaded', function() {
     window.addEventListener('resize', handleResize);
     handleResize(); // Initial check
 
-    // Calendar Functionality
-    function initializeCalendar() {
-        const currentMonthElement = document.getElementById('checkinCurrentMonth');
-        const calendarDaysElement = document.getElementById('checkinCalendarDays');
-        const prevMonthButton = document.getElementById('checkinPrevMonth');
-        const nextMonthButton = document.getElementById('checkinNextMonth');
-
-        if (!currentMonthElement || !calendarDaysElement) return;
-
-        let currentDate = new Date();
-        let currentMonth = currentDate.getMonth();
-        let currentYear = currentDate.getFullYear();
-
-        // Sample data for appointments and checkups
-        const events = {
-            '2024-02-15': ['appointment'],
-            '2024-02-20': ['checkup'],
-            '2024-02-25': ['appointment', 'checkup'],
-        };
-
-        function updateCalendar() {
-            const firstDay = new Date(currentYear, currentMonth, 1);
-            const lastDay = new Date(currentYear, currentMonth + 1, 0);
-            const startingDay = firstDay.getDay();
-            const monthLength = lastDay.getDate();
-            
-            // Update month/year display
-            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 
-                              'July', 'August', 'September', 'October', 'November', 'December'];
-            currentMonthElement.textContent = `${monthNames[currentMonth]} ${currentYear}`;
-
-            // Clear previous days
-            calendarDaysElement.innerHTML = '';
-
-            // Calculate the total number of days to display (6 weeks × 7 days = 42)
-            const totalDaysToShow = 42;
-            
-            // Calculate the start date (first day of the first week to display)
-            const startDate = new Date(firstDay);
-            startDate.setDate(startDate.getDate() - startingDay);
-            
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            
-            for (let i = 0; i < totalDaysToShow; i++) {
-                const date = new Date(startDate);
-                date.setDate(startDate.getDate() + i);
-                
-                const isToday = date.getTime() === today.getTime();
-                const isCurrentMonth = date.getMonth() === currentMonth;
-                const dateStr = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
-                
-                let additionalClass = '';
-                if (!isCurrentMonth) {
-                    additionalClass = 'other-month';
-                } else if (isToday) {
-                    additionalClass = 'today';
-                }
-                
-                const dayElement = createDayElement(date.getDate(), additionalClass, events[dateStr]);
-                calendarDaysElement.appendChild(dayElement);
-            }
-        }
-
-        function createDayElement(day, additionalClass, eventData = null) {
-            const dayElement = document.createElement('div');
-            dayElement.classList.add('calendar-day');
-            if (additionalClass) {
-                dayElement.classList.add(additionalClass);
-            }
-            dayElement.textContent = day;
-            
-            if (eventData) {
-                eventData.forEach(eventType => {
-                    dayElement.classList.add(`has-${eventType}`);
-                });
-            }
-            
-            // Add click event listener
-            dayElement.addEventListener('click', () => {
-                // Remove selected class from all days
-                document.querySelectorAll('.calendar-day').forEach(el => {
-                    el.classList.remove('selected');
-                });
-                // Add selected class to clicked day
-                dayElement.classList.add('selected');
-                console.log(`Selected date: ${day}-${currentMonth + 1}-${currentYear}`);
-            });
-            
-            return dayElement;
-        }
-
-        // Event listeners for month navigation
-        prevMonthButton.addEventListener('click', () => {
-            currentMonth--;
-            if (currentMonth < 0) {
-                currentMonth = 11;
-                currentYear--;
-            }
-            updateCalendar();
-        });
-
-        nextMonthButton.addEventListener('click', () => {
-            currentMonth++;
-            if (currentMonth > 11) {
-                currentMonth = 0;
-                currentYear++;
-            }
-            updateCalendar();
-        });
-
-        // Initialize calendar
-        updateCalendar();
-    }
-
-    // Initialize calendar
-    initializeCalendar();
 
     // Client Profile Chart
     function initClientProgressChart() {

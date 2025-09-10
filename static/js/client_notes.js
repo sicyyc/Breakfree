@@ -7,6 +7,7 @@ class ClientNotesManager {
     constructor(clientId) {
         this.clientId = clientId;
         this.notes = [];
+        this.isSubmitting = false; // Flag to prevent duplicate submissions
         this.currentFilters = {
             sentiment: '',
             domain: '',
@@ -233,29 +234,21 @@ class ClientNotesManager {
         const nlpSummary = document.getElementById('nlpSummary');
         if (!nlpSummary) return;
 
+        console.log('Progress data received:', progressData);
+
         // Extract data from the analytics response
         const sentimentTrend = progressData.sentiment_trend || {};
+        const sentimentCounts = progressData.sentiment_counts || {};
         const domainBreakdown = progressData.domain_breakdown || {};
         const topKeywords = progressData.top_keywords || [];
         
-        // Calculate sentiment summary from trend data
-        const weeklyData = sentimentTrend.weekly || [];
-        let totalSentiment = 0;
-        let positiveCount = 0;
-        let neutralCount = 0;
-        let negativeCount = 0;
-        
-        weeklyData.forEach(week => {
-            const score = week.average_sentiment || 0;
-            totalSentiment += score;
-            
-            if (score > 0.1) positiveCount++;
-            else if (score < -0.1) negativeCount++;
-            else neutralCount++;
-        });
-        
-        const averageSentiment = weeklyData.length > 0 ? totalSentiment / weeklyData.length : 0;
-        const totalWeeks = weeklyData.length;
+        // Use individual sentiment counts from backend
+        const counts = sentimentCounts.counts || {};
+        const positiveCount = counts.positive || 0;
+        const neutralCount = counts.neutral || 0;
+        const negativeCount = counts.negative || 0;
+        const totalNotes = sentimentCounts.total_notes || 0;
+        const averageSentiment = sentimentCounts.average_sentiment || 0;
 
         nlpSummary.innerHTML = `
             <div class="summary-section">
@@ -264,17 +257,17 @@ class ClientNotesManager {
                     <div class="sentiment-item">
                         <span class="sentiment-label positive">Positive</span>
                         <span class="sentiment-count">${positiveCount}</span>
-                        <span class="sentiment-percentage">(${totalWeeks > 0 ? Math.round((positiveCount / totalWeeks) * 100) : 0}%)</span>
+                        <span class="sentiment-percentage">(${totalNotes > 0 ? Math.round((positiveCount / totalNotes) * 100) : 0}%)</span>
                     </div>
                     <div class="sentiment-item">
                         <span class="sentiment-label neutral">Neutral</span>
                         <span class="sentiment-count">${neutralCount}</span>
-                        <span class="sentiment-percentage">(${totalWeeks > 0 ? Math.round((neutralCount / totalWeeks) * 100) : 0}%)</span>
+                        <span class="sentiment-percentage">(${totalNotes > 0 ? Math.round((neutralCount / totalNotes) * 100) : 0}%)</span>
                     </div>
                     <div class="sentiment-item">
                         <span class="sentiment-label negative">Negative</span>
                         <span class="sentiment-count">${negativeCount}</span>
-                        <span class="sentiment-percentage">(${totalWeeks > 0 ? Math.round((negativeCount / totalWeeks) * 100) : 0}%)</span>
+                        <span class="sentiment-percentage">(${totalNotes > 0 ? Math.round((negativeCount / totalNotes) * 100) : 0}%)</span>
                     </div>
                 </div>
                 <div class="average-sentiment">
@@ -368,6 +361,12 @@ class ClientNotesManager {
         e.preventDefault();
         console.log('handleAddNote called');
 
+        // Prevent multiple submissions
+        if (this.isSubmitting) {
+            console.log('Already submitting, ignoring duplicate request');
+            return;
+        }
+
         const noteText = document.getElementById('noteText').value.trim();
 
         console.log('Note text:', noteText);
@@ -376,6 +375,9 @@ class ClientNotesManager {
             this.showError('Please enter note content');
             return;
         }
+
+        // Set submitting flag
+        this.isSubmitting = true;
 
         const saveBtn = document.getElementById('saveNoteBtn');
         const originalText = saveBtn.innerHTML;
@@ -409,6 +411,8 @@ class ClientNotesManager {
             console.error('Error adding note:', error);
             this.showError('Failed to add note');
         } finally {
+            // Reset submitting flag and button state
+            this.isSubmitting = false;
             saveBtn.innerHTML = originalText;
             saveBtn.disabled = false;
         }
@@ -715,9 +719,16 @@ document.addEventListener('DOMContentLoaded', function() {
         // Add fallback for form submission
         const addNoteForm = document.getElementById('addNoteForm');
         if (addNoteForm) {
+            let isSubmitting = false; // Flag to prevent duplicate submissions
             addNoteForm.addEventListener('submit', async function(e) {
                 e.preventDefault();
                 console.log('Fallback form submission');
+                
+                // Prevent multiple submissions
+                if (isSubmitting) {
+                    console.log('Already submitting, ignoring duplicate request');
+                    return;
+                }
                 
                 const noteText = document.getElementById('noteText').value.trim();
                 
@@ -725,6 +736,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     alert('Please enter note content');
                     return;
                 }
+                
+                // Set submitting flag
+                isSubmitting = true;
                 
                 const saveBtn = document.getElementById('saveNoteBtn');
                 const originalText = saveBtn.innerHTML;
@@ -757,6 +771,8 @@ document.addEventListener('DOMContentLoaded', function() {
                     console.error('Error:', error);
                     alert('Failed to add note');
                 } finally {
+                    // Reset submitting flag and button state
+                    isSubmitting = false;
                     saveBtn.innerHTML = originalText;
                     saveBtn.disabled = false;
                 }
@@ -765,39 +781,4 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Initialize the ClientNotesManager when DOM is loaded
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Client Notes JS loaded, initializing...');
-    
-    // Get client ID from multiple sources
-    let clientId = null;
-    
-    // Try to get from main header data attribute
-    const mainHeader = document.querySelector('.main-header');
-    if (mainHeader) {
-        clientId = mainHeader.getAttribute('data-client-id');
-    }
-    
-    // If not found, try to extract from URL
-    if (!clientId) {
-        const pathParts = window.location.pathname.split('/');
-        const clientIndex = pathParts.indexOf('client');
-        if (clientIndex !== -1 && pathParts[clientIndex + 1]) {
-            clientId = pathParts[clientIndex + 1];
-            // Remove any hash fragments
-            if (clientId && clientId.includes('#')) {
-                clientId = clientId.split('#')[0];
-            }
-        }
-    }
-    
-    console.log('Client ID for notes manager:', clientId);
-    
-    if (clientId) {
-        // Initialize the notes manager
-        window.notesManager = new ClientNotesManager(clientId);
-        console.log('Notes manager initialized for client:', clientId);
-    } else {
-        console.error('No client ID found for notes manager');
-    }
-});
+// Duplicate event listener removed - initialization is handled above

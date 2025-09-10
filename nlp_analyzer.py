@@ -12,7 +12,14 @@ import logging
 NLTK_AVAILABLE = False
 SPACY_AVAILABLE = False
 TEXTBLOB_AVAILABLE = False
+TRANSFORMERS_AVAILABLE = False
 nlp = None
+sentiment_pipeline = None
+domain_classifier = None
+
+# Enable transformers for domain classification
+DISABLE_TRANSFORMERS = False
+DISABLE_TEXTBLOB = True
 
 def _init_nltk():
     global NLTK_AVAILABLE
@@ -52,12 +59,61 @@ def _init_spacy():
 
 def _init_textblob():
     global TEXTBLOB_AVAILABLE
+    if DISABLE_TEXTBLOB:
+        TEXTBLOB_AVAILABLE = False
+        return False
     try:
         from textblob import TextBlob
         TEXTBLOB_AVAILABLE = True
         return True
     except ImportError:
         TEXTBLOB_AVAILABLE = False
+        return False
+
+def _init_transformers():
+    global TRANSFORMERS_AVAILABLE, sentiment_pipeline, domain_classifier
+    if DISABLE_TRANSFORMERS:
+        TRANSFORMERS_AVAILABLE = False
+        sentiment_pipeline = None
+        domain_classifier = None
+        return False
+    try:
+        from transformers import pipeline
+        TRANSFORMERS_AVAILABLE = True
+        
+        # Initialize sentiment analysis pipeline
+        try:
+            sentiment_pipeline = pipeline(
+                "sentiment-analysis",
+                model="distilbert-base-uncased-finetuned-sst-2-english",
+                return_all_scores=True
+            )
+        except Exception as e:
+            logging.getLogger(__name__).warning(f"Failed to initialize sentiment pipeline: {e}")
+            sentiment_pipeline = None
+        
+        # Initialize zero-shot classification pipeline for domain tagging
+        try:
+            domain_classifier = pipeline(
+                "zero-shot-classification",
+                model="facebook/bart-large-mnli"
+            )
+        except Exception as e:
+            logging.getLogger(__name__).warning(f"Failed to initialize domain classifier: {e}")
+            domain_classifier = None
+        
+        return True
+    except ImportError as e:
+        logging.getLogger(__name__).warning(f"Transformers not available: {e}")
+        TRANSFORMERS_AVAILABLE = False
+        sentiment_pipeline = None
+        domain_classifier = None
+        return False
+    except Exception as e:
+        logging.getLogger(__name__).warning(f"Unexpected error initializing transformers: {e}")
+        TRANSFORMERS_AVAILABLE = False
+        sentiment_pipeline = None
+        domain_classifier = None
         return False
 
 # Domain-specific keyword dictionaries
@@ -92,6 +148,7 @@ class NLPAnalyzer:
         self._nltk_initialized = False
         self._spacy_initialized = False
         self._textblob_initialized = False
+        self._transformers_initialized = False
     
     def _ensure_nltk(self):
         """Lazy initialization of NLTK"""
@@ -115,6 +172,12 @@ class NLPAnalyzer:
         if not self._textblob_initialized:
             _init_textblob()
             self._textblob_initialized = True
+    
+    def _ensure_transformers(self):
+        """Lazy initialization of Transformers"""
+        if not self._transformers_initialized:
+            _init_transformers()
+            self._transformers_initialized = True
     
     def analyze_note(self, text):
         """
@@ -166,11 +229,61 @@ class NLPAnalyzer:
     
     def _analyze_sentiment(self, text):
         """
-        Analyze sentiment using TextBlob or basic keyword analysis
+        Analyze sentiment using Transformers, TextBlob, or basic keyword analysis
         
         Returns:
             dict: Sentiment analysis results
         """
+        # Try Hugging Face Transformers first
+        try:
+            self._ensure_transformers()
+            
+            if TRANSFORMERS_AVAILABLE and sentiment_pipeline:
+                try:
+                    # Truncate text to 512 tokens to avoid errors
+                    # Simple tokenization by splitting on whitespace
+                    tokens = text.split()
+                    if len(tokens) > 512:
+                        truncated_text = ' '.join(tokens[:512])
+                    else:
+                        truncated_text = text
+                    
+                    # Get sentiment analysis results
+                    results = sentiment_pipeline(truncated_text)
+                    
+                    # Extract the highest confidence result
+                    best_result = max(results[0], key=lambda x: x['score'])
+                    
+                    # Map to our expected format
+                    if best_result['label'] == 'POSITIVE':
+                        sentiment = 'positive'
+                        score = 1
+                        polarity = best_result['score']
+                    elif best_result['label'] == 'NEGATIVE':
+                        sentiment = 'negative'
+                        score = -1
+                        polarity = -best_result['score']
+                    else:
+                        sentiment = 'neutral'
+                        score = 0
+                        polarity = 0.0
+                    
+                    return {
+                        'sentiment': sentiment,
+                        'score': score,
+                        'polarity': polarity,
+                        'subjectivity': 0.5,  # Transformers doesn't provide subjectivity
+                        'confidence': best_result['score']
+                    }
+                    
+                except Exception as e:
+                    self.logger.error(f"Transformers sentiment analysis error: {e}")
+            else:
+                self.logger.warning("Transformers not available, falling back to TextBlob")
+        except Exception as e:
+            self.logger.warning(f"Failed to initialize transformers: {e}")
+        
+        # Fallback to TextBlob
         self._ensure_textblob()
         
         if TEXTBLOB_AVAILABLE:
@@ -199,7 +312,7 @@ class NLPAnalyzer:
             except Exception as e:
                 self.logger.error(f"TextBlob sentiment analysis error: {e}")
         
-        # Fallback to basic keyword-based sentiment analysis
+        # Final fallback to basic keyword-based sentiment analysis
         return self._basic_sentiment_analysis(text)
     
     def _basic_sentiment_analysis(self, text):
@@ -209,8 +322,8 @@ class NLPAnalyzer:
         Returns:
             dict: Sentiment analysis results
         """
-        positive_words = ['good', 'great', 'excellent', 'positive', 'happy', 'calm', 'cooperative', 'attentive', 'focused', 'engaged', 'helpful', 'friendly', 'cheerful', 'content', 'peaceful', 'relaxed', 'serene', 'joyful', 'optimistic', 'hopeful']
-        negative_words = ['bad', 'poor', 'negative', 'sad', 'angry', 'agitated', 'frustrated', 'upset', 'distressed', 'anxious', 'worried', 'fearful', 'depressed', 'irritable', 'moody', 'withdrawn', 'isolated', 'uncooperative', 'hostile', 'aggressive', 'defensive', 'distant', 'unresponsive']
+        positive_words = ['good', 'great', 'excellent', 'positive', 'happy', 'calm', 'cooperative', 'attentive', 'focused', 'engaged', 'helpful', 'friendly', 'cheerful', 'content', 'peaceful', 'relaxed', 'serene', 'joyful', 'optimistic', 'hopeful', 'pleased', 'satisfied', 'comfortable', 'stable']
+        negative_words = ['bad', 'poor', 'negative', 'sad', 'angry', 'mad', 'agitated', 'frustrated', 'upset', 'distressed', 'anxious', 'worried', 'fearful', 'depressed', 'irritable', 'moody', 'withdrawn', 'isolated', 'uncooperative', 'hostile', 'aggressive', 'defensive', 'distant', 'unresponsive', 'annoyed', 'irritated', 'disappointed', 'concerned']
         
         text_lower = text.lower()
         positive_count = sum(1 for word in positive_words if word in text_lower)
@@ -299,7 +412,75 @@ class NLPAnalyzer:
     
     def _tag_domains(self, text, keywords):
         """
-        Tag text to emotional, cognitive, and social domains
+        Tag text to emotional, cognitive, and social domains using BART zero-shot classification
+        
+        Returns:
+            dict: Domain tags with scores
+        """
+        # Try to use BART zero-shot classification first
+        try:
+            self._ensure_transformers()
+            
+            if TRANSFORMERS_AVAILABLE and domain_classifier:
+                try:
+                    # Define candidate labels for domain classification
+                    candidate_labels = ["emotional", "cognitive", "social"]
+                    
+                    # Run zero-shot classification
+                    result = domain_classifier(text, candidate_labels)
+                    
+                    # Extract scores for each domain
+                    domain_scores = {}
+                    for i, label in enumerate(result['labels']):
+                        score = result['scores'][i]
+                        domain_scores[label] = score
+                    
+                    # Normalize scores so they sum to 1.0
+                    total_score = sum(domain_scores.values())
+                    if total_score > 0:
+                        normalized_scores = {domain: score / total_score for domain, score in domain_scores.items()}
+                    else:
+                        normalized_scores = {domain: 1.0/3 for domain in candidate_labels}
+                    
+                    # Convert to the expected format
+                    domain_tags = {}
+                    for domain in candidate_labels:
+                        score = normalized_scores.get(domain, 0.0)
+                        
+                        # Determine category based on score (for compatibility with existing structure)
+                        if score > 0.4:  # High confidence
+                            category = 'positive'
+                        elif score > 0.2:  # Medium confidence
+                            category = 'neutral'
+                        else:  # Low confidence
+                            category = 'negative'
+                        
+                        domain_tags[domain] = {
+                            'score': round(score, 2),
+                            'counts': {
+                                'positive': 1 if category == 'positive' else 0,
+                                'negative': 1 if category == 'negative' else 0,
+                                'neutral': 1 if category == 'neutral' else 0
+                            },
+                            'total_mentions': 1
+                        }
+                    
+                    return domain_tags
+                    
+                except Exception as e:
+                    self.logger.error(f"BART domain classification error: {e}")
+                    self.logger.warning("Falling back to keyword-based domain tagging")
+            else:
+                self.logger.warning("Transformers not available for domain tagging, using keyword-based approach")
+        except Exception as e:
+            self.logger.warning(f"Failed to initialize transformers for domain tagging: {e}")
+        
+        # Fallback to keyword-based domain tagging
+        return self._keyword_based_domain_tagging(text)
+    
+    def _keyword_based_domain_tagging(self, text):
+        """
+        Fallback domain tagging using keyword dictionaries
         
         Returns:
             dict: Domain tags with scores

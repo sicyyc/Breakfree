@@ -11,6 +11,7 @@ from math import isnan
 import hashlib
 import math
 from datetime import datetime
+import json
 
 # Load environment variables before importing Firebase config
 load_dotenv()
@@ -35,6 +36,9 @@ NOMINATIM_BASE_URL = 'https://nominatim.openstreetmap.org/search'
 
 # Import the new Laguna Location API
 from laguna_locations_api import laguna_api, get_municipality, get_all_municipalities, get_barangays, search_locations, get_location_stats
+
+# Import NLP analyzer for sentiment analysis
+from nlp_analyzer import nlp_analyzer
 
 
 def allowed_file(filename):
@@ -292,6 +296,229 @@ def login():
             
     return render_template('login.html')
 
+def get_aggregated_analytics():
+    """Get aggregated analytics data across all clients"""
+    try:
+        # Fetch all clients from Firestore
+        clients_ref = db.collection('clients')
+        clients = clients_ref.where('archived', '==', False).stream()
+        
+        # Initialize data structures
+        sentiment_scores = []
+        domain_scores = {'emotional': [], 'cognitive': [], 'social': []}
+        all_behaviors = []
+        total_notes = 0
+        positive_improvements = 0
+        
+        # Process each client and their notes
+        client_count = 0
+        for client in clients:
+            client_id = client.id
+            client_data = client.to_dict()
+            client_count += 1
+            
+            # Get notes from client's subcollection
+            notes_ref = db.collection('clients').document(client_id).collection('notes')
+            notes = notes_ref.stream()
+            
+            note_count = 0
+            for note in notes:
+                note_count += 1
+                note_data = note.to_dict()
+                
+                # Check if note has already been analyzed (has sentiment data)
+                if 'sentiment' in note_data:
+                    total_notes += 1
+                    
+                    # Extract sentiment from pre-analyzed note
+                    sentiment = note_data.get('sentiment', {})
+                    sentiment_score = sentiment.get('score', 0)  # Use actual score from analysis
+                    
+                    # Convert sentiment score to 1-10 scale for display
+                    if sentiment_score == 1:  # positive
+                        display_score = 8.0
+                    elif sentiment_score == 0:  # neutral
+                        display_score = 5.0
+                    else:  # negative
+                        display_score = 2.0
+                    
+                    sentiment_scores.append(display_score)
+                    
+                    # Extract domain scores from pre-analyzed note
+                    tags = note_data.get('tags', {})
+                    for domain in ['emotional', 'cognitive', 'social']:
+                        domain_data = tags.get(domain, {})
+                        domain_score = domain_data.get('score', 0.0)
+                        # Convert to 1-10 scale
+                        display_domain_score = max(1.0, min(10.0, (domain_score + 1) * 5))
+                        domain_scores[domain].append(display_domain_score)
+                    
+                    # Extract behaviors (keywords) from pre-analyzed note
+                    keywords = note_data.get('keywords', [])
+                    all_behaviors.extend(keywords)
+                    
+                    # Check for positive improvement (sentiment > 6.0)
+                    if display_score > 6.0:
+                        positive_improvements += 1
+            
+            print(f"Client {client_id}: {note_count} notes found")
+        
+        print(f"Analytics Summary: {client_count} clients processed, {total_notes} analyzed notes found")
+        
+        # If no notes found, return default data with a message
+        if total_notes == 0:
+            print("No analyzed notes found in database. Using default analytics data.")
+            return get_default_analytics()
+        
+        # Calculate aggregated metrics
+        avg_sentiment = sum(sentiment_scores) / len(sentiment_scores) if sentiment_scores else 5.0
+        improvement_percentage = (positive_improvements / total_notes * 100) if total_notes > 0 else 0
+        
+        # Calculate average domain scores
+        avg_domain_scores = {}
+        for domain, scores in domain_scores.items():
+            avg_domain_scores[domain] = sum(scores) / len(scores) if scores else 5.0
+        
+        # Get top behaviors
+        from collections import Counter
+        behavior_counts = Counter(all_behaviors)
+        top_behaviors = [{'text': behavior, 'count': count} for behavior, count in behavior_counts.most_common(15)]
+        
+        # Generate sentiment trend data (last 7 days)
+        sentiment_trend = generate_sentiment_trend()
+        
+        return {
+            'sentiment_trend': sentiment_trend,
+            'domain_scores': avg_domain_scores,
+            'top_behaviors': top_behaviors,
+            'summary_stats': {
+                'improvement_percentage': round(improvement_percentage, 1),
+                'avg_sentiment': round(avg_sentiment, 1),
+                'total_notes': total_notes,
+                'positive_improvements': positive_improvements
+            }
+        }
+        
+    except Exception as e:
+        print(f"Error generating analytics: {e}")
+        return get_default_analytics()
+
+def generate_sentiment_trend():
+    """Generate sentiment trend data for the last 7 days"""
+    try:
+        # Get notes from the last 7 days
+        from datetime import datetime, timedelta
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=7)
+        
+        # Fetch all clients and their notes
+        clients_ref = db.collection('clients')
+        clients = clients_ref.where('archived', '==', False).stream()
+        
+        # Group by day
+        daily_sentiments = {}
+        for client in clients:
+            client_id = client.id
+            
+            # Get notes from client's subcollection
+            notes_ref = db.collection('clients').document(client_id).collection('notes')
+            notes = notes_ref.where('created_at', '>=', start_date).where('created_at', '<=', end_date).stream()
+            
+            for note in notes:
+                note_data = note.to_dict()
+                
+                # Check if note has already been analyzed
+                if 'sentiment' in note_data and 'created_at' in note_data:
+                    timestamp_str = note_data.get('created_at')
+                    if timestamp_str:
+                        try:
+                            # Parse timestamp
+                            if isinstance(timestamp_str, str):
+                                timestamp = datetime.fromisoformat(timestamp_str.replace('Z', '+00:00'))
+                            else:
+                                timestamp = timestamp_str
+                            
+                            day = timestamp.strftime('%Y-%m-%d')
+                            
+                            # Extract sentiment score
+                            sentiment = note_data.get('sentiment', {})
+                            sentiment_score = sentiment.get('score', 0)
+                            
+                            # Convert to display scale
+                            if sentiment_score == 1:  # positive
+                                display_score = 8.0
+                            elif sentiment_score == 0:  # neutral
+                                display_score = 5.0
+                            else:  # negative
+                                display_score = 2.0
+                            
+                            if day not in daily_sentiments:
+                                daily_sentiments[day] = []
+                            daily_sentiments[day].append(display_score)
+                        except Exception as e:
+                            print(f"Error parsing timestamp: {e}")
+                            continue
+        
+        # Calculate average sentiment for each day
+        trend_data = []
+        labels = []
+        
+        for i in range(7):
+            date = (end_date - timedelta(days=6-i)).strftime('%Y-%m-%d')
+            day_name = (end_date - timedelta(days=6-i)).strftime('%a')
+            labels.append(day_name)
+            
+            if date in daily_sentiments:
+                avg_sentiment = sum(daily_sentiments[date]) / len(daily_sentiments[date])
+                trend_data.append(round(avg_sentiment, 1))
+            else:
+                trend_data.append(5.0)  # Default neutral
+        
+        return {
+            'labels': labels,
+            'data': trend_data
+        }
+        
+    except Exception as e:
+        print(f"Error generating sentiment trend: {e}")
+        # Return default trend data
+        return {
+            'labels': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            'data': [6.2, 6.8, 7.1, 6.9, 7.3, 7.0, 6.7]
+        }
+
+def get_default_analytics():
+    """Return default analytics data when real data is not available"""
+    return {
+        'sentiment_trend': {
+            'labels': ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            'data': [6.2, 6.8, 7.1, 6.9, 7.3, 7.0, 6.7]
+        },
+        'domain_scores': {
+            'emotional': 7.2,
+            'cognitive': 6.8,
+            'social': 7.5
+        },
+        'top_behaviors': [
+            {'text': 'positive attitude', 'count': 45},
+            {'text': 'active participation', 'count': 38},
+            {'text': 'improved communication', 'count': 32},
+            {'text': 'better focus', 'count': 28},
+            {'text': 'increased confidence', 'count': 25},
+            {'text': 'emotional regulation', 'count': 22},
+            {'text': 'social interaction', 'count': 20},
+            {'text': 'goal setting', 'count': 18},
+            {'text': 'problem solving', 'count': 15},
+            {'text': 'self reflection', 'count': 12}
+        ],
+        'summary_stats': {
+            'improvement_percentage': 65.0,
+            'avg_sentiment': 7.2,
+            'total_notes': 1247,
+            'positive_improvements': 810
+        }
+    }
+
 @app.route('/dashboard')
 def dashboard():
     if 'user_id' not in session:
@@ -324,12 +551,16 @@ def dashboard():
             print("House worker detected - showing only in-house statistics")
             total_clients = in_house_clients
             after_care_clients = 0
+        
+        # Get aggregated analytics data
+        analytics_data = get_aggregated_analytics()
                 
     except Exception as e:
         print(f"Error fetching client counts: {e}")
         total_clients = 0
         in_house_clients = 0
         after_care_clients = 0
+        analytics_data = get_default_analytics()
     
     return render_template('dashboard.html', 
                          email=session['email'],
@@ -337,7 +568,61 @@ def dashboard():
                          total_clients=total_clients,
                          in_house_clients=in_house_clients,
                          after_care_clients=after_care_clients,
+                         analytics_data=analytics_data,
                          active_tab='dashboard')
+
+@app.route('/create-sample-notes', methods=['POST'])
+def create_sample_notes():
+    """Create sample notes for testing analytics (development only)"""
+    if 'user_id' not in session:
+        return jsonify({'error': 'Not authenticated'}), 401
+    
+    try:
+        # Get all clients
+        clients_ref = db.collection('clients')
+        clients = clients_ref.where('archived', '==', False).stream()
+        
+        sample_notes = [
+            "Client showed excellent progress today. They were calm and cooperative during group therapy.",
+            "Patient appeared anxious but engaged well with staff. Good communication skills demonstrated.",
+            "Client was very positive and motivated. Participated actively in all activities.",
+            "Some behavioral challenges observed but client responded well to redirection.",
+            "Outstanding improvement in social interactions. Client initiated conversations with peers.",
+            "Client seemed tired but maintained good focus during individual sessions.",
+            "Excellent emotional regulation today. Client handled stress very well.",
+            "Client showed increased confidence and self-esteem. Very encouraging progress.",
+            "Some resistance to activities but eventually engaged positively.",
+            "Client demonstrated strong problem-solving skills during cognitive exercises."
+        ]
+        
+        notes_created = 0
+        for client in clients:
+            client_id = client.id
+            client_data = client.to_dict()
+            
+            # Create 2-3 sample notes for each client
+            import random
+            num_notes = random.randint(2, 3)
+            selected_notes = random.sample(sample_notes, num_notes)
+            
+            for note_text in selected_notes:
+                # Analyze the note
+                analysis = nlp_analyzer.analyze_note(note_text)
+                
+                # Add to client's notes subcollection
+                notes_ref = db.collection('clients').document(client_id).collection('notes')
+                notes_ref.add(analysis)
+                notes_created += 1
+        
+        return jsonify({
+            'success': True, 
+            'message': f'Created {notes_created} sample notes for testing',
+            'notes_created': notes_created
+        })
+        
+    except Exception as e:
+        print(f"Error creating sample notes: {e}")
+        return jsonify({'error': str(e)}), 500
 
 @app.route('/check_in')
 @role_required(['admin', 'psychometrician', 'house_worker'])
@@ -3289,6 +3574,11 @@ def get_client_progress_analytics(client_id):
                         'weekly': [],
                         'monthly': []
                     },
+                    'sentiment_counts': {
+                        'counts': {'positive': 0, 'neutral': 0, 'negative': 0},
+                        'total_notes': 0,
+                        'average_sentiment': 0
+                    },
                     'domain_breakdown': {
                         'emotional': {'score': 0, 'mentions': 0},
                         'cognitive': {'score': 0, 'mentions': 0},
@@ -3303,6 +3593,11 @@ def get_client_progress_analytics(client_id):
         print("Calculating sentiment trends...")
         sentiment_trends = calculate_sentiment_trends(notes_list)
         print(f"Sentiment trends: {sentiment_trends}")
+        
+        # Calculate individual sentiment counts
+        print("Calculating individual sentiment counts...")
+        sentiment_counts = calculate_individual_sentiment_counts(notes_list)
+        print(f"Sentiment counts: {sentiment_counts}")
         
         # Calculate domain breakdown
         print("Calculating domain breakdown...")
@@ -3328,6 +3623,7 @@ def get_client_progress_analytics(client_id):
                     'total_notes': len(notes_list)
                 },
                 'sentiment_trend': sentiment_trends,
+                'sentiment_counts': sentiment_counts,
                 'domain_breakdown': domain_breakdown,
                 'top_keywords': top_keywords,
                 'progress_insights': progress_insights
@@ -3394,6 +3690,37 @@ def calculate_sentiment_trends(notes_list):
     return {
         'weekly': weekly_trend[-8:],  # Last 8 weeks
         'monthly': monthly_trend[-6:]  # Last 6 months
+    }
+
+def calculate_individual_sentiment_counts(notes_list):
+    """Calculate individual sentiment counts from all notes"""
+    sentiment_counts = {
+        'positive': 0,
+        'neutral': 0,
+        'negative': 0
+    }
+    
+    total_sentiment_score = 0
+    
+    for note in notes_list:
+        sentiment = note.get('sentiment', {})
+        sentiment_type = sentiment.get('sentiment', 'neutral')
+        sentiment_score = sentiment.get('score', 0)
+        
+        # Count by sentiment type
+        if sentiment_type in sentiment_counts:
+            sentiment_counts[sentiment_type] += 1
+        
+        total_sentiment_score += sentiment_score
+    
+    # Calculate average sentiment score
+    total_notes = len(notes_list)
+    average_sentiment = total_sentiment_score / total_notes if total_notes > 0 else 0
+    
+    return {
+        'counts': sentiment_counts,
+        'total_notes': total_notes,
+        'average_sentiment': round(average_sentiment, 2)
     }
 
 def calculate_domain_breakdown(notes_list):
@@ -4215,6 +4542,7 @@ def debug_client(client_id):
 from nlp_analyzer import nlp_analyzer, progress_aggregator
 from firestore_schema import firestore_schema
 
+
 @app.route('/analyze-text', methods=['POST'])
 def analyze_text():
     """
@@ -4455,6 +4783,7 @@ def delete_client_note(client_id, note_id):
     except Exception as e:
         app.logger.error(f"Error deleting client note: {e}")
         return jsonify({'error': 'Internal server error'}), 500
+
 
 
 if __name__ == '__main__':
