@@ -35,105 +35,113 @@
 
 .note-item {
     background: white;
-    border: 1px solid #e0e0e0;
+    border: 1px solid #e5e7eb;
     border-radius: 8px;
-    padding: 20px;
-    margin-bottom: 15px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    transition: box-shadow 0.3s ease;
+    padding: 24px;
+    margin-bottom: 20px;
+    transition: border-color 0.3s ease;
 }
 
 .note-item:hover {
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    border-color: #6b46c1;
 }
 
 .note-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 15px;
-    padding-bottom: 10px;
-    border-bottom: 1px solid #f0f0f0;
+    align-items: flex-start;
+    margin-bottom: 20px;
+    padding-bottom: 0;
+    border-bottom: none;
 }
 
 .note-meta {
     display: flex;
     flex-direction: column;
-    gap: 5px;
+    gap: 12px;
 }
 
 .note-date {
-    font-size: 12px;
-    color: #666;
-    font-weight: 500;
+    font-size: 11px;
+    color: #9ca3af;
+    font-weight: 400;
+    text-transform: uppercase;
+    letter-spacing: 0.8px;
 }
 
 .note-author {
-    font-size: 14px;
-    color: #333;
+    font-size: 15px;
+    color: #111827;
     font-weight: 600;
     display: flex;
     align-items: center;
-    gap: 5px;
+    gap: 8px;
+    letter-spacing: -0.025em;
+    margin-top: 4px;
 }
 
 .note-author i {
-    color: #007bff;
-    font-size: 0.8em;
+    color: #6b46c1;
+    font-size: 0.9em;
 }
 
 .author-role {
-    color: #28a745;
+    color: #34c759;
     font-weight: 500;
-    font-size: 0.8em;
-    background: rgba(40, 167, 69, 0.1);
-    padding: 2px 6px;
-    border-radius: 10px;
-    margin-left: 5px;
+    font-size: 0.75em;
+    background: rgba(52, 199, 89, 0.1);
+    padding: 3px 8px;
+    border-radius: 12px;
+    margin-left: 6px;
 }
 
 .note-sentiment {
     display: flex;
-    align-items: center;
+    align-items: flex-start;
 }
 
 .sentiment-badge {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 5px;
-    padding: 6px 12px;
-    border-radius: 20px;
+    gap: 4px;
+    padding: 6px 14px;
+    border-radius: 16px;
     color: white;
-    font-size: 12px;
-    font-weight: 600;
-    text-transform: capitalize;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
 
 .sentiment-positive {
-    background-color: #4CAF50;
+    background-color: #10b981;
 }
 
 .sentiment-negative {
-    background-color: #f44336;
+    background-color: #ef4444;
 }
 
 .sentiment-neutral {
-    background-color: #9E9E9E;
+    background-color: #6b7280;
 }
 
 .note-content {
-    font-size: 14px;
-    line-height: 1.6;
-    color: #333;
-    margin-bottom: 15px;
+    font-size: 16px;
+    line-height: 1.8;
+    color: #374151;
+    margin-bottom: 20px;
+    margin-top: 16px;
+    font-weight: 400;
+    letter-spacing: -0.01em;
 }
 
 /* NLP Analysis Section */
 .nlp-analysis {
-    background: #f8f9fa;
+    background: #f8f6fe;
     border-radius: 6px;
     padding: 15px;
     margin-top: 15px;
+    border: 1px solid #e5e7eb;
 }
 
 .analysis-section {
@@ -145,13 +153,18 @@
 }
 
 .analysis-section h4 {
-    font-size: 14px;
-    font-weight: 600;
-    color: #333;
-    margin-bottom: 10px;
+    font-size: 15px;
+    font-weight: 700;
+    color: #6b46c1;
+    margin-bottom: 12px;
     display: flex;
     align-items: center;
     gap: 8px;
+    letter-spacing: -0.025em;
+}
+
+.analysis-section h4 i {
+    font-weight: 400;
 }
 
 .keywords {
@@ -161,18 +174,25 @@
 }
 
 .keyword-tag {
-    background: #e3f2fd;
-    color: #1976d2;
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: 500;
+    background: #f0f9ff;
+    color: #0369a1;
+    padding: 8px 14px;
+    border-radius: 18px;
+    font-size: 13px;
+    font-weight: 600;
+    border: 1px solid #e0f2fe;
+    display: inline-flex;
+    align-items: center;
+    letter-spacing: 0.025em;
 }
 
-.domain-scores {
+.notes-card .domain-scores,
+.nlp-preview .domain-scores {
     display: flex;
     flex-direction: column;
     gap: 10px;
+    height: auto;
+    margin-bottom: 10px;
 }
 
 .domain-score {
@@ -191,15 +211,17 @@
 
 .score-bar {
     flex: 1;
-    height: 8px;
-    background: #e0e0e0;
-    border-radius: 4px;
+    height: 4px;
+    background: #f3f4f6;
+    border-radius: 6px;
     overflow: hidden;
+    margin-right: 12px;
 }
 
 .score-fill {
     height: 100%;
-    transition: width 0.3s ease;
+    border-radius: 6px;
+    transition: width 0.4s ease;
 }
 
 .score-value {
@@ -207,148 +229,435 @@
     font-weight: 600;
     min-width: 40px;
     text-align: right;
+    color: #1d1d1f;
 }
 
 /* NLP Summary Card */
+/* Profile Grid Layout */
+.profile-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 24px;
+    margin-bottom: 24px;
+    max-width: 100%;
+}
+
+/* Card Styles */
+.notes-card,
 .nlp-summary-card {
-    margin-top: 20px;
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 24px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    height: fit-content;
+}
+
+/* Card Styles for Notes Tab */
+.tab-pane#notes .profile-grid {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.tab-pane#notes .notes-card,
+.tab-pane#notes .nlp-summary-card {
+    width: 100%;
+}
+
+/* Make cards full width on mobile */
+@media (max-width: 768px) {
+    .profile-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .nlp-summary .summary-section:nth-child(-n+2) {
+        min-width: 100%;
+    }
+}
+
+/* NLP Analysis Summary Enhancements */
+.nlp-summary-card .card-header {
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 16px;
+    margin-bottom: 24px;
+}
+
+.nlp-summary-card .card-header h3 {
+    color: #1a1a1a;
+    font-size: 1.25rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    letter-spacing: -0.025em;
+}
+
+.nlp-summary-card .card-header h3 i {
+    color: #6b46c1;
+    font-size: 1.1em;
+}
+
+.nlp-summary {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 24px;
 }
 
 .summary-section {
-    margin-bottom: 20px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid #f0f0f0;
+    background: #f8f9fe;
+    border-radius: 12px;
+    padding: 20px;
+    border: 1px solid #e5e7eb;
+    transition: all 0.3s ease;
+}
+
+/* Make first two summary sections side by side */
+.nlp-summary .summary-section:nth-child(-n+2) {
+    flex: 1;
+    min-width: calc(50% - 12px); /* Half width minus half the gap */
+}
+
+/* Make the last summary section full width */
+.nlp-summary .summary-section:last-child {
+    width: 100%;
+}
+
+.summary-section:hover {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+    border-color: #d1d5db;
 }
 
 .summary-section:last-child {
-    border-bottom: none;
     margin-bottom: 0;
 }
 
 .summary-section h4 {
-    font-size: 16px;
+    font-size: 1rem;
     font-weight: 600;
-    color: #333;
-    margin-bottom: 15px;
+    color: #4338ca;
+    margin-bottom: 20px;
     display: flex;
     align-items: center;
     gap: 8px;
+    letter-spacing: -0.025em;
+}
+
+.summary-section h4 i {
+    color: #6366f1;
+    font-size: 1.1em;
+}
+
+.summary-section h4 i {
+    font-weight: 400;
 }
 
 .sentiment-overview {
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 12px;
 }
 
 .sentiment-item {
     display: flex;
     align-items: center;
-    gap: 10px;
-    padding: 8px 12px;
-    background: #f8f9fa;
-    border-radius: 6px;
+    gap: 12px;
+    padding: 14px 16px;
+    background: white;
+    border-radius: 10px;
+    border: 1px solid #e5e7eb;
+    transition: all 0.2s ease;
+}
+
+.sentiment-item:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
 }
 
 .sentiment-label {
-    font-size: 12px;
+    font-size: 0.875rem;
     font-weight: 600;
     text-transform: capitalize;
-    min-width: 60px;
+    min-width: 80px;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.sentiment-label::before {
+    content: '';
+    display: inline-block;
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
 }
 
 .sentiment-label.positive {
-    color: #4CAF50;
+    color: #059669;
+}
+
+.sentiment-label.positive::before {
+    background: #059669;
 }
 
 .sentiment-label.negative {
-    color: #f44336;
+    color: #dc2626;
+}
+
+.sentiment-label.negative::before {
+    background: #dc2626;
 }
 
 .sentiment-label.neutral {
-    color: #9E9E9E;
+    color: #6b7280;
+}
+
+.sentiment-label.neutral::before {
+    background: #6b7280;
 }
 
 .sentiment-count {
-    font-size: 14px;
-    font-weight: 600;
-    color: #333;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #111827;
+    min-width: 30px;
+    text-align: center;
 }
 
 .sentiment-percentage {
-    font-size: 12px;
-    color: #666;
+    font-size: 0.875rem;
+    color: #6b7280;
+    font-weight: 500;
+    margin-left: auto;
+    background: #f3f4f6;
+    padding: 4px 10px;
+    border-radius: 20px;
 }
 
 .average-sentiment {
-    margin-top: 10px;
-    padding: 10px;
-    background: #e3f2fd;
-    border-radius: 6px;
+    margin-top: 3.7rem;
+    padding: 12px;
+    background: #e8e3ff;
+    border-radius: 8px;
     text-align: center;
-    color: #1976d2;
+    color: #6b46c1;
+    font-weight: 500;
 }
 
 .domain-trends {
     display: flex;
     flex-direction: column;
-    gap: 12px;
+    gap: 16px;
 }
 
 .domain-trend {
+    background: white;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 16px;
+    transition: all 0.2s ease;
+}
+
+.domain-trend:hover {
+    border-color: #d1d5db;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+}
+
+.domain-trend-header {
     display: flex;
     align-items: center;
-    gap: 10px;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.domain-trend-name {
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: #111827;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.domain-trend-name i {
+    color: #6b46c1;
+    font-size: 1em;
+}
+
+.domain-mentions {
+    font-size: 0.75rem;
+    color: #6b7280;
+    background: #f3f4f6;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-weight: 500;
 }
 
 .trend-bar {
     flex: 1;
-    height: 10px;
-    background: #e0e0e0;
-    border-radius: 5px;
+    height: 8px;
+    background: #f3f4f6;
+    border-radius: 6px;
     overflow: hidden;
+    margin-right: 12px;
+    position: relative;
+}
+
+.trend-bar::after {
+    content: '';
+    position: absolute;
+    left: 50%;
+    top: 0;
+    height: 100%;
+    width: 1px;
+    background: rgba(0, 0, 0, 0.1);
 }
 
 .trend-fill {
     height: 100%;
     transition: width 0.3s ease;
+    background: #6b46c1;
+    border-radius: 6px;
+}
+
+.domain-item {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: white;
+    border-radius: 12px;
+    padding: 16px;
+    border: 1px solid #e5e7eb;
+    margin-bottom: 12px;
+}
+
+.domain-item:last-child {
+    margin-bottom: 0;
+}
+
+.domain-name {
+    font-weight: 600;
+    color: #111827;
+    font-size: 0.875rem;
+}
+
+.domain-score-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.score-bar {
+    flex: 1;
+    height: 8px;
+    background: #f3f4f6;
+    border-radius: 4px;
+    overflow: hidden;
+}
+
+.score-fill {
+    height: 100%;
+    background: #22c55e;
+    border-radius: 4px;
+    transition: width 0.3s ease;
+}
+
+.domain-item {
+    margin-bottom: 16px;
+}
+
+.domain-name {
+    font-weight: 600;
+    color: #111827;
+    margin-bottom: 8px;
+}
+
+.domain-score-row {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.score-bar {
+    flex: 1;
+}
+
+.score-and-mentions {
+    display: flex;
+    align-items: baseline;
+    gap: 8px;
+    white-space: nowrap;
 }
 
 .trend-score {
-    font-size: 12px;
-    font-weight: 600;
-    min-width: 40px;
-    text-align: right;
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: #111827;
+}
+
+.trend-mentions {
+    font-size: 0.75rem;
+    color: #6b7280;
+    padding: 2px 8px;
+    border-radius: 12px;
+    background: #f3f4f6;
+    font-weight: 500;
 }
 
 .top-keywords {
     display: flex;
     flex-wrap: wrap;
-    gap: 10px;
+    gap: 12px;
+    padding: 4px;
 }
 
 .keyword-item {
     display: flex;
     align-items: center;
-    gap: 5px;
-    background: #e3f2fd;
-    padding: 6px 10px;
-    border-radius: 15px;
-    font-size: 12px;
+    gap: 8px;
+    background: #f8f6fe;
+    padding: 8px 16px;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    border: 2px solid #6b46c1;
+    transition: all 0.2s ease;
 }
 
+
 .keyword-text {
-    color: #1976d2;
-    font-weight: 500;
+    color: #6b46c1;
+    font-weight: 600;
+    letter-spacing: -0.025em;
 }
 
 .keyword-count {
-    background: #1976d2;
+    background: #6b46c1;
     color: white;
-    padding: 2px 6px;
-    border-radius: 10px;
-    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
     font-weight: 600;
+    min-width: 24px;
+    text-align: center;
+}
+
+/* Add smooth animations */
+.summary-section,
+.sentiment-item,
+.domain-trend,
+.keyword-item {
+    animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(5px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
 }
 
 /* Modal Styles */
@@ -382,42 +691,87 @@
 
 /* Domain Analysis Styles */
 .domain-analysis {
-    margin-top: 10px;
+    margin-top: 16px;
+}
+
+/* Domain-specific colors */
+.domain-item[data-domain="cognitive"] .score-fill,
+.domain-item[data-domain="cognitive"] .score-fill-preview {
+    background: linear-gradient(90deg, #93c5fd, #3b82f6);
+}
+
+.domain-item[data-domain="emotional"] .score-fill,
+.domain-item[data-domain="emotional"] .score-fill-preview {
+    background: linear-gradient(90deg, #fdba74, #f97316);
+}
+
+.domain-item[data-domain="social"] .score-fill,
+.domain-item[data-domain="social"] .score-fill-preview {
+    background: linear-gradient(90deg, #c084fc, #8b5cf6);
+}
+
+/* Default gradient for unknown domains */
+.score-fill,
+.score-fill-preview {
+    background: linear-gradient(90deg, #86efac, #22c55e);
 }
 
 .domain-item {
-    margin-bottom: 15px;
-    padding: 10px;
-    background: #f8f9fa;
-    border-radius: 8px;
-    border-left: 4px solid #e9ecef;
+    margin-bottom: 16px;
+    padding: 16px;
+    background: #f8f6fe;
+    border-radius: 12px;
+    border: 1px solid #e5e7eb;
 }
 
 .domain-header {
     display: flex;
     align-items: center;
-    margin-bottom: 8px;
+    margin-bottom: 12px;
     gap: 8px;
 }
 
 .domain-header i {
-    color: #007bff;
-    font-size: 0.9em;
+    color: #6b46c1;
+    font-size: 14px;
+    width: 16px;
+    text-align: center;
+    font-weight: 400;
 }
 
 .domain-name {
     font-weight: 600;
-    color: #333;
-    font-size: 0.9em;
+    color: #111827;
+    font-size: 14px;
     flex: 1;
+    letter-spacing: -0.025em;
+}
+
+.domain-name::before {
+    margin-right: 6px;
+    font-size: 14px;
+    opacity: 0.7;
+}
+
+.domain-item[data-domain="cognitive"] .domain-name::before {
+    content: "🧠";
+}
+
+.domain-item[data-domain="emotional"] .domain-name::before {
+    content: "💖";
+}
+
+.domain-item[data-domain="social"] .domain-name::before {
+    content: "🤝";
 }
 
 .domain-mentions {
-    font-size: 0.75em;
-    color: #666;
-    background: #e9ecef;
-    padding: 2px 6px;
-    border-radius: 10px;
+    font-size: 11px;
+    color: #8e8e93;
+    background: #f0f0f0;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-weight: 500;
 }
 
 .domain-score {
@@ -428,11 +782,11 @@
 
 .score-bar {
     flex: 1;
-    height: 10px;
-    background-color: #e0e0e0;
-    border-radius: 5px;
+    height: 6px;
+    background-color: #f0f0f0;
+    border-radius: 8px;
     overflow: hidden;
-    margin-right: 10px;
+    margin-right: 12px;
     position: relative;
 }
 
@@ -443,22 +797,22 @@
     top: 0;
     width: 1px;
     height: 100%;
-    background-color: #999;
+    background-color: #d1d1d6;
     transform: translateX(-50%);
 }
 
 .score-fill {
     height: 100%;
-    transition: width 0.3s ease;
-    border-radius: 5px;
+    transition: width 0.4s ease;
+    border-radius: 8px;
 }
 
 .score-value {
-    font-size: 0.8em;
+    font-size: 12px;
     font-weight: 600;
     min-width: 40px;
     text-align: right;
-    color: #333;
+    color: #1d1d1f;
 }
 
 .domain-breakdown {
@@ -512,8 +866,8 @@
 
 /* Real-time NLP Preview Styles */
 .nlp-preview {
-    background: #f8f9fa;
-    border: 1px solid #e9ecef;
+    background: #f8f6fe;
+    border: 1px solid #e5e7eb;
     border-radius: 8px;
     padding: 15px;
     margin: 15px 0;
@@ -529,7 +883,7 @@
 
 .nlp-preview h4 i {
     margin-right: 8px;
-    color: #007bff;
+    color: #6b46c1;
 }
 
 .preview-content {
@@ -576,10 +930,10 @@
 }
 
 .domain-preview-item {
-    background: #f8f9fa;
+    background: #f8f6fe;
     padding: 8px;
     border-radius: 6px;
-    border-left: 3px solid #e9ecef;
+    border: 1px solid #e5e7eb;
 }
 
 .domain-preview-header {
@@ -590,7 +944,7 @@
 }
 
 .domain-preview-header i {
-    color: #007bff;
+    color: #6b46c1;
     font-size: 0.8em;
 }
 
@@ -847,23 +1201,31 @@
     .note-header {
         flex-direction: column;
         align-items: flex-start;
-        gap: 10px;
+        gap: 12px;
     }
     
-    .domain-scores,
+    .note-item {
+        padding: 20px;
+        margin-bottom: 16px;
+    }
+    
+    .notes-card .domain-scores,
+    .nlp-preview .domain-scores,
     .domain-trends {
-        gap: 8px;
+        gap: 12px;
     }
     
     .domain-score,
     .domain-trend {
         flex-direction: column;
         align-items: flex-start;
-        gap: 5px;
+        gap: 8px;
     }
     
     .score-bar,
     .trend-bar {
         width: 100%;
+        margin-right: 0;
+        margin-bottom: 4px;
     }
 }

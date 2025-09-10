@@ -121,7 +121,7 @@
 .keyword-item {
     display: inline-block;
     padding: 8px 16px;
-    background: linear-gradient(135deg, #4682A9, #91C8E4);
+    background: #f8f6fe;
     color: white;
     border-radius: 20px;
     font-size: 14px;
