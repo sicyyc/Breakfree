@@ -99,7 +99,7 @@
 {% block scripts %}
 <script>
     // Pass analytics data to JavaScript
-    window.analyticsData = {{ analytics_data | tojson }};
+    window.analyticsData = {{ analytics_data | tojson | safe if analytics_data else '{}' }};
 </script>
 <script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
 {% endblock %}
